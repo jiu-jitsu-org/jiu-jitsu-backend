@@ -2,8 +2,6 @@ package com.jiujitsu.api.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.info.Contact;
-import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,15 +15,9 @@ public class SwaggerConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Jiujitsu API")
-                        .description("API documentation for Jiujitsu application")
-                        .version("1.0.0")
-                        .contact(new Contact()
-                                .name("Jiujitsu Team")
-                                .email("contact@jiujitsu.com"))
-                        .license(new License()
-                                .name("MIT License")
-                                .url("https://opensource.org/licenses/MIT")))
+                        .title("주짓수 커뮤니티 API")
+                        .description("주짓수 커뮤니티 API 명세")
+                        .version("1.0.0"))
                 .servers(List.of(
                         new Server()
                                 .url("http://localhost:8080")
