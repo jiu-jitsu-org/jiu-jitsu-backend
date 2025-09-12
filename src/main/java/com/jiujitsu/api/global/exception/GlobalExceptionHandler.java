@@ -8,46 +8,44 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Slf4j
-// @RestControllerAdvice  // Temporarily disabled to avoid version conflicts
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(ErrorException.class)
+    public ResponseEntity<ApiResponse<Object>> handleCustomException(ErrorException e) {
+        ErrorCode errorCode = e.getErrorCode();
+        log.error("예외 발생: {}", e.getMessage(), e);
+
+        return ResponseEntity
+                .status(HttpStatus.valueOf(errorCode.getStatus()))
+                .body(ApiResponse.error(errorCode));
+    }
+
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException e) {
+    public ResponseEntity<ApiResponse<Object>> handleRuntimeException(RuntimeException e) {
         log.error("Runtime exception occurred", e);
         
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("success", false);
-        errorResponse.put("message", e.getMessage());
-        errorResponse.put("code", "RUNTIME_ERROR");
-        
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(ErrorCode.SERVER_ERROR));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
-    public ResponseEntity<Map<String, Object>> handleValidationException(Exception e) {
+    public ResponseEntity<ApiResponse<Object>> handleValidationException(Exception e) {
         log.error("Validation exception occurred", e);
         
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("success", false);
-        errorResponse.put("message", "입력값이 올바르지 않습니다");
-        errorResponse.put("code", "VALIDATION_ERROR");
-        
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ErrorCode.WRONG_PARAMETER));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGenericException(Exception e) {
+    public ResponseEntity<ApiResponse<Object>> handleGenericException(Exception e) {
         log.error("Unexpected exception occurred", e);
-        
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("success", false);
-        errorResponse.put("message", "서버 내부 오류가 발생했습니다");
-        errorResponse.put("code", "INTERNAL_ERROR");
-        
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(ErrorCode.SERVER_ERROR));
     }
 }

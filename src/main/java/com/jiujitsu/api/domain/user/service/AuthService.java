@@ -12,6 +12,8 @@ import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.sns.SnsClient;
 import com.jiujitsu.api.domain.user.service.sns.SnsClientFactory;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.security.JwtTokenProvider;
 import com.jiujitsu.api.global.security.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
@@ -31,37 +33,31 @@ public class AuthService {
     private final TokenBlacklistService tokenBlacklistService;
 
     public AuthResponse snsLogin(SnsLoginRequest request) {
-        try {
-            // SNS 클라이언트를 통해 사용자 정보 조회
-            SnsClient snsClient = snsClientFactory.getClient(request.getSnsProvider());
-            SnsUserInfo snsUserInfo = snsClient.getUserInfo(request.getAccessToken(), request.getIdToken());
+        // SNS 클라이언트를 통해 사용자 정보 조회
+        SnsClient snsClient = snsClientFactory.getClient(request.getSnsProvider());
+        SnsUserInfo snsUserInfo = snsClient.getUserInfo(request.getAccessToken(), request.getIdToken());
 
-            // 기존 사용자 조회 또는 새 사용자 생성
-            User user = userRepository.findBySnsProviderAndSnsId(request.getSnsProvider(), snsUserInfo.getSnsId())
-                    .orElseGet(() -> createNewUser(request.getSnsProvider(), snsUserInfo));
+        // 기존 사용자 조회 또는 새 사용자 생성
+        User user = userRepository.findBySnsProviderAndSnsId(request.getSnsProvider(), snsUserInfo.getSnsId())
+                .orElseGet(() -> createNewUser(request.getSnsProvider(), snsUserInfo));
 
-            // 사용자 정보 업데이트 (프로필 정보가 변경되었을 수 있음)
-            updateUserInfo(user, snsUserInfo);
+        // 사용자 정보 업데이트 (프로필 정보가 변경되었을 수 있음)
+        updateUserInfo(user, snsUserInfo);
 
-            // JWT 토큰 생성
-            String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
-            String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+        // JWT 토큰 생성
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-            // 응답 생성
-            AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
-                    user.getId(),
-                    user.getEmail(),
-                    user.getNickname(),
-                    user.getProfileImageUrl(),
-                    user.getSnsProvider().name()
-            );
+        // 응답 생성
+        AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
+                user.getId(),
+                user.getEmail(),
+                user.getNickname(),
+                user.getProfileImageUrl(),
+                user.getSnsProvider().name()
+        );
 
-            return new AuthResponse(accessToken, refreshToken, userInfo);
-
-        } catch (Exception e) {
-            log.error("SNS 로그인 처리 실패: {}", e.getMessage(), e);
-            throw new RuntimeException("로그인 처리 중 오류가 발생했습니다", e);
-        }
+        return new AuthResponse(accessToken, refreshToken, userInfo);
     }
 
     private User createNewUser(SnsProvider snsProvider, SnsUserInfo snsUserInfo) {
@@ -102,71 +98,59 @@ public class AuthService {
     }
 
     public AuthResponse refreshToken(String refreshToken) {
-        try {
-            // 리프레시 토큰 검증
-            if (!jwtTokenProvider.validateToken(refreshToken)) {
-                throw new RuntimeException("유효하지 않은 리프레시 토큰입니다");
-            }
-
-            // 토큰 타입 확인
-            String tokenType = jwtTokenProvider.getTokenTypeFromToken(refreshToken);
-            if (!"refresh".equals(tokenType)) {
-                throw new RuntimeException("리프레시 토큰이 아닙니다");
-            }
-
-            // 사용자 정보 조회
-            Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
-
-            // 새로운 토큰 생성
-            String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
-            String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-
-            // 응답 생성
-            AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
-                    user.getId(),
-                    user.getEmail(),
-                    user.getNickname(),
-                    user.getProfileImageUrl(),
-                    user.getSnsProvider().name()
-            );
-
-            return new AuthResponse(newAccessToken, newRefreshToken, userInfo);
-
-        } catch (Exception e) {
-            log.error("토큰 갱신 실패: {}", e.getMessage(), e);
-            throw new RuntimeException("토큰 갱신 중 오류가 발생했습니다", e);
+        // 리프레시 토큰 검증
+        if (!jwtTokenProvider.validateToken(refreshToken)) {
+            throw new ErrorException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
+
+        // 토큰 타입 확인
+        String tokenType = jwtTokenProvider.getTokenTypeFromToken(refreshToken);
+        if (!"refresh".equals(tokenType)) {
+            throw new ErrorException(ErrorCode.NOT_MATCH_CATEGORY);
+        }
+
+        // 사용자 정보 조회
+        Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        // 새로운 토큰 생성
+        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+        // 응답 생성
+        AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
+                user.getId(),
+                user.getEmail(),
+                user.getNickname(),
+                user.getProfileImageUrl(),
+                user.getSnsProvider().name()
+        );
+
+        return new AuthResponse(newAccessToken, newRefreshToken, userInfo);
     }
 
     public LogoutResponse logout(LogoutRequest request) {
-        try {
-            // 액세스 토큰 검증 및 블랙리스트 추가
-            if (request.getAccessToken() != null && !request.getAccessToken().trim().isEmpty()) {
-                if (jwtTokenProvider.validateToken(request.getAccessToken())) {
-                    tokenBlacklistService.blacklistToken(request.getAccessToken());
-                    log.info("Access token blacklisted for logout");
-                } else {
-                    log.warn("Invalid access token provided for logout");
-                }
+        // 액세스 토큰 검증 및 블랙리스트 추가
+        if (request.getAccessToken() != null && !request.getAccessToken().trim().isEmpty()) {
+            if (jwtTokenProvider.validateToken(request.getAccessToken())) {
+                tokenBlacklistService.blacklistToken(request.getAccessToken());
+                log.info("Access token blacklisted for logout");
+            } else {
+                log.warn("Invalid access token provided for logout");
             }
-
-            // 리프레시 토큰이 제공된 경우 블랙리스트 추가
-            if (request.getRefreshToken() != null && !request.getRefreshToken().trim().isEmpty()) {
-                if (jwtTokenProvider.validateToken(request.getRefreshToken())) {
-                    tokenBlacklistService.blacklistToken(request.getRefreshToken());
-                    log.info("Refresh token blacklisted for logout");
-                } else {
-                    log.warn("Invalid refresh token provided for logout");
-                }
-            }
-
-            return new LogoutResponse(true, "로그아웃이 완료되었습니다");
-
-        } catch (Exception e) {
-            log.error("로그아웃 처리 실패: {}", e.getMessage(), e);
-            return new LogoutResponse(false, "로그아웃 처리 중 오류가 발생했습니다");
         }
+
+        // 리프레시 토큰이 제공된 경우 블랙리스트 추가
+        if (request.getRefreshToken() != null && !request.getRefreshToken().trim().isEmpty()) {
+            if (jwtTokenProvider.validateToken(request.getRefreshToken())) {
+                tokenBlacklistService.blacklistToken(request.getRefreshToken());
+                log.info("Refresh token blacklisted for logout");
+            } else {
+                log.warn("Invalid refresh token provided for logout");
+            }
+        }
+
+        return new LogoutResponse(true, "로그아웃이 완료되었습니다");
     }
 }

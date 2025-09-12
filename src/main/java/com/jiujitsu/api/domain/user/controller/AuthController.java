@@ -4,8 +4,11 @@ import com.jiujitsu.api.domain.user.dto.AuthResponse;
 import com.jiujitsu.api.domain.user.dto.LogoutRequest;
 import com.jiujitsu.api.domain.user.dto.LogoutResponse;
 import com.jiujitsu.api.domain.user.dto.SnsLoginRequest;
-import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.service.AuthService;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
+import io.netty.util.internal.StringUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,85 +18,18 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Authentication", description = "인증 관련 API")
 @RestController
 @RequestMapping("/api/auth")
+@ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
-
-    @Operation(
-            summary = "카카오 로그인",
-            description = "카카오 SDK에서 받은 액세스 토큰으로 로그인합니다."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "로그인 성공",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = AuthResponse.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content),
-            @ApiResponse(responseCode = "401", description = "인증 실패",
-                    content = @Content)
-    })
-    @PostMapping("/kakao")
-    public ResponseEntity<AuthResponse> kakaoLogin(
-            @Parameter(description = "카카오 액세스 토큰", required = true)
-            @RequestParam String accessToken) {
-        
-        SnsLoginRequest request = new SnsLoginRequest(SnsProvider.KAKAO, accessToken, null);
-        AuthResponse response = authService.snsLogin(request);
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(
-            summary = "구글 로그인",
-            description = "구글 SDK에서 받은 액세스 토큰으로 로그인합니다."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "로그인 성공",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = AuthResponse.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content),
-            @ApiResponse(responseCode = "401", description = "인증 실패",
-                    content = @Content)
-    })
-    @PostMapping("/google")
-    public ResponseEntity<AuthResponse> googleLogin(
-            @Parameter(description = "구글 액세스 토큰", required = true)
-            @RequestParam String accessToken) {
-        
-        SnsLoginRequest request = new SnsLoginRequest(SnsProvider.GOOGLE, accessToken, null);
-        AuthResponse response = authService.snsLogin(request);
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(
-            summary = "애플 로그인",
-            description = "애플 SDK에서 받은 ID 토큰으로 로그인합니다."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "로그인 성공",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = AuthResponse.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content),
-            @ApiResponse(responseCode = "401", description = "인증 실패",
-                    content = @Content)
-    })
-    @PostMapping("/apple")
-    public ResponseEntity<AuthResponse> appleLogin(
-            @Parameter(description = "애플 ID 토큰", required = true)
-            @RequestParam String idToken) {
-        
-        SnsLoginRequest request = new SnsLoginRequest(SnsProvider.APPLE, null, idToken);
-        AuthResponse response = authService.snsLogin(request);
-        return ResponseEntity.ok(response);
-    }
 
     @Operation(
             summary = "통합 SNS 로그인",
@@ -120,15 +56,7 @@ public class AuthController {
             summary = "토큰 갱신",
             description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다."
     )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "토큰 갱신 성공",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = AuthResponse.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content),
-            @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰",
-                    content = @Content)
-    })
+    @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY, ErrorCode.USER_NOT_FOUND})
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refreshToken(
             @Parameter(description = "리프레시 토큰", required = true)
@@ -142,13 +70,6 @@ public class AuthController {
             summary = "로그아웃",
             description = "액세스 토큰과 리프레시 토큰을 무효화하여 로그아웃합니다."
     )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "로그아웃 성공",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = LogoutResponse.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content)
-    })
     @PostMapping("/logout")
     public ResponseEntity<LogoutResponse> logout(
             @Valid @RequestBody LogoutRequest request) {
