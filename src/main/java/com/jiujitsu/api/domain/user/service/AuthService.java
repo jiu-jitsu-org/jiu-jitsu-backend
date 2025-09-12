@@ -1,6 +1,8 @@
 package com.jiujitsu.api.domain.user.service;
 
 import com.jiujitsu.api.domain.user.dto.AuthResponse;
+import com.jiujitsu.api.domain.user.dto.LogoutRequest;
+import com.jiujitsu.api.domain.user.dto.LogoutResponse;
 import com.jiujitsu.api.domain.user.dto.SnsLoginRequest;
 import com.jiujitsu.api.domain.user.dto.SnsUserInfo;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
@@ -11,6 +13,7 @@ import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.sns.SnsClient;
 import com.jiujitsu.api.domain.user.service.sns.SnsClientFactory;
 import com.jiujitsu.api.global.security.JwtTokenProvider;
+import com.jiujitsu.api.global.security.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final SnsClientFactory snsClientFactory;
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenBlacklistService tokenBlacklistService;
 
     public AuthResponse snsLogin(SnsLoginRequest request) {
         try {
@@ -133,6 +137,36 @@ public class AuthService {
         } catch (Exception e) {
             log.error("토큰 갱신 실패: {}", e.getMessage(), e);
             throw new RuntimeException("토큰 갱신 중 오류가 발생했습니다", e);
+        }
+    }
+
+    public LogoutResponse logout(LogoutRequest request) {
+        try {
+            // 액세스 토큰 검증 및 블랙리스트 추가
+            if (request.getAccessToken() != null && !request.getAccessToken().trim().isEmpty()) {
+                if (jwtTokenProvider.validateToken(request.getAccessToken())) {
+                    tokenBlacklistService.blacklistToken(request.getAccessToken());
+                    log.info("Access token blacklisted for logout");
+                } else {
+                    log.warn("Invalid access token provided for logout");
+                }
+            }
+
+            // 리프레시 토큰이 제공된 경우 블랙리스트 추가
+            if (request.getRefreshToken() != null && !request.getRefreshToken().trim().isEmpty()) {
+                if (jwtTokenProvider.validateToken(request.getRefreshToken())) {
+                    tokenBlacklistService.blacklistToken(request.getRefreshToken());
+                    log.info("Refresh token blacklisted for logout");
+                } else {
+                    log.warn("Invalid refresh token provided for logout");
+                }
+            }
+
+            return new LogoutResponse(true, "로그아웃이 완료되었습니다");
+
+        } catch (Exception e) {
+            log.error("로그아웃 처리 실패: {}", e.getMessage(), e);
+            return new LogoutResponse(false, "로그아웃 처리 중 오류가 발생했습니다");
         }
     }
 }

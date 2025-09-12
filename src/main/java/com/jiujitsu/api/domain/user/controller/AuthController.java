@@ -1,6 +1,8 @@
 package com.jiujitsu.api.domain.user.controller;
 
 import com.jiujitsu.api.domain.user.dto.AuthResponse;
+import com.jiujitsu.api.domain.user.dto.LogoutRequest;
+import com.jiujitsu.api.domain.user.dto.LogoutResponse;
 import com.jiujitsu.api.domain.user.dto.SnsLoginRequest;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.service.AuthService;
@@ -133,6 +135,25 @@ public class AuthController {
             @RequestParam String refreshToken) {
         
         AuthResponse response = authService.refreshToken(refreshToken);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "로그아웃",
+            description = "액세스 토큰과 리프레시 토큰을 무효화하여 로그아웃합니다."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그아웃 성공",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = LogoutResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content)
+    })
+    @PostMapping("/logout")
+    public ResponseEntity<LogoutResponse> logout(
+            @Valid @RequestBody LogoutRequest request) {
+        
+        LogoutResponse response = authService.logout(request);
         return ResponseEntity.ok(response);
     }
 }
