@@ -1,4 +1,4 @@
-package com.jiujitsu.api.config;
+package com.jiujitsu.api.global.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
