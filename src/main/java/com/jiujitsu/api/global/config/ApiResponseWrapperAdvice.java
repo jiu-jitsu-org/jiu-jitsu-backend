@@ -11,6 +11,8 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
+import java.util.Map;
+
 @ControllerAdvice
 @RequiredArgsConstructor
 public class ApiResponseWrapperAdvice implements ResponseBodyAdvice<Object> {
@@ -43,12 +45,19 @@ public class ApiResponseWrapperAdvice implements ResponseBodyAdvice<Object> {
             return body;
         }
 
-//        // String 추가 로직 처리
-//        if (data instanceof String) {
-//            return ResponseEntity.ok()
-//                    .contentType(MediaType.APPLICATION_JSON)
-//                    .data(ApiResponse.success(data));
-//        }
+        // spring default 에러도 body 그대로 리턴
+        if (body instanceof Map mapBody) {
+            if (mapBody.containsKey("status") && mapBody.containsKey("error") && mapBody.containsKey("path")) {
+                return body;
+            }
+        }
+
+        // void 또는 null 리턴 처리
+        if (body == null) {
+            return ApiResponse.success(null);
+        }
+
+        // String 추가 로직 처리
         if (body instanceof String) {
             // 여기서 JSON 문자열로 직접 변환
             response.getHeaders().setContentType(MediaType.APPLICATION_JSON);

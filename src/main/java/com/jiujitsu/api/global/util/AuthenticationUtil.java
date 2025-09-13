@@ -1,9 +1,15 @@
 package com.jiujitsu.api.global.util;
 
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Slf4j
 @Component
@@ -18,7 +24,7 @@ public class AuthenticationUtil {
     public static Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("인증되지 않은 사용자입니다");
+            throw new ErrorException(ErrorCode.USER_NOT_FOUND);
         }
         return (Long) authentication.getPrincipal();
     }
@@ -40,5 +46,25 @@ public class AuthenticationUtil {
      */
     public static Authentication getCurrentAuthentication() {
         return SecurityContextHolder.getContext().getAuthentication();
+    }
+
+    /**
+     * 현재 요청의 JWT 토큰을 가져옵니다.
+     * 
+     * @return JWT 토큰 (Bearer 접두사 제거된 상태), 토큰이 없으면 null
+     */
+    public static String getCurrentToken() {
+        try {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+            HttpServletRequest request = attributes.getRequest();
+            String bearerToken = request.getHeader("Authorization");
+            
+            if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+                return bearerToken.substring(7);
+            }
+            return null;
+        } catch (Exception e) {
+            throw new ErrorException(ErrorCode.NO_TOKEN);
+        }
     }
 }

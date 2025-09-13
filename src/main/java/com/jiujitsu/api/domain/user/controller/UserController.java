@@ -8,11 +8,6 @@ import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,9 +29,8 @@ public class UserController {
     )
     @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
     @GetMapping("/profile")
-    public ResponseEntity<UserProfileResponse> getUserProfile() {
-        UserProfileResponse response = userService.getUserProfile();
-        return ResponseEntity.ok(response);
+    public UserProfileResponse getUserProfile() {
+        return userService.getUserProfile();
     }
 
     @Operation(
@@ -45,10 +39,18 @@ public class UserController {
     )
     @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
     @PutMapping("/profile")
-    public ResponseEntity<UpdateProfileResponse> updateProfile(
+    public UpdateProfileResponse updateProfile(
             @Valid @RequestBody UpdateProfileRequest request) {
-        
-        UpdateProfileResponse response = userService.updateProfile(request);
-        return ResponseEntity.ok(response);
+        return userService.updateProfile(request);
+    }
+
+    @Operation(
+            summary = "회원 탈퇴",
+            description = "현재 로그인한 사용자의 계정을 삭제합니다."
+    )
+    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
+    @DeleteMapping("/account")
+    public void deleteUser() {
+        userService.deleteUser();
     }
 }

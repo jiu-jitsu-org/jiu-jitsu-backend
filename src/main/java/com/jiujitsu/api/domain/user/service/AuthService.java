@@ -1,10 +1,6 @@
 package com.jiujitsu.api.domain.user.service;
 
-import com.jiujitsu.api.domain.user.dto.AuthResponse;
-import com.jiujitsu.api.domain.user.dto.LogoutRequest;
-import com.jiujitsu.api.domain.user.dto.LogoutResponse;
-import com.jiujitsu.api.domain.user.dto.SnsLoginRequest;
-import com.jiujitsu.api.domain.user.dto.SnsUserInfo;
+import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
@@ -135,9 +131,6 @@ public class AuthService {
         if (request.getAccessToken() != null && !request.getAccessToken().trim().isEmpty()) {
             if (jwtTokenProvider.validateToken(request.getAccessToken())) {
                 tokenBlacklistService.blacklistToken(request.getAccessToken());
-                log.info("Access token blacklisted for logout");
-            } else {
-                log.warn("Invalid access token provided for logout");
             }
         }
 
@@ -145,9 +138,6 @@ public class AuthService {
         if (request.getRefreshToken() != null && !request.getRefreshToken().trim().isEmpty()) {
             if (jwtTokenProvider.validateToken(request.getRefreshToken())) {
                 tokenBlacklistService.blacklistToken(request.getRefreshToken());
-                log.info("Refresh token blacklisted for logout");
-            } else {
-                log.warn("Invalid refresh token provided for logout");
             }
         }
 
