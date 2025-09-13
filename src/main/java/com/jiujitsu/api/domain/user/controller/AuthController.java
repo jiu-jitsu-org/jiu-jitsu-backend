@@ -6,26 +6,19 @@ import com.jiujitsu.api.domain.user.dto.LogoutResponse;
 import com.jiujitsu.api.domain.user.dto.SnsLoginRequest;
 import com.jiujitsu.api.domain.user.service.AuthService;
 import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
-import io.netty.util.internal.StringUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Authentication", description = "인증 관련 API")
+@Tag(name = "Authentication", description = "인증 API")
+@ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
 @RequestMapping("/api/auth")
-@ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -35,15 +28,6 @@ public class AuthController {
             summary = "통합 SNS 로그인",
             description = "SNS 제공자와 토큰 정보를 포함한 통합 로그인 API입니다."
     )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "로그인 성공",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = AuthResponse.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content),
-            @ApiResponse(responseCode = "401", description = "인증 실패",
-                    content = @Content)
-    })
     @PostMapping("/sns-login")
     public ResponseEntity<AuthResponse> snsLogin(
             @Valid @RequestBody SnsLoginRequest request) {

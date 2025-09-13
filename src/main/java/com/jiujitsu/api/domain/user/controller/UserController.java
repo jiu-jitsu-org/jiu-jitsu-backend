@@ -4,19 +4,19 @@ import com.jiujitsu.api.domain.user.dto.UpdateProfileRequest;
 import com.jiujitsu.api.domain.user.dto.UpdateProfileResponse;
 import com.jiujitsu.api.domain.user.dto.UserProfileResponse;
 import com.jiujitsu.api.domain.user.service.UserService;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
+import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "User", description = "사용자 관련 API")
+@Tag(name = "User", description = "사용자 정보 API")
+@ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
@@ -28,15 +28,7 @@ public class UserController {
             summary = "사용자 프로필 조회",
             description = "현재 로그인한 사용자의 프로필 정보를 조회합니다."
     )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "프로필 조회 성공",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = UserProfileResponse.class))),
-            @ApiResponse(responseCode = "401", description = "인증 실패",
-                    content = @Content),
-            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음",
-                    content = @Content)
-    })
+    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
     @GetMapping("/profile")
     public ResponseEntity<UserProfileResponse> getUserProfile(
             @Parameter(description = "Authorization 헤더의 Bearer 토큰", required = true)
@@ -50,17 +42,7 @@ public class UserController {
             summary = "사용자 프로필 업데이트",
             description = "현재 로그인한 사용자의 닉네임과 프로필 이미지를 업데이트합니다."
     )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "프로필 업데이트 성공",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = UpdateProfileResponse.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content),
-            @ApiResponse(responseCode = "401", description = "인증 실패",
-                    content = @Content),
-            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음",
-                    content = @Content)
-    })
+    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
     @PutMapping("/profile")
     public ResponseEntity<UpdateProfileResponse> updateProfile(
             @Parameter(description = "Authorization 헤더의 Bearer 토큰", required = true)

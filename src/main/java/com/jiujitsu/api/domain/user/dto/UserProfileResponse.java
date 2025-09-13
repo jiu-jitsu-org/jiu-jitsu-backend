@@ -1,5 +1,7 @@
 package com.jiujitsu.api.domain.user.dto;
 
+import com.jiujitsu.api.domain.user.entity.SnsProvider;
+import com.jiujitsu.api.domain.user.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -22,11 +24,21 @@ public class UserProfileResponse {
     private String profileImageUrl;
 
     @Schema(description = "SNS 제공자", example = "KAKAO")
-    private String snsProvider;
+    private SnsProvider snsProvider;
 
     @Schema(description = "사용자 역할", example = "USER")
     private String role;
 
     @Schema(description = "사용자 상태", example = "ACTIVE")
     private String status;
+
+    public UserProfileResponse(User user) {
+        this.id = user.getId();
+        this.email = user.getEmail();
+        this.nickname = user.getNickname();
+        this.profileImageUrl = user.getProfileImageUrl();
+        this.snsProvider = user.getSnsProvider();
+        this.role = user.getRole().name();
+        this.status = user.getStatus().name();
+    }
 }
