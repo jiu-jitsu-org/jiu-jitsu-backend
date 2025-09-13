@@ -7,7 +7,7 @@ import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
-import com.jiujitsu.api.global.security.JwtTokenProvider;
+import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,16 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final JwtTokenProvider jwtTokenProvider;
 
-    public UserProfileResponse getUserProfile(String token) {
-        // Bearer 접두사 제거
-        if (token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
-
-        // 토큰에서 사용자 ID 추출
-        Long userId = jwtTokenProvider.getUserIdFromToken(token);
+    public UserProfileResponse getUserProfile() {
+        // SecurityContext에서 인증된 사용자 ID 가져오기
+        Long userId = AuthenticationUtil.getCurrentUserId();
 
         // 사용자 조회
         User user = userRepository.findById(userId)
@@ -38,18 +32,13 @@ public class UserService {
         return new UserProfileResponse(user);
     }
 
-    public UpdateProfileResponse updateProfile(String token, UpdateProfileRequest request) {
-        // Bearer 접두사 제거
-        if (token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
-
-        // 토큰에서 사용자 ID 추출
-        Long userId = jwtTokenProvider.getUserIdFromToken(token);
+    public UpdateProfileResponse updateProfile(UpdateProfileRequest request) {
+        // SecurityContext에서 인증된 사용자 ID 가져오기
+        Long userId = AuthenticationUtil.getCurrentUserId();
 
         // 사용자 조회
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         // 프로필 업데이트
         user.updateProfile(request.getNickname(), request.getProfileImageUrl());
@@ -57,4 +46,5 @@ public class UserService {
 
         return new UpdateProfileResponse(user);
     }
+
 }

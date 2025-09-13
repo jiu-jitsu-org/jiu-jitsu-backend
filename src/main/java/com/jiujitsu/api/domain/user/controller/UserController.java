@@ -9,6 +9,10 @@ import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,11 +34,8 @@ public class UserController {
     )
     @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
     @GetMapping("/profile")
-    public ResponseEntity<UserProfileResponse> getUserProfile(
-            @Parameter(description = "Authorization 헤더의 Bearer 토큰", required = true)
-            @RequestHeader("Authorization") String authorizationHeader) {
-        
-        UserProfileResponse response = userService.getUserProfile(authorizationHeader);
+    public ResponseEntity<UserProfileResponse> getUserProfile() {
+        UserProfileResponse response = userService.getUserProfile();
         return ResponseEntity.ok(response);
     }
 
@@ -45,11 +46,9 @@ public class UserController {
     @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
     @PutMapping("/profile")
     public ResponseEntity<UpdateProfileResponse> updateProfile(
-            @Parameter(description = "Authorization 헤더의 Bearer 토큰", required = true)
-            @RequestHeader("Authorization") String authorizationHeader,
             @Valid @RequestBody UpdateProfileRequest request) {
         
-        UpdateProfileResponse response = userService.updateProfile(authorizationHeader, request);
+        UpdateProfileResponse response = userService.updateProfile(request);
         return ResponseEntity.ok(response);
     }
 }

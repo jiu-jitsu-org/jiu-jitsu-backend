@@ -28,6 +28,10 @@ public class TokenBlacklistService {
         return blacklistedTokens.contains(token);
     }
 
+    public boolean isBlacklisted(String token) {
+        return isTokenBlacklisted(token);
+    }
+
     public boolean isValidToken(String token) {
         if (token == null || token.trim().isEmpty()) {
             return false;
