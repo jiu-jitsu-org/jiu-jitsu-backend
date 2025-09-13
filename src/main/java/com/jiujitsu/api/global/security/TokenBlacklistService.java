@@ -20,7 +20,6 @@ public class TokenBlacklistService {
     public void blacklistToken(String token) {
         if (token != null && !token.trim().isEmpty()) {
             blacklistedTokens.add(token);
-            log.info("Token blacklisted successfully");
         }
     }
 
