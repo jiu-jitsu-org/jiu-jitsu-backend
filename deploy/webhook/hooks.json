@@ -1,0 +1,58 @@
+[
+  {
+    "id": "redeploy",
+    "execute-command": "/hooks/deploy.sh",
+    "command-working-directory": "/stack",
+    "pass-environment-to-command": [
+      {
+        "envname": "HOOK_REF",
+        "source": "payload",
+        "name": "ref"
+      },
+      {
+        "envname": "HOOK_EVENT",
+        "source": "header",
+        "name": "X-GitHub-Event"
+      },
+      {
+        "envname": "HOOK_REPO",
+        "source": "payload",
+        "name": "repository.full_name"
+      }
+    ],
+    "trigger-rule": {
+      "and": [
+        {
+          "match": {
+            "type": "payload-hmac-sha256",
+            "secret": "{{ getenv \"WEBHOOK_SECRET\" }}",
+            "parameter": {
+              "source": "header",
+              "name": "X-Hub-Signature-256"
+            }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "push",
+            "parameter": {
+              "source": "header",
+              "name": "X-GitHub-Event"
+            }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "refs/heads/feat/dev-deploy-setting",
+            "parameter": {
+              "source": "payload",
+              "name": "ref"
+            }
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,35 @@
+services:
+  nginx:
+    image: nginx:1.29
+    container_name: rp-nginx
+    # Cloudflare Tunnel이 로컬로 붙으니 127.0.0.1에만 공개
+    ports: ["127.0.0.1:8080:80"]
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on: [api]
+    networks: [edge]
+
+  api:
+    # CI/CD가 GHCR에 푸시하는 이미지를 사용
+    image: ghcr.io/jiu-jitsu-org/jiu-jitsu-backend-api:latest-develop
+    container_name: app-api
+    restart: unless-stopped
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms256m -Xmx512m
+    networks: [edge]
+
+  webhook:
+#    image: ghcr.io/adnanh/webhook:latest
+    image: almir/webhook:latest
+    container_name: deploy-webhook
+    command: ["-hooks=/hooks/hooks.json","-template","-port=9000","-verbose"]
+    environment:
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+    volumes:
+      - ./webhook:/hooks:ro
+      - ..:/stack                    # repo-root를 /stack에 마운트
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [edge]
+
+networks:
+  edge: {}
