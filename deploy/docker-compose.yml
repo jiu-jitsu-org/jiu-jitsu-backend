@@ -14,9 +14,16 @@ services:
     image: ghcr.io/jiu-jitsu-org/jiu-jitsu-backend-api:latest-develop
     container_name: app-api
     restart: unless-stopped
+    ports:
+      - "8080:8080"
     environment:
-      - JAVA_TOOL_OPTIONS=-Xms256m -Xmx512m
-    networks: [edge]
+      SPRING_PROFILES_ACTIVE: dev
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep UP || exit 1"]
+      interval: 30s
+      timeout: 3s
+      start_period: 30s
+    pull_policy: always  # Compose v2 기능: 항상 최신으로 풀
 
   webhook:
 #    image: ghcr.io/adnanh/webhook:latest
