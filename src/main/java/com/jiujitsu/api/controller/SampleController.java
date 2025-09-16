@@ -101,7 +101,7 @@ public class SampleController {
             @ApiResponse(responseCode = "400", description = "Invalid name parameter",
                     content = @Content)
     })
-    @GetMapping("/chanq")
+    @GetMapping("/testchanq")
     public ResponseEntity<Map<String, String>> getChanq(
             @Parameter(description = "Name of the person to greet", example = "John")
             @RequestParam(defaultValue = "World") String name) {
