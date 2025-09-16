@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
 LOCK="/tmp/deploy.lock"
 if ! mkdir "$LOCK" 2>/dev/null; then

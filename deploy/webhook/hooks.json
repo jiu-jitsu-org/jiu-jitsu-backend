@@ -3,7 +3,7 @@
   {
     "id": "redeploy",
     "execute-command": "/hooks/deploy.sh",
-    "command-working-directory": "/stack",
+    "command-working-directory": "/stack/deploy",
     "pass-environment-to-command": [
       { "envname": "HOOK_REF",   "source": "payload", "name": "ref" },
       { "envname": "HOOK_EVENT", "source": "header",  "name": "X-GitHub-Event" },
