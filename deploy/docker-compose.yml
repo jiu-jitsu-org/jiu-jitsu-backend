@@ -27,17 +27,35 @@ services:
     pull_policy: always
     networks: [edge]
 
+#  webhook:
+#    image: almir/webhook:latest
+#    container_name: deploy-webhook
+#    command: ["-hooks=/hooks/hooks.json","-template","-port=9000","-verbose"]
+#    environment:
+#      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+#    volumes:
+#      - ./webhook:/hooks:ro
+#      - ..:/stack
+#      - /var/run/docker.sock:/var/run/docker.sock
+#    networks: [edge]
+
   webhook:
-    image: almir/webhook:latest
+    build:
+      context: ./webhook
+      dockerfile: Dockerfile
+    image: webhook-with-docker:latest   # 선택(캐싱/표시용)
     container_name: deploy-webhook
-    command: ["-hooks=/hooks/hooks.json","-template","-port=9000","-verbose"]
+    command: [ "-hooks=/hooks/hooks.json","-template","-port=9000","-verbose" ]
     environment:
       - WEBHOOK_SECRET=${WEBHOOK_SECRET}
     volumes:
       - ./webhook:/hooks:ro
       - ..:/stack
       - /var/run/docker.sock:/var/run/docker.sock
-    networks: [edge]
+    networks: [ edge ]
+    restart: unless-stopped
+
+
 
 networks:
   edge: {}

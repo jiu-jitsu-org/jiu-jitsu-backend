@@ -7,13 +7,9 @@ if ! mkdir "$LOCK" 2>/dev/null; then
 fi
 trap 'rmdir "$LOCK"' EXIT
 
-WORKDIR="/stack/deploy"
-COMPOSE="docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v $WORKDIR:$WORKDIR -w $WORKDIR \
-  docker/compose:2.29.2"
+cd /stack/deploy
 
-echo "[deploy] pull & recreate 'api' in $WORKDIR"
-$COMPOSE pull api
-$COMPOSE up -d --force-recreate api
+echo "[deploy] docker compose pull && up -d (api)"
+docker compose pull api
+docker compose up -d --force-recreate api
 echo "[deploy] done"
