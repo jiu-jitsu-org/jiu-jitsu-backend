@@ -48,6 +48,8 @@ services:
     command: [ "-hooks=/hooks/hooks.json","-template","-port=9000","-verbose" ]
     environment:
       - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - GHCR_USERNAME=${GHCR_USERNAME}
+      - GHCR_PAT=${GHCR_PAT}
     volumes:
       - ./webhook:/hooks:ro
       - ..:/stack
