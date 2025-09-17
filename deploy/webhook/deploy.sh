@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 set -eu
 
 LOCK="/tmp/deploy.lock"
@@ -7,8 +7,13 @@ if ! mkdir "$LOCK" 2>/dev/null; then
 fi
 trap 'rmdir "$LOCK"' EXIT
 
-echo "[deploy] git pull은 불필요 (이미지 배포 방식)"
-echo "[deploy] docker compose pull && up -d"
-docker compose pull
-docker compose up -d
+WORKDIR="/stack/deploy"
+COMPOSE="docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $WORKDIR:$WORKDIR -w $WORKDIR \
+  docker/compose:2.29.2"
+
+echo "[deploy] pull & recreate 'api' in $WORKDIR"
+$COMPOSE pull api
+$COMPOSE up -d --force-recreate api
 echo "[deploy] done"
