@@ -61,7 +61,7 @@
         {
           "match": {
             "type": "value",
-            "value": "jiu-jitsu-org/jiu-jitsu-backend",
+            "value": "jiu-jitsu-backend",
             "parameter": { "source": "payload", "name": "repository.full_name" }
           }
         },
