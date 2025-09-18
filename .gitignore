@@ -35,3 +35,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Deploy ###
+deploy/.env
+deploy/webhook/*.secret
+deploy/docker-compose.local.yml
