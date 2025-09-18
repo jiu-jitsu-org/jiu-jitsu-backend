@@ -1,13 +1,14 @@
-
 [
   {
     "id": "redeploy",
     "execute-command": "/hooks/deploy.sh",
     "command-working-directory": "/stack/deploy",
     "pass-environment-to-command": [
-      { "envname": "HOOK_REF",   "source": "payload", "name": "ref" },
       { "envname": "HOOK_EVENT", "source": "header",  "name": "X-GitHub-Event" },
-      { "envname": "HOOK_REPO",  "source": "payload", "name": "repository.full_name" }
+      { "envname": "WF_NAME",    "source": "payload", "name": "workflow_run.name" },
+      { "envname": "WF_BRANCH",  "source": "payload", "name": "workflow_run.head_branch" },
+      { "envname": "WF_STATUS",  "source": "payload", "name": "workflow_run.status" },
+      { "envname": "WF_RESULT",  "source": "payload", "name": "workflow_run.conclusion" }
     ],
     "trigger-rule": {
       "and": [
@@ -21,15 +22,36 @@
         {
           "match": {
             "type": "value",
-            "value": "push",
+            "value": "workflow_run",
             "parameter": { "source": "header", "name": "X-GitHub-Event" }
           }
         },
         {
           "match": {
             "type": "value",
-            "value": "refs/heads/develop",
-            "parameter": { "source": "payload", "name": "ref" }
+            "value": "completed",
+            "parameter": { "source": "payload", "name": "action" }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "success",
+            "parameter": { "source": "payload", "name": "workflow_run.conclusion" }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "develop",
+            "parameter": { "source": "payload", "name": "workflow_run.head_branch" }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "Build & Push to GHCR",
+            "parameter": { "source": "payload", "name": "workflow_run.name" }
           }
         }
       ]
