@@ -35,7 +35,7 @@ public class SampleController {
             @RequestParam(defaultValue = "World") String name) {
         
         Map<String, String> response = new HashMap<>();
-        response.put("message", "Hello, " + name + "@@@@@");
+        response.put("message", "Hello, " + name + "!");
         response.put("timestamp", java.time.LocalDateTime.now().toString());
         
         return ResponseEntity.ok(response);
@@ -87,29 +87,6 @@ public class SampleController {
         response.put("description", "This is a sample item");
         response.put("created_at", java.time.LocalDateTime.now().minusDays(1).toString());
         
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(
-            summary = "Get a greeting message",
-            description = "Returns a personalized greeting message"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved greeting",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Map.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid name parameter",
-                    content = @Content)
-    })
-    @GetMapping("/testchanq")
-    public ResponseEntity<Map<String, String>> getChanq(
-            @Parameter(description = "Name of the person to greet", example = "John")
-            @RequestParam(defaultValue = "World") String name) {
-
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Hello, ChanQ TEST@@@@@@ " + name + "!");
-        response.put("timestamp", java.time.LocalDateTime.now().toString());
-
         return ResponseEntity.ok(response);
     }
 }

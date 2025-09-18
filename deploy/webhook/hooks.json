@@ -28,7 +28,7 @@
         {
           "match": {
             "type": "value",
-            "value": "refs/heads/feat/dev-deploy-setting",
+            "value": "refs/heads/develop",
             "parameter": { "source": "payload", "name": "ref" }
           }
         }

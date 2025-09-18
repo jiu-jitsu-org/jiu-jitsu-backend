@@ -27,18 +27,6 @@ services:
     pull_policy: always
     networks: [edge]
 
-#  webhook:
-#    image: almir/webhook:latest
-#    container_name: deploy-webhook
-#    command: ["-hooks=/hooks/hooks.json","-template","-port=9000","-verbose"]
-#    environment:
-#      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
-#    volumes:
-#      - ./webhook:/hooks:ro
-#      - ..:/stack
-#      - /var/run/docker.sock:/var/run/docker.sock
-#    networks: [edge]
-
   webhook:
     build:
       context: ./webhook
