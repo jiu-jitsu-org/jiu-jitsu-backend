@@ -16,6 +16,7 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import org.springdoc.core.customizers.OperationCustomizer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.HandlerMethod;
@@ -28,6 +29,8 @@ import java.util.stream.Collectors;
 
 @Configuration
 public class SwaggerConfig {
+    @Value("${springdoc.swagger.server.url}")
+    private String swaggerServerUrl;
 
     @Bean
     public OpenAPI customOpenAPI() {
@@ -38,11 +41,8 @@ public class SwaggerConfig {
                         .version("1.0.0"))
                 .servers(List.of(
                         new Server()
-                                .url("http://localhost:8080")
-                                .description("Development server"),
-                        new Server()
-                                .url("https://api.jiujitsu.com")
-                                .description("Production server")
+                                .url(swaggerServerUrl)
+                                .description("주짓수 server")
                 ))
                 .components(new Components()
                         .addSecuritySchemes("Bearer Authentication",
