@@ -1,0 +1,7 @@
+.git
+deploy
+node_modules
+build
+.gradle
+*.iml
+*.log
