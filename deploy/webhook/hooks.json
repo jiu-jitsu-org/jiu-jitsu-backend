@@ -1,0 +1,89 @@
+[
+  {
+    "id": "redeploy",
+    "execute-command": "/hooks/deploy.sh",
+    "command-working-directory": "/stack/deploy",
+    "pass-environment-to-command": [
+      { "envname": "HOOK_EVENT",   "source": "header",  "name": "X-GitHub-Event" },
+      { "envname": "WF_NAME",      "source": "payload", "name": "workflow_run.name" },
+      { "envname": "WF_BRANCH",    "source": "payload", "name": "workflow_run.head_branch" },
+      { "envname": "WF_STATUS",    "source": "payload", "name": "workflow_run.status" },
+      { "envname": "WF_RESULT",    "source": "payload", "name": "workflow_run.conclusion" },
+      { "envname": "WF_EVENT",     "source": "payload", "name": "workflow_run.event" },
+      { "envname": "WF_RUN_ID",    "source": "payload", "name": "workflow_run.id" },
+      { "envname": "WF_HEAD_SHA",  "source": "payload", "name": "workflow_run.head_sha" },
+      { "envname": "HOOK_REPO",    "source": "payload", "name": "repository.full_name" }
+    ],
+    "trigger-rule": {
+      "and": [
+        {
+          "match": {
+            "type": "payload-hmac-sha256",
+            "secret": "{{ getenv `WEBHOOK_SECRET` }}",
+            "parameter": { "source": "header", "name": "X-Hub-Signature-256" }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "workflow_run",
+            "parameter": { "source": "header", "name": "X-GitHub-Event" }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "completed",
+            "parameter": { "source": "payload", "name": "action" }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "success",
+            "parameter": { "source": "payload", "name": "workflow_run.conclusion" }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "develop",
+            "parameter": { "source": "payload", "name": "workflow_run.head_branch" }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "Build & Push to GHCR",
+            "parameter": { "source": "payload", "name": "workflow_run.name" }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "jiu-jitsu-org/jiu-jitsu-backend",
+            "parameter": { "source": "payload", "name": "repository.full_name" }
+          }
+        },
+        {
+          "or": [
+            {
+              "match": {
+                "type": "value",
+                "value": "push",
+                "parameter": { "source": "payload", "name": "workflow_run.event" }
+              }
+            },
+            {
+              "match": {
+                "type": "value",
+                "value": "workflow_dispatch",
+                "parameter": { "source": "payload", "name": "workflow_run.event" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

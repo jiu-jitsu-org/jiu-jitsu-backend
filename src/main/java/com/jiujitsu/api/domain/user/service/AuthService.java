@@ -1,10 +1,6 @@
 package com.jiujitsu.api.domain.user.service;
 
-import com.jiujitsu.api.domain.user.dto.AuthResponse;
-import com.jiujitsu.api.domain.user.dto.LogoutRequest;
-import com.jiujitsu.api.domain.user.dto.LogoutResponse;
-import com.jiujitsu.api.domain.user.dto.SnsLoginRequest;
-import com.jiujitsu.api.domain.user.dto.SnsUserInfo;
+import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
@@ -41,6 +37,21 @@ public class AuthService {
         User user = userRepository.findBySnsProviderAndSnsId(request.getSnsProvider(), snsUserInfo.getSnsId())
                 .orElseGet(() -> createNewUser(request.getSnsProvider(), snsUserInfo));
 
+        boolean deactivatedWithinGrace = false;
+
+        // 탈퇴 계정 처리: 30일 이내 재로그인 시 복구, 만료 시 에러
+        if (user.getStatus() == UserStatus.DELETED) {
+            if (user.isWithinGracePeriod()) {
+                // 복구 처리
+                user.updateStatus(UserStatus.ACTIVE); // 내부에서 deletedAt null 처리
+                userRepository.save(user);
+                deactivatedWithinGrace = true;
+            } else {
+                // 이미 30일 경과하여 계정 만료
+                throw new ErrorException(ErrorCode.USER_ACCOUNT_EXPIRED);
+            }
+        }
+
         // 사용자 정보 업데이트 (프로필 정보가 변경되었을 수 있음)
         updateUserInfo(user, snsUserInfo);
 
@@ -54,7 +65,8 @@ public class AuthService {
                 user.getEmail(),
                 user.getNickname(),
                 user.getProfileImageUrl(),
-                user.getSnsProvider().name()
+                user.getSnsProvider().name(),
+                deactivatedWithinGrace
         );
 
         return new AuthResponse(accessToken, refreshToken, userInfo);
@@ -124,7 +136,8 @@ public class AuthService {
                 user.getEmail(),
                 user.getNickname(),
                 user.getProfileImageUrl(),
-                user.getSnsProvider().name()
+                user.getSnsProvider().name(),
+                false
         );
 
         return new AuthResponse(newAccessToken, newRefreshToken, userInfo);
@@ -135,9 +148,6 @@ public class AuthService {
         if (request.getAccessToken() != null && !request.getAccessToken().trim().isEmpty()) {
             if (jwtTokenProvider.validateToken(request.getAccessToken())) {
                 tokenBlacklistService.blacklistToken(request.getAccessToken());
-                log.info("Access token blacklisted for logout");
-            } else {
-                log.warn("Invalid access token provided for logout");
             }
         }
 
@@ -145,9 +155,6 @@ public class AuthService {
         if (request.getRefreshToken() != null && !request.getRefreshToken().trim().isEmpty()) {
             if (jwtTokenProvider.validateToken(request.getRefreshToken())) {
                 tokenBlacklistService.blacklistToken(request.getRefreshToken());
-                log.info("Refresh token blacklisted for logout");
-            } else {
-                log.warn("Invalid refresh token provided for logout");
             }
         }
 

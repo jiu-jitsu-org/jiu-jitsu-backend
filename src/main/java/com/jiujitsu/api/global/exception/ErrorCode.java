@@ -19,6 +19,8 @@ public enum ErrorCode {
     LOGIN_NOT_ACCESS(403, "U0001", "로그인이 필요한 서비스입니다. 로그인을 해주세요."),
     USER_NOT_FOUND(401, "U0002", "존재하지 않는 유저입니다."),
     PERMISSION_DENIED(403, "U0003", "권한이 없습니다."),
+    USER_ALREADY_DEACTIVATED(400, "U0004", "이미 탈퇴 처리된 계정입니다."),
+    USER_ACCOUNT_EXPIRED(400, "U0005", "탈퇴 후 30일이 지나 계정이 영구 삭제되었습니다."),
 
     /**
      * 인증 에러

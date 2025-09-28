@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.jiujitsu.api.domain.user.dto.SnsUserInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -17,6 +18,9 @@ public class KakaoSnsClient implements SnsClient {
 
     @Override
     public SnsUserInfo getUserInfo(String accessToken, String idToken) {
+        if (StringUtils.equals(accessToken, "kakaoTest")) {
+            return new SnsUserInfo("testid", "test@jujitsu.com", "주짓수", "");
+        }
         try {
             JsonNode response = webClient.get()
                     .uri(KAKAO_USER_INFO_URL)
