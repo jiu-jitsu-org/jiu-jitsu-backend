@@ -55,6 +55,9 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column
+    private LocalDateTime deletedAt;
+
     public void updateProfile(String nickname, String profileImageUrl) {
         if (nickname != null && !nickname.trim().isEmpty()) {
             this.nickname = nickname;
@@ -66,5 +69,18 @@ public class User {
 
     public void updateStatus(UserStatus status) {
         this.status = status;
+        if (status == UserStatus.DELETED) {
+            this.deletedAt = LocalDateTime.now();
+        } else if (status == UserStatus.ACTIVE) {
+            this.deletedAt = null;
+        }
+    }
+
+    public boolean isWithinGracePeriod() {
+        return deletedAt != null && deletedAt.plusDays(30).isAfter(LocalDateTime.now());
+    }
+
+    public boolean isGracePeriodExpired() {
+        return deletedAt != null && LocalDateTime.now().isAfter(deletedAt.plusDays(30));
     }
 }

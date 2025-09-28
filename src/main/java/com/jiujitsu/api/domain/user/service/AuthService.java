@@ -37,6 +37,21 @@ public class AuthService {
         User user = userRepository.findBySnsProviderAndSnsId(request.getSnsProvider(), snsUserInfo.getSnsId())
                 .orElseGet(() -> createNewUser(request.getSnsProvider(), snsUserInfo));
 
+        boolean deactivatedWithinGrace = false;
+
+        // 탈퇴 계정 처리: 30일 이내 재로그인 시 복구, 만료 시 에러
+        if (user.getStatus() == UserStatus.DELETED) {
+            if (user.isWithinGracePeriod()) {
+                // 복구 처리
+                user.updateStatus(UserStatus.ACTIVE); // 내부에서 deletedAt null 처리
+                userRepository.save(user);
+                deactivatedWithinGrace = true;
+            } else {
+                // 이미 30일 경과하여 계정 만료
+                throw new ErrorException(ErrorCode.USER_ACCOUNT_EXPIRED);
+            }
+        }
+
         // 사용자 정보 업데이트 (프로필 정보가 변경되었을 수 있음)
         updateUserInfo(user, snsUserInfo);
 
@@ -50,7 +65,8 @@ public class AuthService {
                 user.getEmail(),
                 user.getNickname(),
                 user.getProfileImageUrl(),
-                user.getSnsProvider().name()
+                user.getSnsProvider().name(),
+                deactivatedWithinGrace
         );
 
         return new AuthResponse(accessToken, refreshToken, userInfo);
@@ -120,7 +136,8 @@ public class AuthService {
                 user.getEmail(),
                 user.getNickname(),
                 user.getProfileImageUrl(),
-                user.getSnsProvider().name()
+                user.getSnsProvider().name(),
+                false
         );
 
         return new AuthResponse(newAccessToken, newRefreshToken, userInfo);
