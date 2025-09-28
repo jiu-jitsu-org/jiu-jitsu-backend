@@ -46,11 +46,12 @@ public class UserController {
 
     @Operation(
             summary = "회원 탈퇴",
-            description = "현재 로그인한 사용자의 계정을 삭제합니다."
+            description = "현재 로그인한 사용자의 계정을 비활성화합니다. 30일 이내에 로그인하면 계정을 복구할 수 있습니다."
     )
-    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
+    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.USER_ALREADY_DEACTIVATED})
     @DeleteMapping("/account")
-    public void deleteUser() {
-        userService.deleteUser();
+    public ResponseEntity<String> deactivateUser() {
+        userService.deactivateUser();
+        return ResponseEntity.ok("회원 탈퇴가 완료되었습니다. 30일 이내에 로그인하시면 계정을 복구하실 수 있습니다.");
     }
 }

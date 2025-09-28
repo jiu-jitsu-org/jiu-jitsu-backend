@@ -36,5 +36,8 @@ public class AuthResponse {
 
         @Schema(description = "SNS 제공자", example = "KAKAO")
         private String snsProvider;
+
+        @Schema(description = "탈퇴 회원 여부 (30일 이내 재로그인으로 복구된 경우 true)", example = "true")
+        private boolean deactivatedWithinGrace;
     }
 }
