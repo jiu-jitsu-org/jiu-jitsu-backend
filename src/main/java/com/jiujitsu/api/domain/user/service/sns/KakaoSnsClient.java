@@ -17,7 +17,7 @@ public class KakaoSnsClient implements SnsClient {
     private static final String KAKAO_USER_INFO_URL = "https://kapi.kakao.com/v2/user/me";
 
     @Override
-    public SnsUserInfo getUserInfo(String accessToken, String idToken) {
+    public SnsUserInfo getUserInfo(String accessToken) {
         if (StringUtils.equals(accessToken, "kakaoTest")) {
             return new SnsUserInfo("testid", "test@jujitsu.com", "주짓수", "");
         }

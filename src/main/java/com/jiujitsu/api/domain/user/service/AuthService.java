@@ -31,7 +31,7 @@ public class AuthService {
     public AuthResponse snsLogin(SnsLoginRequest request) {
         // SNS 클라이언트를 통해 사용자 정보 조회
         SnsClient snsClient = snsClientFactory.getClient(request.getSnsProvider());
-        SnsUserInfo snsUserInfo = snsClient.getUserInfo(request.getAccessToken(), request.getIdToken());
+        SnsUserInfo snsUserInfo = snsClient.getUserInfo(request.getAccessToken());
 
         // 기존 사용자 조회 또는 새 사용자 생성
         User user = userRepository.findBySnsProviderAndSnsId(request.getSnsProvider(), snsUserInfo.getSnsId())

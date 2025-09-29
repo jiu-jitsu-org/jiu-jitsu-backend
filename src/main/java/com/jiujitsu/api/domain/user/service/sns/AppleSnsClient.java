@@ -17,14 +17,14 @@ public class AppleSnsClient implements SnsClient {
     private final ObjectMapper objectMapper;
 
     @Override
-    public SnsUserInfo getUserInfo(String accessToken, String idToken) {
+    public SnsUserInfo getUserInfo(String accessToken) {
         try {
-            if (idToken == null || idToken.trim().isEmpty()) {
+            if (accessToken == null || accessToken.trim().isEmpty()) {
                 throw new RuntimeException("Apple 로그인에는 ID 토큰이 필요합니다");
             }
 
             // JWT ID 토큰에서 사용자 정보 추출
-            String[] tokenParts = idToken.split("\\.");
+            String[] tokenParts = accessToken.split("\\.");
             if (tokenParts.length != 3) {
                 throw new RuntimeException("유효하지 않은 Apple ID 토큰입니다");
             }
