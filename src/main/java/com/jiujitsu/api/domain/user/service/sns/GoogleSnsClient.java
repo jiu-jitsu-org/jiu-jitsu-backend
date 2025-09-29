@@ -16,7 +16,7 @@ public class GoogleSnsClient implements SnsClient {
     private static final String GOOGLE_USER_INFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
 
     @Override
-    public SnsUserInfo getUserInfo(String accessToken, String idToken) {
+    public SnsUserInfo getUserInfo(String accessToken) {
         try {
             JsonNode response = webClient.get()
                     .uri(GOOGLE_USER_INFO_URL)
