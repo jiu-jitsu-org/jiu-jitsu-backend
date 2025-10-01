@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ENDPOINT_ADMIN")
+                        .requestMatchers("/favicon.ico").permitAll()
                         .requestMatchers("/api/user/**").authenticated()
                         .anyRequest().permitAll()
                 )
