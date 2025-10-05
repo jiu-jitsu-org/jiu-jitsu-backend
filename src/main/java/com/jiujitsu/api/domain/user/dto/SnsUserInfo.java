@@ -10,4 +10,10 @@ public class SnsUserInfo {
     private String email;
     private String nickname;
     private String profileImageUrl;
+
+    public SnsUserInfo(String snsId, String email) {
+        this.snsId = snsId;
+        this.email = email;
+    }
 }
+

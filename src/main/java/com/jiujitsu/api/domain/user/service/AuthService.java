@@ -73,11 +73,6 @@ public class AuthService {
     }
 
     private User createNewUser(SnsProvider snsProvider, SnsUserInfo snsUserInfo) {
-        // 이메일 중복 체크
-        if (snsUserInfo.getEmail() != null && userRepository.existsByEmail(snsUserInfo.getEmail())) {
-            throw new RuntimeException("이미 등록된 이메일입니다: " + snsUserInfo.getEmail());
-        }
-
         User newUser = User.builder()
                 .email(snsUserInfo.getEmail())
                 .nickname(snsUserInfo.getNickname())

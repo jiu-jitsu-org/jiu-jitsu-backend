@@ -2,6 +2,8 @@ package com.jiujitsu.api.domain.user.service.sns;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.jiujitsu.api.domain.user.dto.SnsUserInfo;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -30,23 +32,18 @@ public class KakaoSnsClient implements SnsClient {
                     .block();
 
             if (response == null) {
-                throw new RuntimeException("카카오 사용자 정보를 가져올 수 없습니다");
+                throw new ErrorException(ErrorCode.INVALID_TOKEN);
             }
 
             String snsId = response.get("id").asText();
             JsonNode kakaoAccount = response.get("kakao_account");
-            JsonNode profile = kakaoAccount.get("profile");
-
             String email = kakaoAccount.has("email") ? kakaoAccount.get("email").asText() : null;
-            String nickname = profile.has("nickname") ? profile.get("nickname").asText() : "카카오 사용자";
-            String profileImageUrl = profile.has("profile_image_url") ? 
-                    profile.get("profile_image_url").asText() : null;
 
-            return new SnsUserInfo(snsId, email, nickname, profileImageUrl);
+            return new SnsUserInfo(snsId, email);
 
         } catch (Exception e) {
-            log.error("카카오 사용자 정보 조회 실패", e);
-            throw new RuntimeException("카카오 로그인 처리 중 오류가 발생했습니다", e);
+            log.error("구글 사용자 정보 조회 실패", e);
+            throw new ErrorException(ErrorCode.KEY_PARSING_ERROR);
         }
     }
 }

@@ -1,6 +1,9 @@
 package com.jiujitsu.api.global.security;
 
-import io.jsonwebtoken.*;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,12 +34,9 @@ public class JwtTokenProvider {
         Date now = new Date();
         Date validity = new Date(now.getTime() + accessTokenValidityInMilliseconds);
 
-        return Jwts.builder()
-                .subject(userId.toString())
+        return Jwts.builder().subject(userId.toString())
                 .claim("email", email)
-                .claim("type", "access")
-                .issuedAt(now)
-                .expiration(validity)
+                .claim("type", "access").issuedAt(now).expiration(validity)
                 .signWith(secretKey)
                 .compact();
     }
@@ -73,7 +73,7 @@ public class JwtTokenProvider {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        
+
         return Long.valueOf(claims.getSubject());
     }
 
