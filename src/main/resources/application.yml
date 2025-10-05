@@ -51,6 +51,8 @@ springdoc:
     path: /swagger-ui.html
     server:
       url: http://localhost:8080
+apple:
+  filePath: ./jiujitsuLab_AuthKey_Z3HRNZG68M.p8
 ---
 server:
   port: 8080
@@ -74,7 +76,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
 
@@ -92,3 +94,5 @@ springdoc:
     path: /swagger-ui.html
     server:
       url: https://api.developer-chanq.xyz/
+apple:
+  filePath: ./jiujitsuLab_AuthKey_Z3HRNZG68M.p8
