@@ -35,14 +35,9 @@ public class KakaoSnsClient implements SnsClient {
 
             String snsId = response.get("id").asText();
             JsonNode kakaoAccount = response.get("kakao_account");
-            JsonNode profile = kakaoAccount.get("profile");
-
             String email = kakaoAccount.has("email") ? kakaoAccount.get("email").asText() : null;
-            String nickname = profile.has("nickname") ? profile.get("nickname").asText() : "카카오 사용자";
-            String profileImageUrl = profile.has("profile_image_url") ? 
-                    profile.get("profile_image_url").asText() : null;
 
-            return new SnsUserInfo(snsId, email, nickname, profileImageUrl);
+            return new SnsUserInfo(snsId, email);
 
         } catch (Exception e) {
             log.error("카카오 사용자 정보 조회 실패", e);

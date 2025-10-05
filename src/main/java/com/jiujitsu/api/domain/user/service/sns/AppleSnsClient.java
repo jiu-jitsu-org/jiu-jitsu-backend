@@ -35,13 +35,8 @@ public class AppleSnsClient implements SnsClient {
 
             String snsId = claims.get("sub").asText();
             String email = claims.has("email") ? claims.get("email").asText() : null;
-            
-            // Apple은 이름과 프로필 이미지를 ID 토큰에 포함하지 않음
-            // 앱에서 처음 로그인 시 별도로 전달받아야 함
-            String nickname = "Apple 사용자";
-            String profileImageUrl = null;
 
-            return new SnsUserInfo(snsId, email, nickname, profileImageUrl);
+            return new SnsUserInfo(snsId, email);
 
         } catch (Exception e) {
             log.error("Apple 사용자 정보 조회 실패", e);

@@ -31,10 +31,8 @@ public class GoogleSnsClient implements SnsClient {
 
             String snsId = response.get("id").asText();
             String email = response.has("email") ? response.get("email").asText() : null;
-            String nickname = response.has("name") ? response.get("name").asText() : "구글 사용자";
-            String profileImageUrl = response.has("picture") ? response.get("picture").asText() : null;
 
-            return new SnsUserInfo(snsId, email, nickname, profileImageUrl);
+            return new SnsUserInfo(snsId, email);
 
         } catch (Exception e) {
             log.error("구글 사용자 정보 조회 실패", e);
