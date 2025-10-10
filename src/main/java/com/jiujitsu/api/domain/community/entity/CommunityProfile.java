@@ -64,6 +64,9 @@ public class CommunityProfile {
     @Column(length = 100)
     private String bestTechnique;
 
+    @Column
+    private Boolean weightHidden;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -82,5 +85,6 @@ public class CommunityProfile {
         this.competitionName = source.competitionName;
         this.favoriteTechnique = source.favoriteTechnique;
         this.bestTechnique = source.bestTechnique;
+        this.weightHidden = source.getWeightHidden();
     }
 }

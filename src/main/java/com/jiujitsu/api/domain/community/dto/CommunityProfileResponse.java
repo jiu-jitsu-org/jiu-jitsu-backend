@@ -40,6 +40,9 @@ public class CommunityProfileResponse {
     @Schema(description = "자신있는 기술", example = "Armbar")
     private String bestTechnique;
 
+    @Schema(description = "체급 숨기기 여부")
+    private Boolean isWeightHidden;
+
     public CommunityProfileResponse(CommunityProfile profile) {
         this.beltRank = profile.getBeltRank();
         this.beltStripe = profile.getBeltStripe();
@@ -50,5 +53,6 @@ public class CommunityProfileResponse {
         this.competitionName = profile.getCompetitionName();
         this.favoriteTechnique = profile.getFavoriteTechnique();
         this.bestTechnique = profile.getBestTechnique();
+        this.isWeightHidden = profile.getWeightHidden();
     }
 }

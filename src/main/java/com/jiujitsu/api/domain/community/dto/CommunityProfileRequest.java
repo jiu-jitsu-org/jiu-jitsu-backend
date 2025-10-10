@@ -53,4 +53,7 @@ public class CommunityProfileRequest {
     @Size(max = 100)
     @Schema(description = "자신있는 기술", example = "Armbar")
     private String bestTechnique;
+
+    @Schema(description = "체급 숨기기 여부")
+    private Boolean isWeightHidden;
 }

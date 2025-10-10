@@ -24,7 +24,7 @@ public class CommunityProfileController {
 
     @Operation(
             summary = "내 커뮤니티 프로필 조회",
-            description = "현재 로그인한 사용자의 커뮤니티 프로필을 조회합니다. 존재하지 않으면 204를 반환합니다."
+            description = "현재 로그인한 사용자의 커뮤니티 프로필을 조회합니다."
     )
     @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
     @GetMapping("/me")

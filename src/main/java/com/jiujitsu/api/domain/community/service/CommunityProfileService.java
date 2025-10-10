@@ -51,6 +51,7 @@ public class CommunityProfileService {
                     .competitionName(request.getCompetitionName())
                     .favoriteTechnique(request.getFavoriteTechnique())
                     .bestTechnique(request.getBestTechnique())
+                    .weightHidden(request.getIsWeightHidden())
                     .build();
         } else {
             CommunityProfile patch = CommunityProfile.builder()
@@ -63,6 +64,7 @@ public class CommunityProfileService {
                     .competitionName(request.getCompetitionName())
                     .favoriteTechnique(request.getFavoriteTechnique())
                     .bestTechnique(request.getBestTechnique())
+                    .weightHidden(request.getIsWeightHidden())
                     .build();
             profile.update(patch);
         }
