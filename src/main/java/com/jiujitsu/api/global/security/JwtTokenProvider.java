@@ -1,6 +1,8 @@
 package com.jiujitsu.api.global.security;
 
 
+import com.auth0.jwt.interfaces.Claim;
+import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -65,6 +67,30 @@ public class JwtTokenProvider {
             log.debug("Invalid JWT token: {}", e.getMessage());
             return false;
         }
+    }
+
+    public String createTemporaryToken(String userId, String email, SnsProvider snsProvider) {
+        Date now = new Date();
+        long temporaryTokenValidityInMilliseconds = 5 * 60 * 1000; // 5분
+        Date validity = new Date(now.getTime() + temporaryTokenValidityInMilliseconds);
+
+        return Jwts.builder()
+                .subject(userId)
+                .claim("email", email)
+                .claim("type", "temporary")
+                .claim("snsProvider", snsProvider)
+                .issuedAt(now)
+                .expiration(validity)
+                .signWith(secretKey)
+                .compact();
+    }
+
+    public Claims getJWTClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     public Long getUserIdFromToken(String token) {

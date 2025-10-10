@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class UpdateProfileRequest {
 
     @NotBlank(message = "닉네임은 필수입니다")
-    @Size(min = 2, max = 20, message = "닉네임은 2자 이상 20자 이하여야 합니다")
+    @Size(min = 2, max = 12, message = "닉네임은 2자 이상 12자 이하여야 합니다")
     @Schema(description = "사용자 닉네임", example = "홍길동")
     private String nickname;
 
