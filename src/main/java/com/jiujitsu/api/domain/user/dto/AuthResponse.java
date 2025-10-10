@@ -1,13 +1,22 @@
 package com.jiujitsu.api.domain.user.dto;
 
+import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @AllArgsConstructor
+@NoArgsConstructor
 @Schema(description = "인증 응답")
 public class AuthResponse {
+
+    @Schema(description = "신규회원 여부")
+    private Boolean isNewUser;
+
+    @Schema(description = "신규회원 임시 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    private String tempToken;
 
     @Schema(description = "JWT 액세스 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     private String accessToken;
@@ -17,6 +26,18 @@ public class AuthResponse {
 
     @Schema(description = "사용자 정보")
     private UserInfo userInfo;
+
+    public AuthResponse(String accessToken, String refreshToken, UserInfo userInfo) {
+        this.isNewUser = false;
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.userInfo = userInfo;
+    }
+
+    public AuthResponse(String tempToken) {
+        this.isNewUser = true;
+        this.tempToken = tempToken;
+    }
 
     @Getter
     @AllArgsConstructor
@@ -35,7 +56,7 @@ public class AuthResponse {
         private String profileImageUrl;
 
         @Schema(description = "SNS 제공자", example = "KAKAO")
-        private String snsProvider;
+        private SnsProvider snsProvider;
 
         @Schema(description = "탈퇴 회원 여부 (30일 이내 재로그인으로 복구된 경우 true)", example = "true")
         private boolean deactivatedWithinGrace;
