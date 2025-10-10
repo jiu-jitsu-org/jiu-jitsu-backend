@@ -33,7 +33,7 @@ public class AuthService {
         SnsClient snsClient = snsClientFactory.getClient(request.getSnsProvider());
         SnsUserInfo snsUserInfo = snsClient.getUserInfo(request.getAccessToken());
 
-        // 기존 사용자 조회 또는 새 사용자 생성
+        // 기존 사용자 조회 또는 새 사용자 생성z
         User user = userRepository.findBySnsProviderAndSnsId(request.getSnsProvider(), snsUserInfo.getSnsId())
                 .orElseGet(() -> createNewUser(request.getSnsProvider(), snsUserInfo));
 
