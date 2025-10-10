@@ -40,6 +40,11 @@ public enum ErrorCode {
     AUTHENTICATION_FAILED(401, "A0010", "인증에 실패하였습니다."),
 
     /**
+     * 앱 버전 조회 에러
+     */
+    NO_APP_VERSION_DATA(400, "V0001", "데이터가 존재하지 않습니다."),
+
+    /**
      * 서버 에러
      */
     INVALID_DATA_FORMAT(400, "SY001", "잘못된 요청 데이터입니다."),
