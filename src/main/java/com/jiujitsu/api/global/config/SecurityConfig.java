@@ -33,7 +33,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ENDPOINT_ADMIN")
                         .requestMatchers("/favicon.ico").permitAll()
-                        .requestMatchers("/api/user/**").authenticated()
+//                        .requestMatchers("/api/user/**").authenticated()
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

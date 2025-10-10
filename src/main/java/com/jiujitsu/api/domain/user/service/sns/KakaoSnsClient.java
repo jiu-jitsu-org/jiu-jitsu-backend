@@ -21,7 +21,7 @@ public class KakaoSnsClient implements SnsClient {
     @Override
     public SnsUserInfo getUserInfo(String accessToken) {
         if (StringUtils.equals(accessToken, "kakaoTest")) {
-            return new SnsUserInfo("testid", "test@jujitsu.com", "주짓수", "");
+            return new SnsUserInfo("testid", "test@jujitsu.com");
         }
         try {
             JsonNode response = webClient.get()

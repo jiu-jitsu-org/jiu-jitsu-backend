@@ -12,6 +12,8 @@ public enum ErrorCode {
      */
     REQUIRED_PARAMETER(400, "R0001", "필수값이 입력되지 않았습니다. 다시 확인해 주세요."),
     WRONG_PARAMETER(400, "R0002", "잘못된 요청 데이터입니다. 다시 확인해 주세요."),
+    NICKNAME_DUPLICATED(400, "R0003", "이미 사용중인 닉네임입니다."),
+    NICKNAME_VALIDATION(400, "R0004", "잘못된 닉네임 형식입니다."),
 
     /**
      * 유저 에러

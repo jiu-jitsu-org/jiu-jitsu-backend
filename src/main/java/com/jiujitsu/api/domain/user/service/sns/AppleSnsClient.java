@@ -42,19 +42,6 @@ public class AppleSnsClient implements SnsClient {
             JWTVerifier verifier = JWT.require(algorithm).build();
             DecodedJWT decodedJWT = verifier.verify(accessToken);
 
-            // JWT에서 이메일 추출
-//             decodedJWT.getClaim("email").asString();
-
-//            // JWT ID 토큰에서 사용자 정보 추출
-//            String[] tokenParts = accessToken.split("\\.");
-//            if (tokenParts.length != 3) {
-//                throw new RuntimeException("유효하지 않은 Apple ID 토큰입니다");
-//            }
-//
-//            // JWT payload 디코딩
-//            String payload = new String(Base64.getUrlDecoder().decode(tokenParts[1]));
-//            JsonNode claims = objectMapper.readTree(payload);
-
             String snsId = decodedJWT.getSubject();
             String email = decodedJWT.getClaim("email").asString();
 

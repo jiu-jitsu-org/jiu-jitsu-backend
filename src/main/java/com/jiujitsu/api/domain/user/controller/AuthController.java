@@ -23,12 +23,6 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @Operation(summary = "swagger test")
-    @GetMapping("/hi")
-    public String test() {
-        return "hi";
-    }
-
     @Operation(
             summary = "통합 SNS 로그인",
             description = "SNS 제공자와 토큰 정보를 포함한 통합 로그인 API입니다."
