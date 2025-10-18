@@ -1,7 +1,8 @@
 package com.jiujitsu.api.domain.boot_strap.controller;
 
-import com.jiujitsu.api.domain.boot_strap.dto.AppVersionRequest;
 import com.jiujitsu.api.domain.boot_strap.dto.AppVersionResponse;
+import com.jiujitsu.api.domain.boot_strap.dto.BootStrapRequest;
+import com.jiujitsu.api.domain.boot_strap.dto.BootStrapResponse;
 import com.jiujitsu.api.domain.boot_strap.service.AppVersionService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
@@ -17,9 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "[SYS] AppVersion", description = "강제업데이트, 선택업데이트")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
-@RequestMapping("/api/bootstrap/app-version")
+@RequestMapping("/api/bootstrap")
 @RequiredArgsConstructor
-public class AppVersionController {
+public class BootStrapController {
 
     private final AppVersionService appVersionService;
 
@@ -28,11 +29,16 @@ public class AppVersionController {
             description = "강제업데이트 유무 판단 및 최소 버전은 무조건 강제 업데이트 되도록"
     )
     @GetMapping("/info")
-    public AppVersionResponse appVersionInfo(
+    public BootStrapResponse bootStrapInfo(
             @Parameter(description = "Name of the Mobile OS", example = "ANDROID / IOS")
             @RequestParam(defaultValue = "ANDROID") String osName
     ) {
-        return appVersionService.checkAppVersion(new AppVersionRequest(osName));
+        AppVersionResponse appVersion = appVersionService.checkAppVersion(new BootStrapRequest(osName));
+
+        return new BootStrapResponse(
+                appVersion,
+                "여기는 테스트 데이터 =)"
+        );
     }
 
 }
