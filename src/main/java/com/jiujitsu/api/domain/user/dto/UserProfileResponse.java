@@ -12,7 +12,7 @@ import lombok.Getter;
 public class UserProfileResponse {
 
     @Schema(description = "사용자 ID", example = "1")
-    private Long id;
+    private Long userId;
 
     @Schema(description = "이메일", example = "user@example.com")
     private String email;
@@ -33,7 +33,7 @@ public class UserProfileResponse {
     private String status;
 
     public UserProfileResponse(User user) {
-        this.id = user.getId();
+        this.userId = user.getId();
         this.email = user.getEmail();
         this.nickname = user.getNickname();
         this.profileImageUrl = user.getProfileImageUrl();

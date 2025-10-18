@@ -17,5 +17,11 @@ public class SnsUserInfo {
         this.snsId = snsId;
         this.email = email;
     }
+
+    public SnsUserInfo(String snsId, String email, String nickname) {
+        this.snsId = snsId;
+        this.email = email;
+        this.nickname = nickname;
+    }
 }
 

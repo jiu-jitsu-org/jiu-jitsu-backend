@@ -3,7 +3,6 @@ package com.jiujitsu.api.domain.user.controller;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.service.UserService;
 import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "User", description = "사용자 정보 API")
+@Tag(name = "user-controller", description = "사용자 정보 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER})
 @RestController
 @RequestMapping("/api/user")
@@ -20,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+
     // todo: 1. 회원가입 테스트, 2. 약관동의 업데이트, 3. 프로필 변경,
     @Operation(
             summary = "회원 가입",

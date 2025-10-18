@@ -29,7 +29,7 @@ public class UserService {
     private final JwtTokenProvider jwtTokenProvider;
 
     public AuthResponse createUser(CreateProfileRequest createProfileRequest) {
-        String tempToken = createProfileRequest.getTempToken();
+        String tempToken = AuthenticationUtil.getCurrentToken();
         String nickname = StringUtils.trimToEmpty(createProfileRequest.getNickname());
 
         // 임시 토큰 정보
@@ -52,7 +52,8 @@ public class UserService {
         }
 
         // 회원정보 생성
-        User user = createNewUser(snsProvider, new SnsUserInfo(snsId, email));
+        User user = createNewUser(snsProvider, new SnsUserInfo(snsId, email, nickname));
+        userRepository.save(user);
 
         // 새로운 토큰 생성
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
@@ -134,7 +135,7 @@ public class UserService {
         User newUser = User.builder()
                 .email(snsUserInfo.getEmail())
                 .nickname(snsUserInfo.getNickname())
-                .profileImageUrl(snsUserInfo.getProfileImageUrl())
+                .profileImageUrl("default")
                 .snsProvider(snsProvider)
                 .snsId(snsUserInfo.getSnsId())
                 .role(UserRole.USER)

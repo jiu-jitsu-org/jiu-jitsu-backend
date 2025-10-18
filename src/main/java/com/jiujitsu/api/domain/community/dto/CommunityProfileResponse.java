@@ -1,17 +1,18 @@
 package com.jiujitsu.api.domain.community.dto;
 
-import com.jiujitsu.api.domain.community.entity.BeltRank;
-import com.jiujitsu.api.domain.community.entity.BeltStripe;
-import com.jiujitsu.api.domain.community.entity.CommunityProfile;
-import com.jiujitsu.api.domain.community.entity.Gender;
+import com.jiujitsu.api.domain.community.entity.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
-
-import java.math.BigDecimal;
 
 @Getter
 @Schema(description = "커뮤니티 프로필 응답")
 public class CommunityProfileResponse {
+
+    @Schema(description = "닉네임", example = "홍길동")
+    private String nickname;
+
+    @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.jpg")
+    private String profileImageUrl;
 
     @Schema(description = "벨트 등급", example = "BLUE")
     private BeltRank beltRank;
@@ -23,7 +24,7 @@ public class CommunityProfileResponse {
     private Gender gender;
 
     @Schema(description = "체급(kg, 소수점 1자리)", example = "76.5")
-    private BigDecimal weightKg;
+    private Double weightKg;
 
     @Schema(description = "소속 도장명", example = "Gracie Barra Seoul")
     private String academyName;
@@ -34,13 +35,30 @@ public class CommunityProfileResponse {
     @Schema(description = "대회(이름)", example = "ADCC Korea Trials")
     private String competitionName;
 
-    @Schema(description = "좋아하는 기술", example = "Triangle Choke")
-    private String favoriteTechnique;
+    @Schema(description = "특기 서브미션", example = "CHOKES")
+    private SubmissionType bestSubmission;
 
-    @Schema(description = "자신있는 기술", example = "Armbar")
-    private String bestTechnique;
+    @Schema(description = "최애 서브미션", example = "ARM_LOCKS")
+    private SubmissionType favoriteSubmission;
+
+    @Schema(description = "특기 기술", example = "SWEEPS")
+    private TechniqueType bestTechnique;
+
+    @Schema(description = "최애 기술", example = "GUARD_PASSES")
+    private TechniqueType favoriteTechnique;
+
+    @Schema(description = "특기 포지션", example = "TOP")
+    private PositionType bestPosition;
+
+    @Schema(description = "최애 포지션", example = "GUARD")
+    private PositionType favoritePosition;
+
+    @Schema(description = "체급 숨기기 여부")
+    private Boolean isWeightHidden;
 
     public CommunityProfileResponse(CommunityProfile profile) {
+        this.nickname = profile.getUser().getNickname();
+        this.profileImageUrl = profile.getUser().getProfileImageUrl();
         this.beltRank = profile.getBeltRank();
         this.beltStripe = profile.getBeltStripe();
         this.gender = profile.getGender();
@@ -48,7 +66,12 @@ public class CommunityProfileResponse {
         this.academyName = profile.getAcademyName();
         this.competitionYear = profile.getCompetitionYear();
         this.competitionName = profile.getCompetitionName();
-        this.favoriteTechnique = profile.getFavoriteTechnique();
+        this.bestSubmission = profile.getBestSubmission();
+        this.favoriteSubmission = profile.getFavoriteSubmission();
         this.bestTechnique = profile.getBestTechnique();
+        this.favoriteTechnique = profile.getFavoriteTechnique();
+        this.bestPosition = profile.getBestPosition();
+        this.favoritePosition = profile.getFavoritePosition();
+        this.isWeightHidden = profile.getWeightHidden();
     }
 }

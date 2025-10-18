@@ -26,10 +26,9 @@ public class CommunityProfileService {
     @Transactional(readOnly = true)
     public CommunityProfileResponse getMyProfile() {
         Long userId = AuthenticationUtil.getCurrentUserId();
-        CommunityProfile profile = communityProfileRepository.findByUserId(userId).orElse(null);
-        if (profile == null) {
-            return null;
-        }
+        CommunityProfile profile = communityProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.ENTITY_NOT_FOUND));
+
         return new CommunityProfileResponse(profile);
     }
 
@@ -38,34 +37,8 @@ public class CommunityProfileService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
-        CommunityProfile profile = communityProfileRepository.findByUser(user).orElse(null);
-        if (profile == null) {
-            profile = CommunityProfile.builder()
-                    .user(user)
-                    .beltRank(request.getBeltRank())
-                    .beltStripe(request.getBeltStripe())
-                    .gender(request.getGender())
-                    .weightKg(request.getWeightKg())
-                    .academyName(request.getAcademyName())
-                    .competitionYear(request.getCompetitionYear())
-                    .competitionName(request.getCompetitionName())
-                    .favoriteTechnique(request.getFavoriteTechnique())
-                    .bestTechnique(request.getBestTechnique())
-                    .build();
-        } else {
-            CommunityProfile patch = CommunityProfile.builder()
-                    .beltRank(request.getBeltRank())
-                    .beltStripe(request.getBeltStripe())
-                    .gender(request.getGender())
-                    .weightKg(request.getWeightKg())
-                    .academyName(request.getAcademyName())
-                    .competitionYear(request.getCompetitionYear())
-                    .competitionName(request.getCompetitionName())
-                    .favoriteTechnique(request.getFavoriteTechnique())
-                    .bestTechnique(request.getBestTechnique())
-                    .build();
-            profile.update(patch);
-        }
+        CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
+        profile.toEntity(request, user);
 
         CommunityProfile saved = communityProfileRepository.save(profile);
         return new CommunityProfileResponse(saved);
