@@ -44,7 +44,7 @@ public class AuthResponse {
     @Schema(description = "사용자 정보")
     public static class UserInfo {
         @Schema(description = "사용자 ID", example = "1")
-        private Long id;
+        private Long userId;
 
         @Schema(description = "이메일", example = "user@example.com")
         private String email;

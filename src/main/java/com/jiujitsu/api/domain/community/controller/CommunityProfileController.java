@@ -10,10 +10,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Community", description = "커뮤니티 프로필 API")
+@Tag(name = "community-profile-controller", description = "커뮤니티 프로필 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
 @RequestMapping("/api/community/profile")
@@ -27,7 +26,7 @@ public class CommunityProfileController {
             description = "현재 로그인한 사용자의 커뮤니티 프로필을 조회합니다."
     )
     @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
-    @GetMapping("/me")
+    @GetMapping
     public CommunityProfileResponse getMyProfile() {
         return communityProfileService.getMyProfile();
     }
@@ -37,7 +36,7 @@ public class CommunityProfileController {
             description = "현재 로그인한 사용자의 커뮤니티 프로필을 생성하거나 수정합니다."
     )
     @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
-    @PutMapping("/me")
+    @PostMapping
     public CommunityProfileResponse upsertMyProfile(
             @Valid @RequestBody CommunityProfileRequest request
     ) {

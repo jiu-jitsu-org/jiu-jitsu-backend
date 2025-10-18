@@ -10,9 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Schema(description = "회원가입 요청")
 public class CreateProfileRequest {
-    @NotBlank(message = "임시 토큰은 필수입니다.")
-    @Schema(description = "신규회원 임시 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
-    private String tempToken;
 
     @NotBlank(message = "닉네임은 필수입니다.")
     @Size(min = 2, max = 20, message = "닉네임은 2자 이상 20자 이하여야 합니다")

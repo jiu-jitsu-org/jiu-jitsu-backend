@@ -16,6 +16,10 @@ public enum ErrorCode {
     NICKNAME_VALIDATION(400, "R0004", "잘못된 닉네임 형식입니다."),
 
     /**
+     * 응답 에러
+     */
+    ENTITY_NOT_FOUND(404, "P0001", "데이터가 존재하지 않습니다."),
+    /**
      * 유저 에러
      */
     LOGIN_NOT_ACCESS(403, "U0001", "로그인이 필요한 서비스입니다. 로그인을 해주세요."),

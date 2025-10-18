@@ -1,8 +1,6 @@
 package com.jiujitsu.api.domain.community.dto;
 
-import com.jiujitsu.api.domain.community.entity.BeltRank;
-import com.jiujitsu.api.domain.community.entity.BeltStripe;
-import com.jiujitsu.api.domain.community.entity.Gender;
+import com.jiujitsu.api.domain.community.entity.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
@@ -31,7 +29,7 @@ public class CommunityProfileRequest {
     @DecimalMin(value = "0.0", inclusive = false)
     @DecimalMax(value = "300.0", inclusive = true)
     @Schema(description = "체급(kg, 소수점 1자리)", example = "76.5")
-    private BigDecimal weightKg;
+    private Double weightKg;
 
     @Size(max = 100)
     @Schema(description = "소속 도장명", example = "Gracie Barra Seoul")
@@ -46,13 +44,23 @@ public class CommunityProfileRequest {
     @Schema(description = "대회(이름)", example = "ADCC Korea Trials")
     private String competitionName;
 
-    @Size(max = 100)
-    @Schema(description = "좋아하는 기술", example = "Triangle Choke")
-    private String favoriteTechnique;
+    @Schema(description = "특기 서브미션", example = "CHOKES")
+    private SubmissionType bestSubmission;
 
-    @Size(max = 100)
-    @Schema(description = "자신있는 기술", example = "Armbar")
-    private String bestTechnique;
+    @Schema(description = "최애 서브미션", example = "ARM_LOCKS")
+    private SubmissionType favoriteSubmission;
+
+    @Schema(description = "특기 기술", example = "SWEEPS")
+    private TechniqueType bestTechnique;
+
+    @Schema(description = "최애 기술", example = "GUARD_PASSES")
+    private TechniqueType favoriteTechnique;
+
+    @Schema(description = "특기 포지션", example = "TOP")
+    private PositionType bestPosition;
+
+    @Schema(description = "최애 포지션", example = "GUARD")
+    private PositionType favoritePosition;
 
     @Schema(description = "체급 숨기기 여부")
     private Boolean isWeightHidden;
