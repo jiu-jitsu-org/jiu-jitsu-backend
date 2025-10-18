@@ -76,6 +76,10 @@ public class User {
         }
     }
 
+    public void updateRole(UserRole userRole) {
+        this.role = userRole;
+    }
+
     public boolean isWithinGracePeriod() {
         return deletedAt != null && deletedAt.plusDays(30).isAfter(LocalDateTime.now());
     }

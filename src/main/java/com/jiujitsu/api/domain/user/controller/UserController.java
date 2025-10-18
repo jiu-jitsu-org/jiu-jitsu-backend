@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.user.controller;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.service.UserService;
 import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -58,8 +59,18 @@ public class UserController {
     )
     @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.AUTHENTICATION_FAILED, ErrorCode.USER_ALREADY_DEACTIVATED})
     @DeleteMapping
-    public ResponseEntity<String> deactivateUser() {
+    public Boolean deactivateUser() {
         userService.deactivateUser();
-        return ResponseEntity.ok("회원 탈퇴가 완료되었습니다. 30일 이내에 로그인하시면 계정을 복구하실 수 있습니다.");
+        return true;
+    }
+
+    @Operation(
+            summary = "(관리자로 옮길거임) 관장/사범 권한 부여",
+            description = "사용자에게 관장/사범 권한을 부여합니다."
+    )
+    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
+    @PutMapping("/grantOwnerRole")
+    public UserProfileResponse grantOwnerRole() {
+        return userService.grantOwnerRole();
     }
 }

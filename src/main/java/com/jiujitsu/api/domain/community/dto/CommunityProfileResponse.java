@@ -1,10 +1,12 @@
 package com.jiujitsu.api.domain.community.dto;
 
 import com.jiujitsu.api.domain.community.entity.*;
+import com.jiujitsu.api.domain.user.entity.UserRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.Optional;
 
 @Getter
@@ -60,7 +62,7 @@ public class CommunityProfileResponse {
     private Boolean isWeightHidden;
 
     @Schema(description = "관장/사범 여부")
-    private Boolean isOwner = false;
+    private Boolean isOwner;
 
     @Schema(description = "(관장/사범) 지도 철학")
     private String teachingPhilosophy;
@@ -88,12 +90,16 @@ public class CommunityProfileResponse {
         this.bestPosition = profile.getBestPosition();
         this.favoritePosition = profile.getFavoritePosition();
         this.isWeightHidden = profile.getWeightHidden();
-        if (Optional.ofNullable(profile.getOwnerProfile()).isPresent()) {
-            OwnerProfile ownerProfile = profile.getOwnerProfile();
-            this.isOwner = true;
-            this.teachingPhilosophy = ownerProfile.getTeachingPhilosophy();
-            this.teachingStartDate = ownerProfile.getTeachingStartDate();
-            this.teachingDetail = ownerProfile.getTeachingDetail();
+        this.isOwner = Objects.equals(profile.getUser().getRole(), UserRole.OWNER);
+        if (isOwner) {
+            Optional<OwnerProfile> ownerProfile = Optional.ofNullable(profile.getOwnerProfile());
+            ownerProfile.ifPresent(
+                    owner -> {
+                        this.teachingPhilosophy = owner.getTeachingPhilosophy();
+                        this.teachingStartDate = owner.getTeachingStartDate();
+                        this.teachingDetail = owner.getTeachingDetail();
+                    }
+            );
         }
     }
 }

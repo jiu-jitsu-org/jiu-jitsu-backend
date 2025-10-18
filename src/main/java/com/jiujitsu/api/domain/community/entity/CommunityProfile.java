@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.entity;
 
 import com.jiujitsu.api.domain.community.dto.CommunityProfileRequest;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,6 +15,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "community_profiles", uniqueConstraints = {
@@ -100,7 +102,7 @@ public class CommunityProfile {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    public void toEntity(CommunityProfileRequest request, User user) {
+    public void upsert(CommunityProfileRequest request, User user) {
         this.user = user;
         this.beltRank = request.getBeltRank();
         this.beltStripe = request.getBeltStripe();
@@ -116,5 +118,12 @@ public class CommunityProfile {
         this.bestPosition = request.getBestPosition();
         this.favoritePosition = request.getFavoritePosition();
         this.weightHidden = request.getIsWeightHidden();
+        if (Objects.equals(user.getRole(), UserRole.OWNER)) {
+            this.ownerProfile.update(request);
+        }
+    }
+
+    public void insertOwnerProfile(OwnerProfile ownerProfile) {
+        this.ownerProfile = ownerProfile;
     }
 }

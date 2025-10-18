@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.entity;
 
+import com.jiujitsu.api.domain.community.dto.CommunityProfileRequest;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,9 +28,15 @@ public class OwnerProfile {
     @Column
     private String teachingPhilosophy;    // 지도 철학
 
-    @Column(nullable = false)
+    @Column
     private LocalDate teachingStartDate;    // 지도 경력시작일
 
     @Column
     private String teachingDetail;    // 경력 상세
+
+    public void update(CommunityProfileRequest request) {
+        this.teachingPhilosophy = request.getTeachingPhilosophy();
+        this.teachingStartDate = request.getTeachingStartDate();
+        this.teachingDetail = request.getTeachingDetail();
+    }
 }
