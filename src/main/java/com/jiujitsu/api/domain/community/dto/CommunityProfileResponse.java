@@ -4,6 +4,9 @@ import com.jiujitsu.api.domain.community.entity.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
+import java.time.LocalDate;
+import java.util.Optional;
+
 @Getter
 @Schema(description = "커뮤니티 프로필 응답")
 public class CommunityProfileResponse {
@@ -56,6 +59,18 @@ public class CommunityProfileResponse {
     @Schema(description = "체급 숨기기 여부")
     private Boolean isWeightHidden;
 
+    @Schema(description = "관장/사범 여부")
+    private Boolean isOwner = false;
+
+    @Schema(description = "(관장/사범) 지도 철학")
+    private String teachingPhilosophy;
+
+    @Schema(description = "(관장/사범) 경력 시작일")
+    private LocalDate teachingStartDate;
+
+    @Schema(description = "(관장/사범) 경력 상세")
+    private String teachingDetail;
+
     public CommunityProfileResponse(CommunityProfile profile) {
         this.nickname = profile.getUser().getNickname();
         this.profileImageUrl = profile.getUser().getProfileImageUrl();
@@ -73,5 +88,12 @@ public class CommunityProfileResponse {
         this.bestPosition = profile.getBestPosition();
         this.favoritePosition = profile.getFavoritePosition();
         this.isWeightHidden = profile.getWeightHidden();
+        if (Optional.ofNullable(profile.getOwnerProfile()).isPresent()) {
+            OwnerProfile ownerProfile = profile.getOwnerProfile();
+            this.isOwner = true;
+            this.teachingPhilosophy = ownerProfile.getTeachingPhilosophy();
+            this.teachingStartDate = ownerProfile.getTeachingStartDate();
+            this.teachingDetail = ownerProfile.getTeachingDetail();
+        }
     }
 }

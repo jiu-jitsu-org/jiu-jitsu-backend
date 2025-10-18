@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "community_profiles", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_community_profile_user", columnNames = {"user_id"})
+        @UniqueConstraint(name = "uk_community_profile_user", columnNames = {"user_id"}),
+        @UniqueConstraint(name = "uk_community_profile_owner", columnNames = {"owner_id"})
 })
 @Getter
 @Builder
@@ -86,6 +87,11 @@ public class CommunityProfile {
     @Column
     private Boolean weightHidden;   // 체급 숨김여부
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private OwnerProfile ownerProfile;  // 관장사범 프로필
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -93,19 +99,6 @@ public class CommunityProfile {
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
-
-    public void update(CommunityProfile source) {
-        this.beltRank = source.beltRank;
-        this.beltStripe = source.beltStripe;
-        this.gender = source.gender;
-        this.weightKg = source.weightKg;
-        this.academyName = source.academyName;
-        this.competitionYear = source.competitionYear;
-        this.competitionName = source.competitionName;
-        this.favoriteTechnique = source.favoriteTechnique;
-        this.bestTechnique = source.bestTechnique;
-        this.weightHidden = source.getWeightHidden();
-    }
 
     public void toEntity(CommunityProfileRequest request, User user) {
         this.user = user;
