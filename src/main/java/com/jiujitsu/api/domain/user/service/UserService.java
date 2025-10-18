@@ -1,12 +1,16 @@
 package com.jiujitsu.api.domain.user.service;
 
+import com.jiujitsu.api.domain.community.entity.CommunityProfile;
+import com.jiujitsu.api.domain.community.entity.OwnerProfile;
+import com.jiujitsu.api.domain.community.repository.CommunityProfileRepository;
+import com.jiujitsu.api.domain.community.repository.OwnerProfileRepository;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
+import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.security.JwtTokenProvider;
 import com.jiujitsu.api.global.security.TokenBlacklistService;
@@ -25,9 +29,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final OwnerProfileRepository ownerProfileRepository;
+    private final CommunityProfileRepository communityProfileRepository;
     private final TokenBlacklistService tokenBlacklistService;
     private final JwtTokenProvider jwtTokenProvider;
 
+    /**
+     * 회원가입
+     */
     public AuthResponse createUser(CreateProfileRequest createProfileRequest) {
         String tempToken = AuthenticationUtil.getCurrentToken();
         String nickname = StringUtils.trimToEmpty(createProfileRequest.getNickname());
@@ -72,6 +81,9 @@ public class UserService {
         return new AuthResponse(newAccessToken, newRefreshToken, userInfo);
     }
 
+    /**
+     * 사용자 프로필 조회
+     */
     public UserProfileResponse getUserProfile() {
         // SecurityContext에서 인증된 사용자 ID 가져오기
         Long userId = AuthenticationUtil.getCurrentUserId();
@@ -83,6 +95,9 @@ public class UserService {
         return new UserProfileResponse(user);
     }
 
+    /**
+     * 사용자 프로필 수정
+     */
     public UpdateProfileResponse updateProfile(UpdateProfileRequest request) {
         // SecurityContext에서 인증된 사용자 ID 가져오기
         Long userId = AuthenticationUtil.getCurrentUserId();
@@ -98,6 +113,9 @@ public class UserService {
         return new UpdateProfileResponse(user);
     }
 
+    /**
+     * 회원 비활성화
+     */
     public void deactivateUser() {
         // SecurityContext에서 인증된 사용자 ID 가져오기
         Long userId = AuthenticationUtil.getCurrentUserId();
@@ -121,7 +139,10 @@ public class UserService {
         user.updateStatus(UserStatus.DELETED);
         userRepository.save(user);
     }
-    
+
+    /**
+     * 회원 활성화
+     */
     public boolean reactivateUserIfWithinGracePeriod(User user) {
         if (user.getStatus() == UserStatus.DELETED && user.isWithinGracePeriod()) {
             user.updateStatus(UserStatus.ACTIVE);
@@ -129,6 +150,35 @@ public class UserService {
             return true;
         }
         return false;
+    }
+
+    /**
+     * 관장/사범 권한 부여
+     */
+    public UserProfileResponse grantOwnerRole() {
+        // SecurityContext에서 인증된 사용자 ID 가져오기
+        Long userId = AuthenticationUtil.getCurrentUserId();
+
+        // 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        // 사용자 권한 변경
+        user.updateRole(UserRole.OWNER);
+
+        // 관장 프로필 생성
+        OwnerProfile ownerProfile = OwnerProfile.builder()
+                .documentImageUrl("defaultDocument")
+                .build();
+        ownerProfileRepository.save(ownerProfile);
+
+        // 관장-커뮤 프로필 매핑
+        CommunityProfile communityProfile = communityProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.REQUIRED_PROFILE));
+        communityProfile.insertOwnerProfile(ownerProfile);
+        communityProfileRepository.save(communityProfile);
+
+        return new UserProfileResponse(userRepository.save(user));
     }
 
     private User createNewUser(SnsProvider snsProvider, SnsUserInfo snsUserInfo) {

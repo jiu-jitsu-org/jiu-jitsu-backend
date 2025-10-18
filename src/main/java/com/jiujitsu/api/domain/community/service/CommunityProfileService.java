@@ -38,7 +38,7 @@ public class CommunityProfileService {
                 .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
-        profile.toEntity(request, user);
+        profile.upsert(request, user);
 
         CommunityProfile saved = communityProfileRepository.save(profile);
         return new CommunityProfileResponse(saved);

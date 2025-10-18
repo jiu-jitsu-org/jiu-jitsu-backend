@@ -6,7 +6,7 @@ import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Getter
 @NoArgsConstructor
@@ -64,4 +64,13 @@ public class CommunityProfileRequest {
 
     @Schema(description = "체급 숨기기 여부")
     private Boolean isWeightHidden;
+
+    @Schema(description = "(관장/사범) 지도 철학")
+    private String teachingPhilosophy;
+
+    @Schema(description = "(관장/사범) 경력 시작일")
+    private LocalDate teachingStartDate;
+
+    @Schema(description = "(관장/사범) 경력 상세")
+    private String teachingDetail;
 }

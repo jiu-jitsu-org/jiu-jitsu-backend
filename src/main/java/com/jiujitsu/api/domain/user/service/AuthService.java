@@ -1,9 +1,7 @@
 package com.jiujitsu.api.domain.user.service;
 
 import com.jiujitsu.api.domain.user.dto.*;
-import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
-import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.sns.SnsClient;

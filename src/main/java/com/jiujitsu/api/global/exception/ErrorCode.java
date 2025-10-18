@@ -14,11 +14,14 @@ public enum ErrorCode {
     WRONG_PARAMETER(400, "R0002", "잘못된 요청 데이터입니다. 다시 확인해 주세요."),
     NICKNAME_DUPLICATED(400, "R0003", "이미 사용중인 닉네임입니다."),
     NICKNAME_VALIDATION(400, "R0004", "잘못된 닉네임 형식입니다."),
+    REQUIRED_PROFILE(400, "R0005", "프로필 등록 후 처리 가능합니다."),
 
     /**
      * 응답 에러
      */
     ENTITY_NOT_FOUND(404, "P0001", "데이터가 존재하지 않습니다."),
+
+
     /**
      * 유저 에러
      */
