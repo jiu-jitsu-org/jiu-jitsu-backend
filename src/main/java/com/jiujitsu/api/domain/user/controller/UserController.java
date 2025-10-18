@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "user-controller", description = "사용자 정보 API")
@@ -21,7 +20,7 @@ public class UserController {
 
     private final UserService userService;
 
-    // todo: 1. 회원가입 테스트, 2. 약관동의 업데이트, 3. 프로필 변경,
+    // todo: 약관동의 업데이트
     @Operation(
             summary = "회원 가입",
             description = "인증정보, 닉네임, SNS 정보를 저장합니다."
