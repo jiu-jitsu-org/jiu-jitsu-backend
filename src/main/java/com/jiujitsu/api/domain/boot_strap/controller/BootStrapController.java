@@ -37,7 +37,7 @@ public class BootStrapController {
     ) {
         AppVersionResponse appVersion = appVersionService.checkAppVersion(new BootStrapRequest(osName));
 
-        log.info("AppVersionService checkAppVersion Success");
+        log.info("AppVersionService checkAppVersion Success!!");
         return new BootStrapResponse(
                 appVersion,
                 "여기는 테스트 데이터 =)"
