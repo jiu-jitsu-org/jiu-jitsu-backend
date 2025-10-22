@@ -10,11 +10,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @Tag(name = "[SYS] AppVersion", description = "강제업데이트, 선택업데이트")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
@@ -35,6 +37,7 @@ public class BootStrapController {
     ) {
         AppVersionResponse appVersion = appVersionService.checkAppVersion(new BootStrapRequest(osName));
 
+        log.info("AppVersionService checkAppVersion Success");
         return new BootStrapResponse(
                 appVersion,
                 "여기는 테스트 데이터 =)"

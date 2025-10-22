@@ -20,6 +20,7 @@ public class AppVersionService {
     public AppVersionResponse checkAppVersion(BootStrapRequest request) {
         if (appVersionRepository
                 .findByOsName(request.osName()).isEmpty()) {
+            log.error("AppVersionService checkAppVersion findByOsName isEmpty");
             throw new ErrorException(ErrorCode.NO_APP_VERSION_DATA);
         } else {
             return new AppVersionResponse(
