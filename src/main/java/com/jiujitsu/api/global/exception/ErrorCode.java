@@ -20,6 +20,7 @@ public enum ErrorCode {
      * 응답 에러
      */
     ENTITY_NOT_FOUND(404, "P0001", "데이터가 존재하지 않습니다."),
+    FAILED_SIGNATURE(500, "P0002", "서명 생성 중 오류가 발생하였습니다."),
 
 
     /**
