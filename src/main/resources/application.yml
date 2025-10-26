@@ -62,8 +62,6 @@ springdoc:
       url: http://localhost:8080
 apple:
   filePath: ./jiujitsuLab_AuthKey_Z3HRNZG68M.p8
-cdn:
-  code: private_wxr5zzataMwfAQvBitzvLTVWS94=
 ---
 server:
   port: 8080
@@ -116,5 +114,3 @@ springdoc:
       url: https://api.developer-chanq.xyz/
 apple:
   filePath: ./jiujitsuLab_AuthKey_Z3HRNZG68M.p8
-cdn:
-  code: private_wxr5zzataMwfAQvBitzvLTVWS94=

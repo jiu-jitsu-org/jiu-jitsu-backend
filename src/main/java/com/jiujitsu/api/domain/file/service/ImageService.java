@@ -4,7 +4,6 @@ import com.jiujitsu.api.domain.file.dto.CdnSignatureResponse;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -16,8 +15,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ImageService {
 
-    @Value("${cdn.code}")
-    private String cdnKey;
+    private final String IMAGEKIT_PRIVATE_KEY =  System.getenv("IMAGEKIT_PRIVATE_KEY");
 
     /**
      * CDN 요청용 서명 생성
@@ -41,7 +39,7 @@ public class ImageService {
             String data = token + expire;
 
             Mac mac = Mac.getInstance("HmacSHA1");
-            SecretKeySpec secretKey = new SecretKeySpec(cdnKey.getBytes(StandardCharsets.UTF_8), "HmacSHA1");
+            SecretKeySpec secretKey = new SecretKeySpec(IMAGEKIT_PRIVATE_KEY.getBytes(StandardCharsets.UTF_8), "HmacSHA1");
             mac.init(secretKey);
 
             byte[] hmacData = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
