@@ -19,7 +19,7 @@ services:
       - "8080"                     # 같은 네트워크 컨테이너들에만 8080 노출
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      IMAGEKIT_PRIVATE_KEY: private_wxr5zzataMwfAQvBitzvLTVWS94=
+      IMAGEKIT_PRIVATE_KEY: "private_wxr5zzataMwfAQvBitzvLTVWS94="
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep UP || exit 1"]
       interval: 30s
