@@ -1,7 +1,6 @@
 package com.jiujitsu.api.domain.community.service;
 
-import com.jiujitsu.api.domain.community.dto.CommunityProfileRequest;
-import com.jiujitsu.api.domain.community.dto.CommunityProfileResponse;
+import com.jiujitsu.api.domain.community.dto.*;
 import com.jiujitsu.api.domain.community.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.repository.CommunityProfileRepository;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -40,7 +39,39 @@ public class CommunityProfileService {
         CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
         profile.upsert(request, user);
 
-        CommunityProfile saved = communityProfileRepository.save(profile);
-        return new CommunityProfileResponse(saved);
+        return new CommunityProfileResponse(profile);
+    }
+
+    public CommunityProfileResponse upsertAcademyInfo(AcademyUpdateRequest request) {
+        Long userId = AuthenticationUtil.getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
+        profile.upsertAcademyInfo(request, user);
+
+        return new CommunityProfileResponse(profile);
+    }
+
+    public CommunityProfileResponse upsertLevelInfo(LevelUpdateRequest request) {
+        Long userId = AuthenticationUtil.getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
+        profile.upsertLevelInfo(request, user);
+
+        return new CommunityProfileResponse(profile);
+    }
+
+    public CommunityProfileResponse upsertTechniqueInfo(TechniqueUpdateRequest request) {
+        Long userId = AuthenticationUtil.getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
+        profile.upsertTechniqueInfo(request, user);
+
+        return new CommunityProfileResponse(profile);
     }
 }
