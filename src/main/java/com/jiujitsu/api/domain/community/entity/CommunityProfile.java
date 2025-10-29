@@ -1,6 +1,9 @@
 package com.jiujitsu.api.domain.community.entity;
 
+import com.jiujitsu.api.domain.community.dto.AcademyUpdateRequest;
 import com.jiujitsu.api.domain.community.dto.CommunityProfileRequest;
+import com.jiujitsu.api.domain.community.dto.LevelUpdateRequest;
+import com.jiujitsu.api.domain.community.dto.TechniqueUpdateRequest;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import jakarta.persistence.*;
@@ -8,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.data.annotation.CreatedDate;
@@ -125,5 +129,47 @@ public class CommunityProfile {
 
     public void insertOwnerProfile(OwnerProfile ownerProfile) {
         this.ownerProfile = ownerProfile;
+    }
+
+    public void upsertAcademyInfo(AcademyUpdateRequest request, User user) {
+        this.user = user;
+        this.academyName = StringUtils.trimToEmpty(request.getAcademyName());
+    }
+
+    public void upsertLevelInfo(LevelUpdateRequest request, User user) {
+        this.user = user;
+        this.beltRank = request.getBeltRank();
+        this.beltStripe = request.getBeltStripe();
+        this.gender = request.getGender();
+        this.weightKg = request.getWeightKg();
+        this.weightHidden = request.getIsWeightHidden();
+    }
+
+    public void upsertTechniqueInfo(TechniqueUpdateRequest request, User user) {
+        this.user = user;
+
+        if (!Objects.isNull(request.getSubmission())) {
+            if (Objects.equals(request.getPreferenceType(), TechniqueUpdateRequest.PreferenceType.BEST)) {
+                this.bestSubmission = request.getSubmission();
+            } else {
+                this.favoriteSubmission = request.getSubmission();
+            }
+        }
+
+        if (!Objects.isNull(request.getTechniqueType())) {
+            if (Objects.equals(request.getPreferenceType(), TechniqueUpdateRequest.PreferenceType.BEST)) {
+                this.bestTechnique = request.getTechniqueType();
+            } else {
+                this.favoriteTechnique = request.getTechniqueType();
+            }
+        }
+
+        if (!Objects.isNull(request.getPosition())) {
+            if (Objects.equals(request.getPreferenceType(), TechniqueUpdateRequest.PreferenceType.BEST)) {
+                this.bestPosition = request.getPosition();
+            } else {
+                this.favoritePosition = request.getPosition();
+            }
+        }
     }
 }
