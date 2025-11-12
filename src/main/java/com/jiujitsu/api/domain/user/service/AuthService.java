@@ -47,7 +47,6 @@ public class AuthService {
                 if (user.isWithinGracePeriod()) {
                     // 복구 처리
                     user.updateStatus(UserStatus.ACTIVE); // 내부에서 deletedAt null 처리
-                    userRepository.save(user);
                     deactivatedWithinGrace = true;
                 } else {
                     // 이미 30일 경과하여 계정 만료
@@ -95,7 +94,6 @@ public class AuthService {
 
         if (needsUpdate) {
             user.updateProfile(snsUserInfo.getNickname(), snsUserInfo.getProfileImageUrl());
-            userRepository.save(user);
         }
     }
 

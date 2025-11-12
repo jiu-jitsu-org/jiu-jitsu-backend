@@ -62,7 +62,6 @@ public class UserService {
 
         // 회원정보 생성
         User user = createNewUser(snsProvider, new SnsUserInfo(snsId, email, nickname));
-        userRepository.save(user);
 
         // 새로운 토큰 생성
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
@@ -108,7 +107,6 @@ public class UserService {
 
         // 프로필 업데이트
         user.updateProfile(request.getNickname(), request.getProfileImageUrl());
-        userRepository.save(user);
 
         return new UpdateProfileResponse(user);
     }
@@ -137,7 +135,6 @@ public class UserService {
 
         // 사용자 상태를 DELETED로 변경 (soft delete)
         user.updateStatus(UserStatus.DELETED);
-        userRepository.save(user);
     }
 
     /**
@@ -146,10 +143,26 @@ public class UserService {
     public boolean reactivateUserIfWithinGracePeriod(User user) {
         if (user.getStatus() == UserStatus.DELETED && user.isWithinGracePeriod()) {
             user.updateStatus(UserStatus.ACTIVE);
-            userRepository.save(user);
             return true;
         }
         return false;
+    }
+
+    /**
+     * 관장/사범 신청
+     */
+    public UserProfileResponse requestOwnerRole(String ownerRequestImageUrl) {
+        // SecurityContext에서 인증된 사용자 ID 가져오기
+        Long userId = AuthenticationUtil.getCurrentUserId();
+
+        // 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        // 사용자 권한 변경
+        user.requestOwner(ownerRequestImageUrl);
+
+        return new UserProfileResponse(user);
     }
 
     /**
@@ -176,9 +189,8 @@ public class UserService {
         CommunityProfile communityProfile = communityProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.REQUIRED_PROFILE));
         communityProfile.insertOwnerProfile(ownerProfile);
-        communityProfileRepository.save(communityProfile);
 
-        return new UserProfileResponse(userRepository.save(user));
+        return new UserProfileResponse(user);
     }
 
     private User createNewUser(SnsProvider snsProvider, SnsUserInfo snsUserInfo) {
@@ -188,6 +200,7 @@ public class UserService {
                 .profileImageUrl("default")
                 .snsProvider(snsProvider)
                 .snsId(snsUserInfo.getSnsId())
+                .ownerRequested(false)
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
                 .build();

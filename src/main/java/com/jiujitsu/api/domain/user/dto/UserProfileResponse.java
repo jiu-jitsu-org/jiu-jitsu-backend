@@ -26,6 +26,9 @@ public class UserProfileResponse {
     @Schema(description = "SNS 제공자", example = "KAKAO")
     private SnsProvider snsProvider;
 
+    @Schema(description = "관장/사범 신청 여부", example = "true")
+    private Boolean ownerRequested;
+
     @Schema(description = "사용자 역할", example = "USER")
     private String role;
 
@@ -38,6 +41,7 @@ public class UserProfileResponse {
         this.nickname = user.getNickname();
         this.profileImageUrl = user.getProfileImageUrl();
         this.snsProvider = user.getSnsProvider();
+        this.ownerRequested = user.getOwnerRequested();
         this.role = user.getRole().name();
         this.status = user.getStatus().name();
     }
