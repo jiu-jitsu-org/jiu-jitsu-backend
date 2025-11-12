@@ -38,6 +38,7 @@ public class CommunityProfileService {
 
         CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
         profile.upsert(request, user);
+        communityProfileRepository.save(profile);
 
         return new CommunityProfileResponse(profile);
     }
@@ -49,6 +50,7 @@ public class CommunityProfileService {
 
         CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
         profile.upsertAcademyInfo(request, user);
+        communityProfileRepository.save(profile);
 
         return new CommunityProfileResponse(profile);
     }
@@ -60,6 +62,7 @@ public class CommunityProfileService {
 
         CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
         profile.upsertLevelInfo(request, user);
+        communityProfileRepository.save(profile);
 
         return new CommunityProfileResponse(profile);
     }
@@ -71,6 +74,7 @@ public class CommunityProfileService {
 
         CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
         profile.upsertTechniqueInfo(request, user);
+        communityProfileRepository.save(profile);
 
         return new CommunityProfileResponse(profile);
     }

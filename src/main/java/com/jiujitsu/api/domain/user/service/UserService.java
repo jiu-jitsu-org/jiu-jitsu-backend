@@ -96,14 +96,18 @@ public class UserService {
      */
     public UpdateProfileResponse updateProfile(UpdateProfileRequest request) {
         // SecurityContext에서 인증된 사용자 ID 가져오기
-        Long userId = AuthenticationUtil.getCurrentUserId();
+        final Long userId = AuthenticationUtil.getCurrentUserId();
+        final String nickname = StringUtils.trimToEmpty(request.getNickname());
+        final String profileImageUrl = StringUtils.trimToEmpty(request.getProfileImageUrl());
 
         // 사용자 조회
         User user = userRepository.findById(userId)
         .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
+        // 닉네임 중복체크
+        checkNickname(nickname);
         // 프로필 업데이트
-        user.updateProfile(request.getNickname(), request.getProfileImageUrl());
+        user.updateProfile(nickname, profileImageUrl);
 
         return new UpdateProfileResponse(user);
     }
