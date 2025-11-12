@@ -55,14 +55,10 @@ public class UserService {
         SnsProvider snsProvider = SnsProvider.valueOf(claims.get("snsProvider", String.class));
 
         // 닉네임 valid 체크
-        String pattern = "^[가-힣a-zA-Z0-9]{2,12}$";
-        if (!nickname.matches(pattern)) {
-            throw new ErrorException(ErrorCode.NICKNAME_VALIDATION);
-        }
+        this.checkNickname(nickname);
 
         // 회원정보 생성
         User user = createNewUser(snsProvider, new SnsUserInfo(snsId, email, nickname));
-        userRepository.save(user);
 
         // 새로운 토큰 생성
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
@@ -108,7 +104,6 @@ public class UserService {
 
         // 프로필 업데이트
         user.updateProfile(request.getNickname(), request.getProfileImageUrl());
-        userRepository.save(user);
 
         return new UpdateProfileResponse(user);
     }
@@ -137,7 +132,6 @@ public class UserService {
 
         // 사용자 상태를 DELETED로 변경 (soft delete)
         user.updateStatus(UserStatus.DELETED);
-        userRepository.save(user);
     }
 
     /**
@@ -146,10 +140,26 @@ public class UserService {
     public boolean reactivateUserIfWithinGracePeriod(User user) {
         if (user.getStatus() == UserStatus.DELETED && user.isWithinGracePeriod()) {
             user.updateStatus(UserStatus.ACTIVE);
-            userRepository.save(user);
             return true;
         }
         return false;
+    }
+
+    /**
+     * 관장/사범 신청
+     */
+    public UserProfileResponse requestOwnerRole(String ownerRequestImageUrl) {
+        // SecurityContext에서 인증된 사용자 ID 가져오기
+        Long userId = AuthenticationUtil.getCurrentUserId();
+
+        // 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        // 사용자 권한 변경
+        user.requestOwner(ownerRequestImageUrl);
+
+        return new UserProfileResponse(user);
     }
 
     /**
@@ -176,9 +186,24 @@ public class UserService {
         CommunityProfile communityProfile = communityProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.REQUIRED_PROFILE));
         communityProfile.insertOwnerProfile(ownerProfile);
-        communityProfileRepository.save(communityProfile);
 
-        return new UserProfileResponse(userRepository.save(user));
+        return new UserProfileResponse(user);
+    }
+
+    /**
+     * 닉네임 유효성 체크
+     */
+    public Boolean checkNickname(String nickname) {
+        // 유효성 체크
+        String pattern = "^[가-힣a-zA-Z0-9]{2,12}$";
+        if (!nickname.matches(pattern)) {
+            throw new ErrorException(ErrorCode.NICKNAME_VALIDATION);
+        }
+        // 중복 체크
+        if (userRepository.findByNickname(nickname).isPresent()) {
+            throw new ErrorException(ErrorCode.NICKNAME_DUPLICATED);
+        }
+        return true;
     }
 
     private User createNewUser(SnsProvider snsProvider, SnsUserInfo snsUserInfo) {
@@ -188,6 +213,7 @@ public class UserService {
                 .profileImageUrl("default")
                 .snsProvider(snsProvider)
                 .snsId(snsUserInfo.getSnsId())
+                .ownerRequested(false)
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
                 .build();

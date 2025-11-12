@@ -39,6 +39,12 @@ public class User {
     @Column(nullable = false, unique = true)
     private String snsId;
 
+    @Column(nullable = false)
+    private Boolean ownerRequested;
+
+    @Column
+    private String ownerRequestImageUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
@@ -86,5 +92,10 @@ public class User {
 
     public boolean isGracePeriodExpired() {
         return deletedAt != null && LocalDateTime.now().isAfter(deletedAt.plusDays(30));
+    }
+
+    public void requestOwner(String ownerRequestImageUrl) {
+        this.ownerRequested = true;
+        this.ownerRequestImageUrl = ownerRequestImageUrl;
     }
 }

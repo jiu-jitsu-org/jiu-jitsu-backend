@@ -68,8 +68,18 @@ public class UserController {
             description = "사용자에게 관장/사범 권한을 부여합니다."
     )
     @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
-    @PutMapping("/grantOwnerRole")
+    @PutMapping("/grant/owner-role")
     public UserProfileResponse grantOwnerRole() {
         return userService.grantOwnerRole();
+    }
+
+    @Operation(
+            summary = "닉네임 유효성 체크",
+            description = "중복되거나 유효하지 않은 닉네임인지 확인합니다."
+    )
+    @ApiErrorCodeExamples({ErrorCode.NICKNAME_DUPLICATED, ErrorCode.NICKNAME_VALIDATION})
+    @GetMapping("/check/nickname")
+    public Boolean duplicateNickname(@RequestParam(value = "nickname") String nickname) {
+        return userService.checkNickname(nickname);
     }
 }
