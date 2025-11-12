@@ -55,10 +55,7 @@ public class UserService {
         SnsProvider snsProvider = SnsProvider.valueOf(claims.get("snsProvider", String.class));
 
         // 닉네임 valid 체크
-        String pattern = "^[가-힣a-zA-Z0-9]{2,12}$";
-        if (!nickname.matches(pattern)) {
-            throw new ErrorException(ErrorCode.NICKNAME_VALIDATION);
-        }
+        this.checkNickname(nickname);
 
         // 회원정보 생성
         User user = createNewUser(snsProvider, new SnsUserInfo(snsId, email, nickname));
@@ -191,6 +188,22 @@ public class UserService {
         communityProfile.insertOwnerProfile(ownerProfile);
 
         return new UserProfileResponse(user);
+    }
+
+    /**
+     * 닉네임 유효성 체크
+     */
+    public Boolean checkNickname(String nickname) {
+        // 유효성 체크
+        String pattern = "^[가-힣a-zA-Z0-9]{2,12}$";
+        if (!nickname.matches(pattern)) {
+            throw new ErrorException(ErrorCode.NICKNAME_VALIDATION);
+        }
+        // 중복 체크
+        if (userRepository.findByNickname(nickname).isPresent()) {
+            throw new ErrorException(ErrorCode.NICKNAME_DUPLICATED);
+        }
+        return true;
     }
 
     private User createNewUser(SnsProvider snsProvider, SnsUserInfo snsUserInfo) {
