@@ -7,21 +7,19 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
 @Schema(description = "커뮤니티 프로필 수정 요청")
 public class CommunityProfileRequest {
 
-    @NotNull
     @Schema(description = "벨트 등급", example = "BLUE")
     private BeltRank beltRank;
 
-    @NotNull
     @Schema(description = "그랄(1~4)", example = "STRIPE_2")
     private BeltStripe beltStripe;
 
-    @NotNull
     @Schema(description = "성별", example = "MALE")
     private Gender gender;
 
@@ -35,14 +33,8 @@ public class CommunityProfileRequest {
     @Schema(description = "소속 도장명", example = "Gracie Barra Seoul")
     private String academyName;
 
-    @Min(1900)
-    @Max(2100)
-    @Schema(description = "대회(년도)", example = "2024")
-    private Integer competitionYear;
-
-    @Size(max = 100)
-    @Schema(description = "대회(이름)", example = "ADCC Korea Trials")
-    private String competitionName;
+    @Schema(description = "대회정보")
+    List<CompetitionInfoDto> competitionInfoList;
 
     @Schema(description = "특기 서브미션", example = "CHOKES")
     private SubmissionType bestSubmission;
@@ -74,3 +66,5 @@ public class CommunityProfileRequest {
     @Schema(description = "(관장/사범) 경력 상세")
     private String teachingDetail;
 }
+
+
