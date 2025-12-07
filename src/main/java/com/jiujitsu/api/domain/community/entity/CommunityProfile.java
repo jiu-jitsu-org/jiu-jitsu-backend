@@ -21,13 +21,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+@Builder
 @Entity
 @Table(name = "community_profiles", uniqueConstraints = {
         @UniqueConstraint(name = "uk_community_profile_user", columnNames = {"user_id"}),
         @UniqueConstraint(name = "uk_community_profile_owner", columnNames = {"owner_id"})
 })
 @Getter
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
@@ -56,12 +56,13 @@ public class CommunityProfile {
     @Column(length = 100)
     private String academyName; // 도장명
 
+    @Builder.Default
     @ElementCollection
     @CollectionTable(
             name = "community_profile_competitions",
             joinColumns = @JoinColumn(name = "community_profile_id")
     )
-    private List<CompetitionInfo> competitions = new ArrayList<>(); //대회 정보
+    private List<CompetitionInfo> competitions = new ArrayList<>(); // 대회 정보
 
     @Enumerated(EnumType.STRING)
     @Column(length = 100)
@@ -117,7 +118,8 @@ public class CommunityProfile {
         this.bestPosition = request.getBestPosition();
         this.favoritePosition = request.getFavoritePosition();
         this.weightHidden = request.getIsWeightHidden();
-        this.competitions = request.getCompetitionInfoList().stream().map(CompetitionInfoDto::toEntity).collect(Collectors.toList());
+        this.competitions = request.getCompetitionInfoList().isEmpty() ? null
+                : request.getCompetitionInfoList().stream().map(CompetitionInfoDto::toEntity).collect(Collectors.toList());
         if (Objects.equals(user.getRole(), UserRole.OWNER)) {
             this.ownerProfile.update(request);
         }

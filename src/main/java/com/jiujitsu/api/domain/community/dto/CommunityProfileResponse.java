@@ -2,7 +2,6 @@ package com.jiujitsu.api.domain.community.dto;
 
 import com.jiujitsu.api.domain.community.entity.*;
 import com.jiujitsu.api.domain.user.entity.UserRole;
-import com.jiujitsu.api.global.util.AuthenticationUtil;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -10,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -86,7 +86,6 @@ public class CommunityProfileResponse {
         this.gender = profile.getGender();
         this.weightKg = profile.getWeightKg();
         this.academyName = profile.getAcademyName();
-        this.competitions = profile.getCompetitions().stream().map(CompetitionInfoDto::new).toList();
         this.bestSubmission = profile.getBestSubmission();
         this.favoriteSubmission = profile.getFavoriteSubmission();
         this.bestTechnique = profile.getBestTechnique();
@@ -105,5 +104,11 @@ public class CommunityProfileResponse {
                     }
             );
         }
+        this.competitions =
+                Optional.ofNullable(profile.getCompetitions())
+                        .orElseGet(Collections::emptyList)
+                        .stream()
+                        .map(CompetitionInfoDto::new)
+                        .toList();
     }
 }
