@@ -2,11 +2,15 @@ package com.jiujitsu.api.domain.community.dto;
 
 import com.jiujitsu.api.domain.community.entity.*;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -34,7 +38,7 @@ public class CommunityProfileRequest {
     private String academyName;
 
     @Schema(description = "대회정보")
-    List<CompetitionInfoDto> competitionInfoList;
+    List<CompetitionInfoDto> competitionInfoList = new ArrayList<>();
 
     @Schema(description = "특기 서브미션", example = "CHOKES")
     private SubmissionType bestSubmission;
