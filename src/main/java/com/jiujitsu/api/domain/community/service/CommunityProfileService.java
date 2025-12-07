@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -25,10 +27,20 @@ public class CommunityProfileService {
     @Transactional(readOnly = true)
     public CommunityProfileResponse getMyProfile() {
         Long userId = AuthenticationUtil.getCurrentUserId();
-        CommunityProfile profile = communityProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.ENTITY_NOT_FOUND));
+        Optional<CommunityProfile> profile = communityProfileRepository.findByUserId(userId);
 
-        return new CommunityProfileResponse(profile);
+        // 없는 경우 null return
+        if (profile.isEmpty()) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+            CommunityProfileResponse communityProfile = new CommunityProfileResponse();
+            communityProfile.setNickname(user.getNickname());
+            communityProfile.setProfileImageUrl(user.getProfileImageUrl());
+            return communityProfile;
+        }
+
+        return new CommunityProfileResponse(profile.get());
     }
 
     public CommunityProfileResponse upsertMyProfile(CommunityProfileRequest request) {

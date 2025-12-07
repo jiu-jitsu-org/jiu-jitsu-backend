@@ -2,8 +2,12 @@ package com.jiujitsu.api.domain.community.dto;
 
 import com.jiujitsu.api.domain.community.entity.*;
 import com.jiujitsu.api.domain.user.entity.UserRole;
+import com.jiujitsu.api.global.util.AuthenticationUtil;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -11,6 +15,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "커뮤니티 프로필 응답")
 public class CommunityProfileResponse {
 
