@@ -1,9 +1,6 @@
 package com.jiujitsu.api.domain.community.entity;
 
-import com.jiujitsu.api.domain.community.dto.AcademyUpdateRequest;
-import com.jiujitsu.api.domain.community.dto.CommunityProfileRequest;
-import com.jiujitsu.api.domain.community.dto.LevelUpdateRequest;
-import com.jiujitsu.api.domain.community.dto.TechniqueUpdateRequest;
+import com.jiujitsu.api.domain.community.dto.*;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import jakarta.persistence.*;
@@ -19,7 +16,10 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "community_profiles", uniqueConstraints = {
@@ -43,28 +43,25 @@ public class CommunityProfile {
     private User user; // 유저정보
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private BeltRank beltRank;  // 벨트 등급
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private BeltStripe beltStripe; // 그랄 등급(1~4)
+    private BeltStripe beltStripe; // 그랄 등급(무그랄~4)
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Gender gender;  // 성별
 
-    @Column(nullable = false)
     private Double weightKg;    // 체급 (소수점 1자리)
 
     @Column(length = 100)
-    private String academyName;
+    private String academyName; // 도장명
 
-    @Column
-    private Integer competitionYear; // 대회정보(년도)
-
-    @Column(length = 100)
-    private String competitionName; // 대회정보(이름)
+    @ElementCollection
+    @CollectionTable(
+            name = "community_profile_competitions",
+            joinColumns = @JoinColumn(name = "community_profile_id")
+    )
+    private List<CompetitionInfo> competitions = new ArrayList<>(); //대회 정보
 
     @Enumerated(EnumType.STRING)
     @Column(length = 100)
@@ -113,8 +110,6 @@ public class CommunityProfile {
         this.gender = request.getGender();
         this.weightKg = request.getWeightKg();
         this.academyName = request.getAcademyName();
-        this.competitionYear = request.getCompetitionYear();
-        this.competitionName = request.getCompetitionName();
         this.bestSubmission = request.getBestSubmission();
         this.favoriteSubmission = request.getFavoriteSubmission();
         this.bestTechnique = request.getBestTechnique();
@@ -122,6 +117,7 @@ public class CommunityProfile {
         this.bestPosition = request.getBestPosition();
         this.favoritePosition = request.getFavoritePosition();
         this.weightHidden = request.getIsWeightHidden();
+        this.competitions = request.getCompetitionInfoList().stream().map(CompetitionInfoDto::toEntity).collect(Collectors.toList());
         if (Objects.equals(user.getRole(), UserRole.OWNER)) {
             this.ownerProfile.update(request);
         }

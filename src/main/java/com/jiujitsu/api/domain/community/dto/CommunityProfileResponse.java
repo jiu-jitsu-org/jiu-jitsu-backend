@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -34,11 +35,8 @@ public class CommunityProfileResponse {
     @Schema(description = "소속 도장명", example = "Gracie Barra Seoul")
     private String academyName;
 
-    @Schema(description = "대회(년도)", example = "2024")
-    private Integer competitionYear;
-
-    @Schema(description = "대회(이름)", example = "ADCC Korea Trials")
-    private String competitionName;
+    @Schema(description = "대회 정보")
+    private List<CompetitionInfoDto> competitions;
 
     @Schema(description = "특기 서브미션", example = "CHOKES")
     private SubmissionType bestSubmission;
@@ -81,8 +79,7 @@ public class CommunityProfileResponse {
         this.gender = profile.getGender();
         this.weightKg = profile.getWeightKg();
         this.academyName = profile.getAcademyName();
-        this.competitionYear = profile.getCompetitionYear();
-        this.competitionName = profile.getCompetitionName();
+        this.competitions = profile.getCompetitions().stream().map(CompetitionInfoDto::new).toList();
         this.bestSubmission = profile.getBestSubmission();
         this.favoriteSubmission = profile.getFavoriteSubmission();
         this.bestTechnique = profile.getBestTechnique();
