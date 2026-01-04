@@ -1,24 +1,22 @@
 package com.jiujitsu.api.domain.community.entity;
 
-import com.jiujitsu.api.domain.community.dto.*;
+import com.jiujitsu.api.domain.community.dto.CompetitionInfoDto;
 import com.jiujitsu.api.domain.user.entity.User;
-import com.jiujitsu.api.domain.user.entity.UserRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Builder
@@ -104,70 +102,75 @@ public class CommunityProfile {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    public void upsert(CommunityProfileRequest request, User user) {
+    /**
+     * 최초 User 생성자
+     */
+    public CommunityProfile(User user) {
         this.user = user;
-        this.beltRank = request.getBeltRank();
-        this.beltStripe = request.getBeltStripe();
-        this.gender = request.getGender();
-        this.weightKg = request.getWeightKg();
-        this.academyName = request.getAcademyName();
-        this.bestSubmission = request.getBestSubmission();
-        this.favoriteSubmission = request.getFavoriteSubmission();
-        this.bestTechnique = request.getBestTechnique();
-        this.favoriteTechnique = request.getFavoriteTechnique();
-        this.bestPosition = request.getBestPosition();
-        this.favoritePosition = request.getFavoritePosition();
-        this.weightHidden = request.getIsWeightHidden();
-        this.competitions = request.getCompetitionInfoList().isEmpty() ? null
-                : request.getCompetitionInfoList().stream().map(CompetitionInfoDto::toEntity).collect(Collectors.toList());
-        if (Objects.equals(user.getRole(), UserRole.OWNER)) {
-            this.ownerProfile.update(request);
-        }
     }
 
+    /**
+     * 도장명 수정
+     */
+    public void upsertAcademy(String academyName) {
+        this.academyName = academyName;
+    }
+
+    /**
+     * 벨트/성별/체급 수정
+     */
+    public void upsertBeltWeight(BeltRank beltRank, BeltStripe beltStripe, Gender gender, Double weightKg, Boolean weightHidden) {
+        this.beltRank = beltRank;
+        this.beltStripe = beltStripe;
+        this.gender = gender;
+        this.weightKg = weightKg;
+        this.weightHidden = weightHidden;
+    }
+
+    /**
+     * 포지션 수정
+     */
+    public void upsertPosition(PositionType bestPosition, PositionType favoritePosition) {
+        this.bestPosition = bestPosition;
+        this.favoritePosition = favoritePosition;
+    }
+
+    /**
+     * 서브미션 수정
+     */
+    public void upsertSubmission(SubmissionType bestSubmission, SubmissionType favoriteSubmission) {
+        this.bestSubmission = bestSubmission;
+        this.favoriteSubmission = favoriteSubmission;
+    }
+
+    /**
+     * 기술 수정
+     */
+    public void upsertTechnique(TechniqueType bestTechnique, TechniqueType favoriteTechnique) {
+        this.bestTechnique = bestTechnique;
+        this.favoriteTechnique = favoriteTechnique;
+    }
+
+    /**
+     * 대회정보 수정
+     */
+    public void upsertCompetitions(List<CompetitionInfoDto> competitionInfos) {
+        this.competitions = competitionInfos.isEmpty()
+                ? null
+                : competitionInfos.stream().map(CompetitionInfoDto::toEntity).collect(Collectors.toList());
+    }
+
+    /**
+     * 관장 프로필 수정
+     */
+    public void upsertOwnerInfo(String teachingPhilosophy, LocalDate teachingStartDate, String teachingDetail) {
+        this.ownerProfile.update(teachingPhilosophy, teachingStartDate, teachingDetail);
+    }
+
+    /**
+     * 관장 프로필 등록
+     */
     public void insertOwnerProfile(OwnerProfile ownerProfile) {
         this.ownerProfile = ownerProfile;
-    }
-
-    public void upsertAcademyInfo(AcademyUpdateRequest request, User user) {
-        this.user = user;
-        this.academyName = StringUtils.trimToEmpty(request.getAcademyName());
-    }
-
-    public void upsertLevelInfo(LevelUpdateRequest request, User user) {
-        this.user = user;
-        this.beltRank = request.getBeltRank();
-        this.beltStripe = request.getBeltStripe();
-        this.gender = request.getGender();
-        this.weightKg = request.getWeightKg();
-        this.weightHidden = request.getIsWeightHidden();
-    }
-
-    public void upsertTechniqueInfo(TechniqueUpdateRequest request, User user) {
-        this.user = user;
-
-        if (!Objects.isNull(request.getSubmission())) {
-            if (Objects.equals(request.getPreferenceType(), TechniqueUpdateRequest.PreferenceType.BEST)) {
-                this.bestSubmission = request.getSubmission();
-            } else {
-                this.favoriteSubmission = request.getSubmission();
-            }
-        }
-
-        if (!Objects.isNull(request.getTechniqueType())) {
-            if (Objects.equals(request.getPreferenceType(), TechniqueUpdateRequest.PreferenceType.BEST)) {
-                this.bestTechnique = request.getTechniqueType();
-            } else {
-                this.favoriteTechnique = request.getTechniqueType();
-            }
-        }
-
-        if (!Objects.isNull(request.getPosition())) {
-            if (Objects.equals(request.getPreferenceType(), TechniqueUpdateRequest.PreferenceType.BEST)) {
-                this.bestPosition = request.getPosition();
-            } else {
-                this.favoritePosition = request.getPosition();
-            }
-        }
     }
 }

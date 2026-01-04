@@ -2,10 +2,7 @@ package com.jiujitsu.api.domain.community.dto;
 
 import com.jiujitsu.api.domain.community.entity.*;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -17,6 +14,10 @@ import java.util.List;
 @NoArgsConstructor
 @Schema(description = "커뮤니티 프로필 수정 요청")
 public class CommunityProfileRequest {
+
+    @Schema(description = "프로필 수정 유형")  // 유형별로 따로따로 수정되어서 타입받아서 분리하여 처리
+    @NotNull
+    private ProfileRequestType profileRequestType;
 
     @Schema(description = "벨트 등급", example = "BLUE")
     private BeltRank beltRank;

@@ -4,15 +4,18 @@ import com.jiujitsu.api.domain.community.dto.*;
 import com.jiujitsu.api.domain.community.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.repository.CommunityProfileRepository;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -24,6 +27,9 @@ public class CommunityProfileService {
     private final CommunityProfileRepository communityProfileRepository;
     private final UserRepository userRepository;
 
+    /**
+     * 커뮤니티 프로필 조회
+     */
     @Transactional(readOnly = true)
     public CommunityProfileResponse getMyProfile() {
         Long userId = AuthenticationUtil.getCurrentUserId();
@@ -43,49 +49,35 @@ public class CommunityProfileService {
         return new CommunityProfileResponse(profile.get());
     }
 
+    /**
+     * 커뮤니티 프로필 등록/수정
+     */
     public CommunityProfileResponse upsertMyProfile(CommunityProfileRequest request) {
         Long userId = AuthenticationUtil.getCurrentUserId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
-        CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
-        profile.upsert(request, user);
-        communityProfileRepository.save(profile);
+        CommunityProfile profile = communityProfileRepository.findByUser(user).orElse(new CommunityProfile(user));
 
-        return new CommunityProfileResponse(profile);
-    }
-
-    public CommunityProfileResponse upsertAcademyInfo(AcademyUpdateRequest request) {
-        Long userId = AuthenticationUtil.getCurrentUserId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-
-        CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
-        profile.upsertAcademyInfo(request, user);
-        communityProfileRepository.save(profile);
-
-        return new CommunityProfileResponse(profile);
-    }
-
-    public CommunityProfileResponse upsertLevelInfo(LevelUpdateRequest request) {
-        Long userId = AuthenticationUtil.getCurrentUserId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-
-        CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
-        profile.upsertLevelInfo(request, user);
-        communityProfileRepository.save(profile);
-
-        return new CommunityProfileResponse(profile);
-    }
-
-    public CommunityProfileResponse upsertTechniqueInfo(TechniqueUpdateRequest request) {
-        Long userId = AuthenticationUtil.getCurrentUserId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-
-        CommunityProfile profile = communityProfileRepository.findByUser(user).orElseGet(CommunityProfile::new);
-        profile.upsertTechniqueInfo(request, user);
+        switch (request.getProfileRequestType()) {
+            case ACADEMY -> profile.upsertAcademy(StringUtils.trimToEmpty(request.getAcademyName()));
+            case BELT_WEIGHT -> profile.upsertBeltWeight(
+                    request.getBeltRank(),
+                    request.getBeltStripe(),
+                    request.getGender(),
+                    request.getWeightKg(),
+                    request.getIsWeightHidden()
+            );
+            case POSITION -> profile.upsertPosition(request.getBestPosition(), request.getFavoritePosition());
+            case SUBMISSION -> profile.upsertSubmission(request.getBestSubmission(), request.getFavoriteSubmission());
+            case TECHNIQUE -> profile.upsertTechnique(request.getBestTechnique(), request.getFavoriteTechnique());
+            case COMPETITION -> profile.upsertCompetitions(request.getCompetitionInfoList());
+            case OWNER_INFO -> {
+                if (Objects.equals(user.getRole(), UserRole.OWNER)) {
+                    profile.upsertOwnerInfo(request.getTeachingPhilosophy(), request.getTeachingStartDate(), request.getTeachingDetail());
+                }
+            }
+        }
         communityProfileRepository.save(profile);
 
         return new CommunityProfileResponse(profile);
