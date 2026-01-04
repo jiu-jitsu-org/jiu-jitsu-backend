@@ -41,40 +41,4 @@ public class CommunityProfileController {
     ) {
         return communityProfileService.upsertMyProfile(request);
     }
-
-    @Operation(
-            summary = "도장정보 수정",
-            description = "현재 로그인한 사용자의 도장 정보 수정합니다."
-    )
-    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
-    @PostMapping("/academy")
-    public CommunityProfileResponse upsertAcademyInfo(
-            @Valid @RequestBody AcademyUpdateRequest request
-    ) {
-        return communityProfileService.upsertAcademyInfo(request);
-    }
-
-    @Operation(
-            summary = "벨트/체급 정보 수정",
-            description = "현재 로그인한 사용자의 벨트/체급 정보 수정합니다."
-    )
-    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
-    @PostMapping("/level")
-    public CommunityProfileResponse upsertLevelInfo(
-            @Valid @RequestBody LevelUpdateRequest request
-    ) {
-        return communityProfileService.upsertLevelInfo(request);
-    }
-
-    @Operation(
-            summary = "기술 정보 수정",
-            description = "현재 로그인한 사용자의 기술 정보 수정합니다."
-    )
-    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
-    @PostMapping("/technique")
-    public CommunityProfileResponse upsertTechniqueInfo(
-            @Valid @RequestBody TechniqueUpdateRequest request
-    ) {
-        return communityProfileService.upsertTechniqueInfo(request);
-    }
 }

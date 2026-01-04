@@ -45,9 +45,9 @@ public class OwnerProfile {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    public void update(CommunityProfileRequest request) {
-        this.teachingPhilosophy = request.getTeachingPhilosophy();
-        this.teachingStartDate = request.getTeachingStartDate();
-        this.teachingDetail = request.getTeachingDetail();
+    public void update(String teachingPhilosophy, LocalDate teachingStartDate, String teachingDetail) {
+        this.teachingPhilosophy = teachingPhilosophy;
+        this.teachingStartDate = teachingStartDate;
+        this.teachingDetail = teachingDetail;
     }
 }
