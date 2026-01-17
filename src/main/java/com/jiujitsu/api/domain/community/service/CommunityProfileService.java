@@ -68,9 +68,12 @@ public class CommunityProfileService {
                     request.getWeightKg(),
                     request.getIsWeightHidden()
             );
-            case POSITION -> profile.upsertPosition(request.getBestPosition(), request.getFavoritePosition());
-            case SUBMISSION -> profile.upsertSubmission(request.getBestSubmission(), request.getFavoriteSubmission());
-            case TECHNIQUE -> profile.upsertTechnique(request.getBestTechnique(), request.getFavoriteTechnique());
+            case POSITION_BEST -> profile.upsertBestPosition(request.getBestPosition());
+            case POSITION_FAVORITE -> profile.upsertFavoritePosition(request.getFavoritePosition());
+            case SUBMISSION_BEST -> profile.upsertBestSubmission(request.getBestSubmission());
+            case SUBMISSION_FAVORITE -> profile.upsertFavoriteSubmission(request.getFavoriteSubmission());
+            case TECHNIQUE_BEST -> profile.upsertBestTechnique(request.getBestTechnique());
+            case TECHNIQUE_FAVORITE -> profile.upsertFavoriteTechnique(request.getFavoriteTechnique());
             case COMPETITION -> profile.upsertCompetitions(request.getCompetitionInfoList());
             case OWNER_INFO -> {
                 if (Objects.equals(user.getRole(), UserRole.OWNER)) {
