@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 
-@Tag(name = "Test", description = "Test CI/CD")
+@Tag(name = "[SYS] CI/CD-test-controller", description = "Test CI/CD")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
 @RequestMapping("/api/test")

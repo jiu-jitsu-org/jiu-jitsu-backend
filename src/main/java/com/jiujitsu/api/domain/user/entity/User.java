@@ -24,10 +24,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column
     private String email;
 
-    @Column(nullable = false)
+    @Column
     private String nickname;
 
     private String profileImageUrl;
@@ -38,6 +38,12 @@ public class User {
 
     @Column(nullable = false, unique = true)
     private String snsId;
+
+    @Column(nullable = false)
+    private Boolean ownerRequested;
+
+    @Column
+    private String ownerRequestImageUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -76,11 +82,20 @@ public class User {
         }
     }
 
+    public void updateRole(UserRole userRole) {
+        this.role = userRole;
+    }
+
     public boolean isWithinGracePeriod() {
         return deletedAt != null && deletedAt.plusDays(30).isAfter(LocalDateTime.now());
     }
 
     public boolean isGracePeriodExpired() {
         return deletedAt != null && LocalDateTime.now().isAfter(deletedAt.plusDays(30));
+    }
+
+    public void requestOwner(String ownerRequestImageUrl) {
+        this.ownerRequested = true;
+        this.ownerRequestImageUrl = ownerRequestImageUrl;
     }
 }

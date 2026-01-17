@@ -20,12 +20,8 @@ public class SnsLoginRequest {
     @Schema(description = "SNS에서 발급받은 액세스 토큰", example = "ya29.a0AfH6SMC...")
     private String accessToken;
 
-    @Schema(description = "Apple 로그인 시 필요한 ID 토큰 (Apple만 해당)", example = "eyJhbGciOiJSUzI1NiI...")
-    private String idToken;
-
     public SnsLoginRequest(SnsProvider snsProvider, String accessToken, String idToken) {
         this.snsProvider = snsProvider;
         this.accessToken = accessToken;
-        this.idToken = idToken;
     }
 }

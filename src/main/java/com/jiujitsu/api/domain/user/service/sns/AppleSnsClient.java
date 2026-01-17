@@ -1,13 +1,24 @@
 package com.jiujitsu.api.domain.user.service.sns;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.auth0.jwk.Jwk;
+import com.auth0.jwk.JwkProvider;
+import com.auth0.jwk.UrlJwkProvider;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.auth0.jwt.interfaces.JWTVerifier;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jiujitsu.api.domain.user.dto.SnsUserInfo;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Base64;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.interfaces.RSAPublicKey;
 
 @Slf4j
 @Component
@@ -17,35 +28,49 @@ public class AppleSnsClient implements SnsClient {
     private final ObjectMapper objectMapper;
 
     @Override
-    public SnsUserInfo getUserInfo(String accessToken, String idToken) {
+    public SnsUserInfo getUserInfo(String accessToken) {
         try {
-            if (idToken == null || idToken.trim().isEmpty()) {
+            if (accessToken == null || accessToken.trim().isEmpty()) {
                 throw new RuntimeException("Apple 로그인에는 ID 토큰이 필요합니다");
             }
 
-            // JWT ID 토큰에서 사용자 정보 추출
-            String[] tokenParts = idToken.split("\\.");
-            if (tokenParts.length != 3) {
-                throw new RuntimeException("유효하지 않은 Apple ID 토큰입니다");
-            }
+            // 1. RSA 복호화
+            RSAPublicKey applePublicKey = fetchApplePublicKey(accessToken);
 
-            // JWT payload 디코딩
-            String payload = new String(Base64.getUrlDecoder().decode(tokenParts[1]));
-            JsonNode claims = objectMapper.readTree(payload);
+            // 2. JWT 검증
+            Algorithm algorithm = Algorithm.RSA256(applePublicKey, null);
+            JWTVerifier verifier = JWT.require(algorithm).build();
+            DecodedJWT decodedJWT = verifier.verify(accessToken);
 
-            String snsId = claims.get("sub").asText();
-            String email = claims.has("email") ? claims.get("email").asText() : null;
-            
-            // Apple은 이름과 프로필 이미지를 ID 토큰에 포함하지 않음
-            // 앱에서 처음 로그인 시 별도로 전달받아야 함
-            String nickname = "Apple 사용자";
-            String profileImageUrl = null;
+            String snsId = decodedJWT.getSubject();
+            String email = decodedJWT.getClaim("email").asString();
 
-            return new SnsUserInfo(snsId, email, nickname, profileImageUrl);
+            return new SnsUserInfo(snsId, email);
 
         } catch (Exception e) {
             log.error("Apple 사용자 정보 조회 실패", e);
-            throw new RuntimeException("Apple 로그인 처리 중 오류가 발생했습니다", e);
+            throw new ErrorException(ErrorCode.KEY_PARSING_ERROR);
+        }
+    }
+
+    private RSAPublicKey fetchApplePublicKey(String idToken) {
+        try {
+            // 1. JWT header에서 key id(kid), alg 가져오기
+            DecodedJWT decodedJWT = JWT.decode(idToken);
+            String kid = decodedJWT.getKeyId();
+            String alg = decodedJWT.getAlgorithm();
+
+            // 2. Apple 공개키 요청
+            URL url = new URL("https://appleid.apple.com/auth/keys");
+            InputStream inputStream = url.openStream();
+            String jwksJson = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+
+            JwkProvider provider = new UrlJwkProvider(new URL("https://appleid.apple.com/auth/keys"));
+            Jwk jwk = provider.get(kid); // kid에 해당하는 공개키 가져오기
+
+            return (RSAPublicKey) jwk.getPublicKey();
+        } catch (Exception e) {
+            throw new ErrorException(ErrorCode.KEY_PARSING_ERROR);
         }
     }
 }

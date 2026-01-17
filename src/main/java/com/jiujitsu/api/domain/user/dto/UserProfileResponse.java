@@ -12,7 +12,7 @@ import lombok.Getter;
 public class UserProfileResponse {
 
     @Schema(description = "사용자 ID", example = "1")
-    private Long id;
+    private Long userId;
 
     @Schema(description = "이메일", example = "user@example.com")
     private String email;
@@ -26,6 +26,9 @@ public class UserProfileResponse {
     @Schema(description = "SNS 제공자", example = "KAKAO")
     private SnsProvider snsProvider;
 
+    @Schema(description = "관장/사범 신청 여부", example = "true")
+    private Boolean ownerRequested;
+
     @Schema(description = "사용자 역할", example = "USER")
     private String role;
 
@@ -33,11 +36,12 @@ public class UserProfileResponse {
     private String status;
 
     public UserProfileResponse(User user) {
-        this.id = user.getId();
+        this.userId = user.getId();
         this.email = user.getEmail();
         this.nickname = user.getNickname();
         this.profileImageUrl = user.getProfileImageUrl();
         this.snsProvider = user.getSnsProvider();
+        this.ownerRequested = user.getOwnerRequested();
         this.role = user.getRole().name();
         this.status = user.getStatus().name();
     }

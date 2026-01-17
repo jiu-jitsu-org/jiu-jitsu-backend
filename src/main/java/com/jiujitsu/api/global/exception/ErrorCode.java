@@ -12,6 +12,16 @@ public enum ErrorCode {
      */
     REQUIRED_PARAMETER(400, "R0001", "필수값이 입력되지 않았습니다. 다시 확인해 주세요."),
     WRONG_PARAMETER(400, "R0002", "잘못된 요청 데이터입니다. 다시 확인해 주세요."),
+    NICKNAME_DUPLICATED(400, "R0003", "이미 사용중인 닉네임입니다."),
+    NICKNAME_VALIDATION(400, "R0004", "잘못된 닉네임 형식입니다."),
+    REQUIRED_PROFILE(400, "R0005", "프로필 등록 후 처리 가능합니다."),
+
+    /**
+     * 응답 에러
+     */
+    ENTITY_NOT_FOUND(404, "P0001", "데이터가 존재하지 않습니다."),
+    FAILED_SIGNATURE(500, "P0002", "서명 생성 중 오류가 발생하였습니다."),
+
 
     /**
      * 유저 에러
@@ -36,6 +46,11 @@ public enum ErrorCode {
     INVALID_REFRESH_TOKEN(401, "A0009", "유효하지 않은 refresh token입니다. 재로그인 해 주세요."),
     KEY_PARSING_ERROR(401, "A0010", "인증 키 파싱 중 오류가 발생하였습니다."),
     AUTHENTICATION_FAILED(401, "A0010", "인증에 실패하였습니다."),
+
+    /**
+     * 앱 버전 조회 에러
+     */
+    NO_APP_VERSION_DATA(400, "V0001", "데이터가 존재하지 않습니다."),
 
     /**
      * 서버 에러

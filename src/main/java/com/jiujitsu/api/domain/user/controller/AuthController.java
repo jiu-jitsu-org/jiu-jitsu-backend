@@ -14,7 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Authentication", description = "인증 API")
+@Tag(name = "authentication-controller", description = "인증 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
 @RequestMapping("/api/auth")
@@ -22,12 +22,6 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-
-    @Operation(summary = "swagger test")
-    @GetMapping("/hi")
-    public String test() {
-        return "hi";
-    }
 
     @Operation(
             summary = "통합 SNS 로그인",

@@ -1,9 +1,7 @@
 package com.jiujitsu.api.domain.user.service;
 
 import com.jiujitsu.api.domain.user.dto.*;
-import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
-import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.sns.SnsClient;
@@ -16,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -31,64 +31,53 @@ public class AuthService {
     public AuthResponse snsLogin(SnsLoginRequest request) {
         // SNS 클라이언트를 통해 사용자 정보 조회
         SnsClient snsClient = snsClientFactory.getClient(request.getSnsProvider());
-        SnsUserInfo snsUserInfo = snsClient.getUserInfo(request.getAccessToken(), request.getIdToken());
+        SnsUserInfo snsUserInfo = snsClient.getUserInfo(request.getAccessToken());
 
-        // 기존 사용자 조회 또는 새 사용자 생성
-        User user = userRepository.findBySnsProviderAndSnsId(request.getSnsProvider(), snsUserInfo.getSnsId())
-                .orElseGet(() -> createNewUser(request.getSnsProvider(), snsUserInfo));
+        // 회원 정보 조회
+        Optional<User> userOptional = userRepository.findBySnsProviderAndSnsId(request.getSnsProvider(), snsUserInfo.getSnsId());
 
-        boolean deactivatedWithinGrace = false;
+        if (userOptional.isPresent()) {
+            // 1. 기존 회원 > 로그인
+            User user = userOptional.get();
 
-        // 탈퇴 계정 처리: 30일 이내 재로그인 시 복구, 만료 시 에러
-        if (user.getStatus() == UserStatus.DELETED) {
-            if (user.isWithinGracePeriod()) {
-                // 복구 처리
-                user.updateStatus(UserStatus.ACTIVE); // 내부에서 deletedAt null 처리
-                userRepository.save(user);
-                deactivatedWithinGrace = true;
-            } else {
-                // 이미 30일 경과하여 계정 만료
-                throw new ErrorException(ErrorCode.USER_ACCOUNT_EXPIRED);
+            boolean deactivatedWithinGrace = false;
+
+            // 탈퇴 계정 처리: 30일 이내 재로그인 시 복구, 만료 시 에러
+            if (user.getStatus() == UserStatus.DELETED) {
+                if (user.isWithinGracePeriod()) {
+                    // 복구 처리
+                    user.updateStatus(UserStatus.ACTIVE); // 내부에서 deletedAt null 처리
+                    deactivatedWithinGrace = true;
+                } else {
+                    // 이미 30일 경과하여 계정 만료
+                    throw new ErrorException(ErrorCode.USER_ACCOUNT_EXPIRED);
+                }
             }
+
+            // 사용자 정보 업데이트 (프로필 정보가 변경되었을 수 있음)
+            updateUserInfo(user, snsUserInfo);
+
+            // JWT 토큰 생성
+            String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+            String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+            // 응답 생성
+            AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
+                    user.getId(),
+                    user.getEmail(),
+                    user.getNickname(),
+                    user.getProfileImageUrl(),
+                    user.getSnsProvider(),
+                    deactivatedWithinGrace
+            );
+
+            return new AuthResponse(accessToken, refreshToken, userInfo);
+        } else {
+            // 2. 신규 회원 > 임시 토큰 생성
+            String tempToken = jwtTokenProvider.createTemporaryToken(
+                    snsUserInfo.getSnsId(), snsUserInfo.getEmail(), request.getSnsProvider());
+            return new AuthResponse(tempToken);
         }
-
-        // 사용자 정보 업데이트 (프로필 정보가 변경되었을 수 있음)
-        updateUserInfo(user, snsUserInfo);
-
-        // JWT 토큰 생성
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
-        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-
-        // 응답 생성
-        AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
-                user.getId(),
-                user.getEmail(),
-                user.getNickname(),
-                user.getProfileImageUrl(),
-                user.getSnsProvider().name(),
-                deactivatedWithinGrace
-        );
-
-        return new AuthResponse(accessToken, refreshToken, userInfo);
-    }
-
-    private User createNewUser(SnsProvider snsProvider, SnsUserInfo snsUserInfo) {
-        // 이메일 중복 체크
-        if (snsUserInfo.getEmail() != null && userRepository.existsByEmail(snsUserInfo.getEmail())) {
-            throw new RuntimeException("이미 등록된 이메일입니다: " + snsUserInfo.getEmail());
-        }
-
-        User newUser = User.builder()
-                .email(snsUserInfo.getEmail())
-                .nickname(snsUserInfo.getNickname())
-                .profileImageUrl(snsUserInfo.getProfileImageUrl())
-                .snsProvider(snsProvider)
-                .snsId(snsUserInfo.getSnsId())
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build();
-
-        return userRepository.save(newUser);
     }
 
     private void updateUserInfo(User user, SnsUserInfo snsUserInfo) {
@@ -105,7 +94,6 @@ public class AuthService {
 
         if (needsUpdate) {
             user.updateProfile(snsUserInfo.getNickname(), snsUserInfo.getProfileImageUrl());
-            userRepository.save(user);
         }
     }
 
@@ -136,7 +124,7 @@ public class AuthService {
                 user.getEmail(),
                 user.getNickname(),
                 user.getProfileImageUrl(),
-                user.getSnsProvider().name(),
+                user.getSnsProvider(),
                 false
         );
 
