@@ -130,24 +130,33 @@ public class CommunityProfile {
     /**
      * 포지션 수정
      */
-    public void upsertPosition(PositionType bestPosition, PositionType favoritePosition) {
+    public void upsertBestPosition(PositionType bestPosition) {
         this.bestPosition = bestPosition;
+    }
+
+    public void upsertFavoritePosition(PositionType favoritePosition) {
         this.favoritePosition = favoritePosition;
     }
 
     /**
      * 서브미션 수정
      */
-    public void upsertSubmission(SubmissionType bestSubmission, SubmissionType favoriteSubmission) {
+    public void upsertBestSubmission(SubmissionType bestSubmission) {
         this.bestSubmission = bestSubmission;
+    }
+
+    public void upsertFavoriteSubmission(SubmissionType favoriteSubmission) {
         this.favoriteSubmission = favoriteSubmission;
     }
 
     /**
      * 기술 수정
      */
-    public void upsertTechnique(TechniqueType bestTechnique, TechniqueType favoriteTechnique) {
+    public void upsertBestTechnique(TechniqueType bestTechnique) {
         this.bestTechnique = bestTechnique;
+
+    }
+    public void upsertFavoriteTechnique(TechniqueType favoriteTechnique) {
         this.favoriteTechnique = favoriteTechnique;
     }
 
