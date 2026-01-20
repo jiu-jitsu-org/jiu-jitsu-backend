@@ -31,7 +31,7 @@ public class CommunityProfileController {
     }
 
     @Operation(
-            summary = "내 커뮤니티 프로필 생성/수정",
+            summary = "내 커뮤니티 프로필 생성/수정22222222",
             description = "현재 로그인한 사용자의 커뮤니티 프로필을 생성하거나 수정합니다."
     )
     @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
