@@ -41,22 +41,6 @@ public class CommunityCommentsController {
         );
     }
 
-//    @Operation(
-//            summary = "커뮤니티 게시글 댓글 생성",
-//            description = "현재 커뮤니티 게시물의 댓글을 생성합니다."
-//    )
-//    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
-//    @PostMapping("/update")
-//    public CommunityCommentsWriteResponse updateComment(
-//            @Valid @RequestBody CommunityCommentsWriteRequest body
-//    ) {
-//        return communityCommentsService.write(
-//                body.postId(),
-//                body.parentId(),
-//                body.body()
-//        );
-//    }
-
     @Operation(
             summary = "커뮤니티 게시글 댓글 리스트조회",
             description = "현재 커뮤니티 게시물의 댓글을 조회합니다."
