@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "community-comments-reaction-controller", description = "커뮤니티 댓글 반응 API (Like, DisLike")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
-@RequestMapping("/api/community/comments/{commentId}")
+@RequestMapping("/community/comments/{commentId}")
 @RequiredArgsConstructor
 public class CommunityCommentsReactionController {
 

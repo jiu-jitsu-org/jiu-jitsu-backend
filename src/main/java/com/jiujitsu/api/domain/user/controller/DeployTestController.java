@@ -21,7 +21,7 @@ import java.util.Map;
 @Tag(name = "[SYS] CI/CD-test-controller", description = "Test CI/CD")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
-@RequestMapping("/api/test")
+@RequestMapping("/test")
 public class DeployTestController {
 
     @Operation(

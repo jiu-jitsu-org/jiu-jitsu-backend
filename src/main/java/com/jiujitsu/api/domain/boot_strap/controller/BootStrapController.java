@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "[SYS] AppVersion", description = "강제업데이트, 선택업데이트")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
-@RequestMapping("/api/bootstrap")
+@RequestMapping("/bootstrap")
 @RequiredArgsConstructor
 public class BootStrapController {
 

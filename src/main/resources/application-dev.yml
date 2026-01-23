@@ -1,0 +1,42 @@
+# application-dev.yml
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://postgres:5432/jiujitsu
+    username: jiujitsu
+    password: jiujitsu_pw
+    driver-class-name: org.postgresql.Driver
+    initialization-mode: never
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    open-in-view: false
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+
+# CORS
+cors:
+  allowed-origins:
+    - https://api.developer-chanq.xyz
+
+# Swagger server URL
+springdoc:
+  swagger:
+    server:
+      url: https://api.developer-chanq.xyz/api

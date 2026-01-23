@@ -1,125 +1,50 @@
-# === [공통] 모든 프로필에 적용되는 Actuator 설정 ===
+# application.yml
+spring:
+  mvc:
+    servlet:
+      path: /api
+  application:
+    name: api
+  output:
+    ansi:
+      enabled: ALWAYS
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    com.jiujitsu.api: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} - %msg%n"
+
+# 공통 Actuator 설정
 management:
   endpoints:
     web:
       base-path: /actuator
       exposure:
-        include: "health,info"    # 필요시 metrics,loggers,httpexchanges 등 추가
+        include: "health,info"
   endpoint:
     health:
-      show-details: "never"       # never | when_authorized | always
+      show-details: "never"
       probes:
-        enabled: true             # /actuator/health/liveness, /readiness 활성화
----
-server:
-  port: 8080
-logging:
-  level:
-    root: INFO
-    com.jiujitsu.api: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} - %msg%n"
-spring:
-  output:
-    ansi:
-      enabled: ALWAYS
-  config:
-    activate:
-      on-profile: local
-  application:
-    name: api
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-      settings:
-        web-allow-others: true
-  datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: 
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: update
-  autoconfigure:
-    exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+        enabled: true
 
-# JWT Configuration
+# JWT 공통
 jwt:
   secret: jiujitsu-secret-key-for-development-only-change-in-production-environment
   access-token-validity: 3600000
   refresh-token-validity: 604800000
 
-# Swagger/OpenAPI Configuration
+# Swagger/OpenAPI 공통
 springdoc:
   api-docs:
     path: /api-docs
   swagger:
     path: /swagger-ui.html
-    server:
-      url: http://localhost:8080
-apple:
-  filePath: ./jiujitsuLab_AuthKey_Z3HRNZG68M.p8
----
-server:
-  port: 8080
-logging:
-  level:
-    root: INFO
-    com.jiujitsu.api: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} - %msg%n"
-spring:
-  output:
-    ansi:
-      enabled: ALWAYS
-  config:
-    activate:
-      on-profile: dev
-  application:
-    name: api
-  datasource:
-    url: jdbc:postgresql://postgres:5432/jiujitsu
-    username: jiujitsu
-    password: jiujitsu_pw
-    driver-class-name: org.postgresql.Driver
-    initialization-mode: never   # db초기화여부 > always, never 있음 (never로 고정)
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      idle-timeout: 30000
-      max-lifetime: 1800000
-      connection-timeout: 30000
-  jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        jdbc:
-          lob:
-            non_contextual_creation: true
-    open-in-view: false        # true면 Lazy 로딩 가능, false 권장
-  autoconfigure:
-    exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
 
-# JWT Configuration
-jwt:
-  secret: jiujitsu-secret-key-for-development-only-change-in-production-environment
-  access-token-validity: 3600000
-  refresh-token-validity: 604800000
-
-# Swagger/OpenAPI Configuration
-springdoc:
-  api-docs:
-    path: /api-docs
-  swagger:
-    path: /swagger-ui.html
-    server:
-      url: https://api.developer-chanq.xyz/
+# Apple Key 공통
 apple:
   filePath: ./jiujitsuLab_AuthKey_Z3HRNZG68M.p8
