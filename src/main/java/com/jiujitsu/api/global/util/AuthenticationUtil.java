@@ -1,18 +1,18 @@
 package com.jiujitsu.api.global.util;
 
-import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.security.CustomUserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.Optional;
+
 @Slf4j
-@Component
 public class AuthenticationUtil {
 
     /**
@@ -21,12 +21,27 @@ public class AuthenticationUtil {
      * @return 현재 인증된 사용자의 ID
      * @throws RuntimeException 인증되지 않은 사용자인 경우
      */
-    public static Long getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new ErrorException(ErrorCode.USER_NOT_FOUND);
+    public static Optional<Long> getCurrentUserId() {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return Optional.empty();
         }
-        return (Long) authentication.getPrincipal();
+
+
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof CustomUserPrincipal customUser) {
+            return Optional.of(customUser.getUserId());
+        }
+
+        if (principal instanceof Long userId) {
+            return Optional.of(userId);
+        }
+
+        return Optional.empty();
     }
 
     /**
@@ -35,8 +50,12 @@ public class AuthenticationUtil {
      * @return 인증 여부
      */
     public static boolean isAuthenticated() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.isAuthenticated();
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        return authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
     }
 
     /**
@@ -53,18 +72,25 @@ public class AuthenticationUtil {
      * 
      * @return JWT 토큰 (Bearer 접두사 제거된 상태), 토큰이 없으면 null
      */
-    public static String getCurrentToken() {
+    public static Optional<String> getCurrentToken() {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+            ServletRequestAttributes attributes =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+
+            if (attributes == null) {
+                return Optional.empty();
+            }
+
             HttpServletRequest request = attributes.getRequest();
             String bearerToken = request.getHeader("Authorization");
-            
+
             if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-                return bearerToken.substring(7);
+                return Optional.of(bearerToken.substring(7));
             }
-            return null;
+
+            return Optional.empty();
         } catch (Exception e) {
-            throw new ErrorException(ErrorCode.NO_TOKEN);
+            return Optional.empty();
         }
     }
 }

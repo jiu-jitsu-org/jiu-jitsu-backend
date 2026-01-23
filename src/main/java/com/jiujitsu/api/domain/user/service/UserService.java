@@ -1,9 +1,9 @@
 package com.jiujitsu.api.domain.user.service;
 
-import com.jiujitsu.api.domain.community.entity.CommunityProfile;
-import com.jiujitsu.api.domain.community.entity.OwnerProfile;
-import com.jiujitsu.api.domain.community.repository.CommunityProfileRepository;
-import com.jiujitsu.api.domain.community.repository.OwnerProfileRepository;
+import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
+import com.jiujitsu.api.domain.community.profile.entity.OwnerProfile;
+import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepository;
+import com.jiujitsu.api.domain.community.profile.repository.OwnerProfileRepository;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -38,7 +38,8 @@ public class UserService {
      * 회원가입
      */
     public AuthResponse createUser(CreateProfileRequest createProfileRequest) {
-        String tempToken = AuthenticationUtil.getCurrentToken();
+        String tempToken = AuthenticationUtil.getCurrentToken()
+                .orElseThrow(() -> new ErrorException(ErrorCode.NO_TOKEN));
         String nickname = StringUtils.trimToEmpty(createProfileRequest.getNickname());
 
         // 임시 토큰 정보
@@ -82,7 +83,8 @@ public class UserService {
      */
     public UserProfileResponse getUserProfile() {
         // SecurityContext에서 인증된 사용자 ID 가져오기
-        Long userId = AuthenticationUtil.getCurrentUserId();
+        Long userId = AuthenticationUtil.getCurrentUserId()
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         // 사용자 조회
         User user = userRepository.findById(userId)
@@ -96,7 +98,8 @@ public class UserService {
      */
     public UpdateProfileResponse updateProfile(UpdateProfileRequest request) {
         // SecurityContext에서 인증된 사용자 ID 가져오기
-        final Long userId = AuthenticationUtil.getCurrentUserId();
+        final Long userId = AuthenticationUtil.getCurrentUserId()
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
         final String nickname = StringUtils.trimToEmpty(request.getNickname());
         final String profileImageUrl = StringUtils.trimToEmpty(request.getProfileImageUrl());
 
@@ -117,7 +120,8 @@ public class UserService {
      */
     public void deactivateUser() {
         // SecurityContext에서 인증된 사용자 ID 가져오기
-        Long userId = AuthenticationUtil.getCurrentUserId();
+        Long userId = AuthenticationUtil.getCurrentUserId()
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         // 사용자 조회
         User user = userRepository.findById(userId)
@@ -129,10 +133,10 @@ public class UserService {
         }
 
         // 현재 사용자의 JWT 토큰을 블랙리스트에 추가
-        String token = AuthenticationUtil.getCurrentToken();
-        if (token != null) {
-            tokenBlacklistService.blacklistToken(token);
-        }
+        String token = AuthenticationUtil.getCurrentToken()
+                .orElseThrow(() -> new ErrorException(ErrorCode.NO_TOKEN));
+
+        tokenBlacklistService.blacklistToken(token);
 
         // 사용자 상태를 DELETED로 변경 (soft delete)
         user.updateStatus(UserStatus.DELETED);
@@ -153,8 +157,9 @@ public class UserService {
      * 관장/사범 신청
      */
     public UserProfileResponse requestOwnerRole(String ownerRequestImageUrl) {
-        // SecurityContext에서 인증된 사용자 ID 가져오기
-        Long userId = AuthenticationUtil.getCurrentUserId();
+        // SecurityContext 에서 인증된 사용자 ID 가져오기
+        Long userId = AuthenticationUtil.getCurrentUserId()
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         // 사용자 조회
         User user = userRepository.findById(userId)
@@ -171,7 +176,8 @@ public class UserService {
      */
     public UserProfileResponse grantOwnerRole() {
         // SecurityContext에서 인증된 사용자 ID 가져오기
-        Long userId = AuthenticationUtil.getCurrentUserId();
+        Long userId = AuthenticationUtil.getCurrentUserId()
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         // 사용자 조회
         User user = userRepository.findById(userId)
