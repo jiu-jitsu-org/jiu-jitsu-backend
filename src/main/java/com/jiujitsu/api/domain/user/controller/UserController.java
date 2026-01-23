@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "user-controller", description = "사용자 정보 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER})
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/user")
 @RequiredArgsConstructor
 public class UserController {
 

@@ -30,4 +30,4 @@ cors:
 springdoc:
   swagger:
     server:
-      url: http://localhost:8080
+      url: http://localhost:8080/api

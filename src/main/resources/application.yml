@@ -1,5 +1,8 @@
 # application.yml
 spring:
+  mvc:
+    servlet:
+      path: /api
   application:
     name: api
   output:

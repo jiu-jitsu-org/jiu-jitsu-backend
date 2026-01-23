@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "community-profile-controller", description = "커뮤니티 프로필 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
-@RequestMapping("/api/community/profile")
+@RequestMapping("/community/profile")
 @RequiredArgsConstructor
 public class CommunityProfileController {
 
