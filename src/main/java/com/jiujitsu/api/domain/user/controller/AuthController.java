@@ -1,9 +1,6 @@
 package com.jiujitsu.api.domain.user.controller;
 
-import com.jiujitsu.api.domain.user.dto.AuthResponse;
-import com.jiujitsu.api.domain.user.dto.LogoutRequest;
-import com.jiujitsu.api.domain.user.dto.LogoutResponse;
-import com.jiujitsu.api.domain.user.dto.SnsLoginRequest;
+import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.service.AuthService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
@@ -56,5 +53,14 @@ public class AuthController {
             @Valid @RequestBody LogoutRequest request) {
 
         return authService.logout(request);
+    }
+
+    @Operation(
+            summary = "로그인",
+            description = "관리자 로그인 테스트"
+    )
+    @PostMapping("/login")
+    public LoginResponse login(@RequestBody LoginRequest request) {
+        return new LoginResponse();
     }
 }
