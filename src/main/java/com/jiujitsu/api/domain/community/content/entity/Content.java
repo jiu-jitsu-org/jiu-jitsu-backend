@@ -21,6 +21,4 @@ public class Content extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ContentType contentType;  // 컨텐츠 타입
-
 }
-

@@ -1,7 +1,6 @@
 package com.jiujitsu.api.domain.community.comment.repository;
 
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
-import com.jiujitsu.api.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,24 +16,20 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
      * 댓글 작성
      * @param postId   게시글ID
      * @param parentId  부모 댓글 ID
-     * @param author    작성자
      * @param body      댓글내용
      * @return  댓글
      */
     default CommunityComments createComment(
             Long postId,
             Long parentId,
-            User author,
             String body
     ) {
         Objects.requireNonNull(postId, "postId must not be null");
-        Objects.requireNonNull(author, "author must not be null");
         Objects.requireNonNull(body, "body must not be null");
 
         CommunityComments comment = CommunityComments.builder()
                 .postId(postId)
                 .parentId(parentId)
-                .author(author)
                 .body(body)
                 .build();
         return save(comment);
@@ -63,7 +58,6 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
     @Query("""
         select c
         from CommunityComments c
-        join fetch c.author a
         where c.postId = :postId
             and c.parentId = :parentId
         order by c.createdAt asc, c.id asc

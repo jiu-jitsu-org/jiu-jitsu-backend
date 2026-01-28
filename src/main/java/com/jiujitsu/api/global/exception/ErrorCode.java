@@ -15,6 +15,7 @@ public enum ErrorCode {
     NICKNAME_DUPLICATED(400, "R0003", "이미 사용중인 닉네임입니다."),
     NICKNAME_VALIDATION(400, "R0004", "잘못된 닉네임 형식입니다."),
     REQUIRED_PROFILE(400, "R0005", "프로필 등록 후 처리 가능합니다."),
+    CONTENT_NOT_FOUND(404, "C0001", "존재하지 않는 게시물입니다."),
 
     /**
      * 응답 에러

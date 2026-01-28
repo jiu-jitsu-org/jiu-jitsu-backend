@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentReactionRepository;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.comment.repository.ReactionCountProjection;
+import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -27,22 +28,23 @@ public class CommunityCommentsService {
 
     private final CommunityCommentReactionRepository commentReactionRepository;
     private final CommunityCommentsRepository communityCommentsRepository;
+    private final ContentRepository contentRepository;
     private final UserRepository userRepository;
 
     @Transactional
     public CommunityCommentsWriteResponse write(
             Long postId,
             Long parentId,
-            Long userId,
             String body
     ) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        // Content 유효성 체크
+        if (!contentRepository.existsById(postId)) {
+            throw new ErrorException(ErrorCode.CONTENT_NOT_FOUND);
+        }
 
         communityCommentsRepository.createComment(
                 postId,
                 parentId,
-                user,
                 body
         );
         return new CommunityCommentsWriteResponse(true);
@@ -76,9 +78,9 @@ public class CommunityCommentsService {
                                 childComment.getParentId(),
                                 childComment.getBody(),
                                 new CommentAuthor(
-                                        childComment.getAuthor().getId(),
-                                        childComment.getAuthor().getNickname(),
-                                        childComment.getAuthor().getProfileImageUrl()
+                                        childComment.getCreatedBy().getId(),
+                                        childComment.getCreatedBy().getNickname(),
+                                        childComment.getCreatedBy().getProfileImageUrl()
                                 ),
                                 childComment.getCreatedAt(),
                                 childComment.getUpdatedAt()
@@ -93,9 +95,9 @@ public class CommunityCommentsService {
                             communityComment.getParentId(),
                             communityComment.getBody(),
                             new CommentAuthor(
-                                    communityComment.getAuthor().getId(),
-                                    communityComment.getAuthor().getNickname(),
-                                    communityComment.getAuthor().getProfileImageUrl()
+                                    communityComment.getCreatedBy().getId(),
+                                    communityComment.getCreatedBy().getNickname(),
+                                    communityComment.getCreatedBy().getProfileImageUrl()
                             ),
                             communityComment.getCreatedAt(),
                             communityComment.getUpdatedAt(),

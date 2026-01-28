@@ -41,7 +41,6 @@ public class CommunityCommentsReactionService {
                     CommunityCommentReaction
                             .builder()
                             .comment(comment)
-                            .user(user)
                             .reactionType(clickedType)
                             .build()
             );

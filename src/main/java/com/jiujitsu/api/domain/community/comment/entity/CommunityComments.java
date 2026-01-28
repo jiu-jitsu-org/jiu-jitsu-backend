@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.comment.entity;
 
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsUpdateRequest;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,7 +23,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class CommunityComments {
+public class CommunityComments extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,25 +35,17 @@ public class CommunityComments {
 
     @Column(nullable = true)
     private Long parentId;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "author_id", nullable = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    private User author; // 유저정보
+//
+//    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+//    @JoinColumn(name = "author_id", nullable = false)
+//    @OnDelete(action = OnDeleteAction.CASCADE)
+//    private User author; // 유저정보
 
     @Column
     private String body;        // 댓글 내용
 
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
-
     public void updateFrom(CommunityCommentsUpdateRequest request, User author) {
-        this.author = author;
+//        this.author = author;
         this.body = request.body();
     }
 }
