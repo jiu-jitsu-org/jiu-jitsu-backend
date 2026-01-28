@@ -30,13 +30,11 @@ public class CommunityCommentsController {
     @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
     @PostMapping("/write")
     public CommunityCommentsWriteResponse writeComment(
-            @RequestBody CommunityCommentsWriteRequest body,
-            @AuthenticationPrincipal Long userId
+            @RequestBody CommunityCommentsWriteRequest body
     ) {
         return communityCommentsService.write(
                 body.postId(),
                 body.parentId(),
-                userId,
                 body.body()
         );
     }
