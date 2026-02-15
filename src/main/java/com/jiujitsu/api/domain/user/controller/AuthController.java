@@ -5,7 +5,6 @@ import com.jiujitsu.api.domain.user.service.AuthService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,19 +31,6 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "토큰 갱신",
-            description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다."
-    )
-    @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY, ErrorCode.USER_NOT_FOUND})
-    @PostMapping("/refresh")
-    public AuthResponse refreshToken(
-            @Parameter(description = "리프레시 토큰", required = true)
-            @RequestParam String refreshToken) {
-
-        return authService.refreshToken(refreshToken);
-    }
-
-    @Operation(
             summary = "로그아웃",
             description = "액세스 토큰과 리프레시 토큰을 무효화하여 로그아웃합니다."
     )
@@ -63,4 +49,13 @@ public class AuthController {
     public LoginResponse login(@RequestBody LoginRequest request) {
         return new LoginResponse();
     }
+        @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
+        @ApiErrorCodeExamples({ ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY,
+                        ErrorCode.USER_NOT_FOUND })
+        @PostMapping("/refresh")
+        public AuthResponse refreshToken(
+                        @Valid @RequestBody RefreshTokenRequest request) {
+
+                return authService.refreshToken(request.getRefreshToken());
+        }
 }
