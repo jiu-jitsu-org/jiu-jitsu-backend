@@ -5,11 +5,13 @@ import com.jiujitsu.api.domain.user.service.AuthService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "authentication-controller", description = "인증 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
@@ -25,23 +27,8 @@ public class AuthController {
             description = "SNS 제공자와 토큰 정보를 포함한 통합 로그인 API입니다."
     )
     @PostMapping("/sns-login")
-    public AuthResponse snsLogin(
-            @Valid @RequestBody SnsLoginRequest request) {
-
+    public AuthResponse snsLogin(@Valid @RequestBody SnsLoginRequest request) {
         return authService.snsLogin(request);
-    }
-
-    @Operation(
-            summary = "토큰 갱신",
-            description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다."
-    )
-    @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY, ErrorCode.USER_NOT_FOUND})
-    @PostMapping("/refresh")
-    public AuthResponse refreshToken(
-            @Parameter(description = "리프레시 토큰", required = true)
-            @RequestParam String refreshToken) {
-
-        return authService.refreshToken(refreshToken);
     }
 
     @Operation(
@@ -49,9 +36,7 @@ public class AuthController {
             description = "액세스 토큰과 리프레시 토큰을 무효화하여 로그아웃합니다."
     )
     @PostMapping("/logout")
-    public LogoutResponse logout(
-            @Valid @RequestBody LogoutRequest request) {
-
+    public LogoutResponse logout(@Valid @RequestBody LogoutRequest request) {
         return authService.logout(request);
     }
 
@@ -62,5 +47,13 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest request) {
         return new LoginResponse();
+    }
+
+    @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
+    @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY,
+            ErrorCode.USER_NOT_FOUND})
+    @PostMapping("/refresh")
+    public AuthResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        return authService.refreshToken(request.getRefreshToken());
     }
 }
