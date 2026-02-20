@@ -27,9 +27,7 @@ public class AuthController {
             description = "SNS 제공자와 토큰 정보를 포함한 통합 로그인 API입니다."
     )
     @PostMapping("/sns-login")
-    public AuthResponse snsLogin(
-            @Valid @RequestBody SnsLoginRequest request) {
-
+    public AuthResponse snsLogin(@Valid @RequestBody SnsLoginRequest request) {
         return authService.snsLogin(request);
     }
 
@@ -38,9 +36,7 @@ public class AuthController {
             description = "액세스 토큰과 리프레시 토큰을 무효화하여 로그아웃합니다."
     )
     @PostMapping("/logout")
-    public LogoutResponse logout(
-            @Valid @RequestBody LogoutRequest request) {
-
+    public LogoutResponse logout(@Valid @RequestBody LogoutRequest request) {
         return authService.logout(request);
     }
 
@@ -57,9 +53,7 @@ public class AuthController {
     @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY,
             ErrorCode.USER_NOT_FOUND})
     @PostMapping("/refresh")
-    public AuthResponse refreshToken(
-            @Valid @RequestBody RefreshTokenRequest request) {
-
+    public AuthResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         return authService.refreshToken(request.getRefreshToken());
     }
 }
