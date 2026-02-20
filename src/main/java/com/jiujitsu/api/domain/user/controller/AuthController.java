@@ -8,7 +8,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "authentication-controller", description = "인증 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
@@ -49,13 +52,14 @@ public class AuthController {
     public LoginResponse login(@RequestBody LoginRequest request) {
         return new LoginResponse();
     }
-        @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
-        @ApiErrorCodeExamples({ ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY,
-                        ErrorCode.USER_NOT_FOUND })
-        @PostMapping("/refresh")
-        public AuthResponse refreshToken(
-                        @Valid @RequestBody RefreshTokenRequest request) {
 
-                return authService.refreshToken(request.getRefreshToken());
-        }
+    @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
+    @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY,
+            ErrorCode.USER_NOT_FOUND})
+    @PostMapping("/refresh")
+    public AuthResponse refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request) {
+
+        return authService.refreshToken(request.getRefreshToken());
+    }
 }
