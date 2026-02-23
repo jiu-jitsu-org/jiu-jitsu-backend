@@ -6,8 +6,6 @@ import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentReac
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.comment.repository.ReactionCountProjection;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
-import com.jiujitsu.api.domain.user.entity.User;
-import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +27,6 @@ public class CommunityCommentsService {
     private final CommunityCommentReactionRepository commentReactionRepository;
     private final CommunityCommentsRepository communityCommentsRepository;
     private final ContentRepository contentRepository;
-    private final UserRepository userRepository;
 
     @Transactional
     public CommunityCommentsWriteResponse write(
