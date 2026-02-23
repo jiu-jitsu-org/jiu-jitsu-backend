@@ -1,5 +1,5 @@
 name: Build & Push to GHCR
-
+# Token Expires 2026 04 
 on:
   push:
     branches:
@@ -8,7 +8,7 @@ on:
 
 permissions:
   contents: read
-  packages: write   # GITHUB_TOKEN 사용할 때 필요. PAT만 써도 둬도 무방
+  packages: write   # GITHUB_TOKEN 사용할 때 필요. PAT만 써도 둬도 무방 
 
 env:
   GHCR_IMAGE: ghcr.io/jiu-jitsu-org/jiu-jitsu-backend-api

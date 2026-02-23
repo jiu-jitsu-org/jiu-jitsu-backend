@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "image-controller", description = "CDN 업로드 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
-@RequestMapping("/api/image")
+@RequestMapping("/image")
 @RequiredArgsConstructor
 public class ImageController {
 
