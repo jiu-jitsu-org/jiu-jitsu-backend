@@ -30,6 +30,9 @@ public class BoardController {
 
     private final BoardService boardService;
 
+    /**
+     * 카테고리
+     */
     @Operation(summary = "카테고리 목록 조회", description = "카테고리 목록 조회(임시)")
     @GetMapping("/category")
     public List<BoardCategoryResponse> getCategory() {
@@ -43,6 +46,10 @@ public class BoardController {
        boardService.createCategory();
     }
 
+
+    /**
+     * 게시물
+     */
     @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다.")
     @ApiErrorCodeExamples({ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER})
     @PostMapping

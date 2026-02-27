@@ -78,6 +78,7 @@ public class BoardService {
 
     @Transactional
     public BoardResponse create(BoardCreateRequest request) {
+        // todo: 사용자 인증 부분 체크하는거 공통 처리 필요
         Long userId = AuthenticationUtil.getCurrentUserId()
                 .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
         User user = userRepository.findById(userId)
