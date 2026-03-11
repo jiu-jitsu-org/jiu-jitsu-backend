@@ -5,7 +5,7 @@ import java.util.List;
 
 public record CommunityCommentsItem(
         Long id,
-        Long postId,
+        Long contentId,
         Long parentId,
         String body,
         CommentAuthor author,

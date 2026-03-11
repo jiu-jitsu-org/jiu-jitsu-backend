@@ -33,7 +33,7 @@ public class CommunityCommentsController {
             @RequestBody CommunityCommentsWriteRequest body
     ) {
         return communityCommentsService.write(
-                body.postId(),
+                body.contentId(),
                 body.parentId(),
                 body.body()
         );
@@ -47,8 +47,8 @@ public class CommunityCommentsController {
     @GetMapping("/all")
     public CommunityCommentsListResponse allComments(
             @Parameter(description = "커뮤니티 게시글 ID", example = "")
-            @RequestParam Integer postId
+            @RequestParam Integer contentId
     ) {
-        return communityCommentsService.fetchCommentsList(postId);
+        return communityCommentsService.fetchCommentsList(contentId);
     }
 }

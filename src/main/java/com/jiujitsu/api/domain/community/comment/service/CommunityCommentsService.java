@@ -5,7 +5,9 @@ import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentReactionRepository;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.comment.repository.ReactionCountProjection;
+import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
+import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -27,51 +30,52 @@ public class CommunityCommentsService {
     private final CommunityCommentReactionRepository commentReactionRepository;
     private final CommunityCommentsRepository communityCommentsRepository;
     private final ContentRepository contentRepository;
+    private final AuthenticationFacade authenticationFacade;
 
     @Transactional
     public CommunityCommentsWriteResponse write(
-            Long postId,
+            Long contentId,
             Long parentId,
             String body
     ) {
-        // Content 유효성 체크
-        if (!contentRepository.existsById(postId)) {
-            throw new ErrorException(ErrorCode.CONTENT_NOT_FOUND);
-        }
+        // 로그인 확인
+        authenticationFacade.checkCurrentUser();
 
-        communityCommentsRepository.createComment(
-                postId,
-                parentId,
-                body
-        );
+        // parentId 0일경우 null 로 처리
+        parentId = Objects.equals(parentId, 0L) ? null : parentId;
+
+        // 컨텐츠 조회
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
+
+        communityCommentsRepository.createComment(content, parentId, body);
         return new CommunityCommentsWriteResponse(true);
     }
 
     @Transactional(readOnly = true)
-    public List<CommunityComments> listTopLevel(Long postId) {
-        return communityCommentsRepository.findCommentsByPostId(postId);
+    public List<CommunityComments> listTopLevel(Long contentId) {
+        return communityCommentsRepository.findCommentsByContentId(contentId);
     }
 
     @Transactional(readOnly = true)
-    public List<CommunityComments> listChild(Long postId, Long parentId) {
-        return communityCommentsRepository.findByPostIdAndParentIdOrderByCreatedAtAsc(postId, parentId);
+    public List<CommunityComments> listChild(Long contentId, Long parentId) {
+        return communityCommentsRepository.findByContentIdAndParentIdOrderByCreatedAtAsc(contentId, parentId);
     }
 
     @Transactional(readOnly = true)
-    public CommunityCommentsListResponse fetchCommentsList(Integer postId) {
+    public CommunityCommentsListResponse fetchCommentsList(Integer contentId) {
         List<CommunityCommentsItem> returnValue = new java.util.ArrayList<>(List.of());
-        List<CommunityComments> parentsList = communityCommentsRepository.findCommentsByPostId(postId.longValue());
-
+        List<CommunityComments> parentsList = communityCommentsRepository.findCommentsByContentId(contentId.longValue());
 
         parentsList.forEach(communityComment -> {
-            List<CommunityComments> childList = communityCommentsRepository.findByPostIdAndParentIdOrderByCreatedAtAsc(postId.longValue(), communityComment.getId());
+            List<CommunityComments> childList = communityCommentsRepository.findByContentIdAndParentIdOrderByCreatedAtAsc(contentId.longValue(), communityComment.getId());
             List<ChildCommentItem> childListDto = new java.util.ArrayList<>(List.of());
 
             childList.forEach(childComment -> {
                 childListDto.add(
                         new ChildCommentItem(
                                 childComment.getId(),
-                                childComment.getPostId(),
+                                childComment.getContent().getId(),
                                 childComment.getParentId(),
                                 childComment.getBody(),
                                 new CommentAuthor(
@@ -88,7 +92,7 @@ public class CommunityCommentsService {
             returnValue.add(
                     new CommunityCommentsItem(
                             communityComment.getId(),
-                            communityComment.getPostId(),
+                            communityComment.getContent().getId(),
                             communityComment.getParentId(),
                             communityComment.getBody(),
                             new CommentAuthor(
@@ -107,8 +111,8 @@ public class CommunityCommentsService {
     }
 
     public Map<Long, ReactionCountProjection> getReactionCount(Collection<Long> commentIds) {
-        var rows = commentReactionRepository.countByCommentIdsGroupByType(commentIds);
-        var map = rows.stream().collect(Collectors.toMap(
+        List<ReactionCountProjection> rows = commentReactionRepository.countByCommentIdsGroupByType(commentIds);
+        Map<Long, ReactionCountProjection> map = rows.stream().collect(Collectors.toMap(
                 ReactionCountProjection::getCommentId, Function.identity()
         ));
 

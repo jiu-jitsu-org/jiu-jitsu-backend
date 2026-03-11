@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public record ChildCommentItem(
         Long id,
-        Long postId,
+        Long contentId,
         Long parentId,
         String body,
         CommentAuthor author,

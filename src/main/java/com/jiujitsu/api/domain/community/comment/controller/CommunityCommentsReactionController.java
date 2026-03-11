@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.comment.controller;
 
 import com.jiujitsu.api.domain.community.comment.dto.reaction.CommunityCommentReactionRequest;
 import com.jiujitsu.api.domain.community.comment.dto.reaction.CommunityCommentReactionResponse;
+import com.jiujitsu.api.domain.community.comment.dto.reaction.CommunityCommentReactionSummary;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityCommentReactionType;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsReactionService;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -26,8 +27,8 @@ public class CommunityCommentsReactionController {
             @RequestBody CommunityCommentReactionRequest requestBody,
             @AuthenticationPrincipal Long userId
     ) {
-        var type = CommunityCommentReactionType.valueOf(requestBody.type());
-        var summary = reactionService.toggle(commentId, userId, type);
+        CommunityCommentReactionType type = CommunityCommentReactionType.valueOf(requestBody.type());
+        CommunityCommentReactionSummary summary = reactionService.toggle(commentId, userId, type);
         return new CommunityCommentReactionResponse(
                 summary.likeCount(),
                 summary.dislikeCount(),

@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.comment.service;
 import com.jiujitsu.api.domain.community.comment.dto.reaction.CommunityCommentReactionSummary;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityCommentReaction;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityCommentReactionType;
+import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentReactionRepository;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -12,6 +13,8 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,13 +30,13 @@ public class CommunityCommentsReactionService {
             Long userId,
             CommunityCommentReactionType clickedType
     ) {
-        var comment = commentsRepository.getReferenceById(commentId);
+        CommunityComments comment = commentsRepository.getReferenceById(commentId);
 //        var comment = commentsRepository.findById(commentId);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
-        var existingOpt = commentReactionRepository.findByCommentAndUser(commentId, userId);
+        Optional<CommunityCommentReaction> existingOpt = commentReactionRepository.findByCommentAndUser(commentId, userId);
 
         if (existingOpt.isEmpty()) {
             // 처음누름 -> INSERT
@@ -45,7 +48,7 @@ public class CommunityCommentsReactionService {
                             .build()
             );
         } else {
-            var existing = existingOpt.get();
+            CommunityCommentReaction existing = existingOpt.get();
             if (existing.getReactionType() == clickedType) {
                 // 같은 버튼 다시 누름 -> DELETE
                 commentReactionRepository.delete(existing);

@@ -38,4 +38,7 @@ public class BoardResponse {
 
     @Schema(description = "수정 일시")
     private LocalDateTime updatedAt;
+
+    @Schema(description = "상위 댓글 수 (대댓글 제외)", example = "5")
+    private Long commentCount;
 }
