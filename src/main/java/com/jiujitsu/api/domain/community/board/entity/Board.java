@@ -34,6 +34,8 @@ public class Board extends BaseEntity {
     @Column(nullable = false)
     private String body;    // 내용
 
+    // todo : 투표, 태그
+
     public void changeTitle(String title) {
         this.title = title;
     }

@@ -1,21 +1,19 @@
 package com.jiujitsu.api.domain.community.board.service;
 
-import com.jiujitsu.api.domain.community.board.dto.BoardCategoryResponse;
-import com.jiujitsu.api.domain.community.board.dto.BoardCreateRequest;
-import com.jiujitsu.api.domain.community.board.dto.BoardResponse;
-import com.jiujitsu.api.domain.community.board.dto.BoardUpdateRequest;
+import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
 import com.jiujitsu.api.domain.community.board.repository.BoardCategoryRepository;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
+import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
+import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
-import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -36,6 +36,8 @@ public class BoardService {
     private final BoardCategoryRepository boardCategoryRepository;
     private final ContentRepository contentRepository;
     private final UserRepository userRepository;
+    private final CommunityCommentsRepository communityCommentsRepository;
+    private final AuthenticationFacade authenticationFacade;
 
     @Transactional(readOnly = true)
     public List<BoardCategoryResponse> getCategory() {
@@ -78,18 +80,17 @@ public class BoardService {
 
     @Transactional
     public BoardResponse create(BoardCreateRequest request) {
-        // todo: 사용자 인증 부분 체크하는거 공통 처리 필요
-        Long userId = AuthenticationUtil.getCurrentUserId()
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        // 로그인 유저 체크
+        authenticationFacade.checkCurrentUser();
 
+        // 카테고리 확인
         BoardCategory category = boardCategoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_CATEGORY_NOT_FOUND));
         if (!category.isActive()) {
             throw new ErrorException(ErrorCode.BOARD_CATEGORY_NOT_FOUND);
         }
 
+        // 컨텐츠(게시물) 저장
         Content content = contentRepository.save(
                 Content.builder().contentType(ContentType.BOARD).build()
         );
@@ -101,34 +102,49 @@ public class BoardService {
                         .body(request.getBody())
                         .build()
         );
-        return toResponse(board);
+        return toResponse(board, communityCommentsRepository.countByContent_IdAndParentIdIsNull(board.getContent().getId()));
     }
 
     @Transactional(readOnly = true)
     public BoardResponse getById(Long id) {
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
-        return toResponse(board);
+        return toResponse(board, communityCommentsRepository.countByContent_IdAndParentIdIsNull(board.getContent().getId()));
     }
 
     @Transactional(readOnly = true)
-    public Page<BoardResponse> getList(Long categoryId, Pageable pageable) {
+    public Page<BoardResponse> getList(BoardListRequest boardListRequest, Pageable pageable) {
+        Long categoryId = boardListRequest.getCategoryId();
+
+        // 게시판 조회
         Page<Board> page = categoryId != null
                 ? boardRepository.findAllByCategory_Id(categoryId, pageable)
                 : boardRepository.findAll(pageable);
-        return page.map(this::toResponse);
+
+        // 컨텐츠(공통) 조회
+        List<Long> contentIds = page.getContent().stream()
+                .map(b -> b.getContent().getId())
+                .toList();
+
+        // 댓글 조회
+        Map<Long, Long> commentCountMap = contentIds.isEmpty()
+                ? Map.of()
+                : communityCommentsRepository.countTopLevelCommentsByContentIds(contentIds).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+
+        return page.map(board -> toResponse(board, commentCountMap.getOrDefault(board.getContent().getId(), 0L)));
     }
 
     @Transactional
     public BoardResponse update(Long id, BoardUpdateRequest request) {
+        // 게시물 조회
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
-        Long userId = AuthenticationUtil.getCurrentUserId()
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        // 로그인 유저 조회
+        User user = authenticationFacade.getCurrentUser();
 
+        // 권한 체크
         if (!Objects.equals(user, board.getCreatedBy())) {
             throw new ErrorException(ErrorCode.PERMISSION_DENIED);
         }
@@ -148,7 +164,8 @@ public class BoardService {
             board.changeBody(request.getBody());
         }
 
-        return toResponse(boardRepository.save(board));
+        Board saved = boardRepository.save(board);
+        return toResponse(saved, communityCommentsRepository.countByContent_IdAndParentIdIsNull(saved.getContent().getId()));
     }
 
     @Transactional
@@ -156,10 +173,7 @@ public class BoardService {
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
-        Long userId = AuthenticationUtil.getCurrentUserId()
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        User user = authenticationFacade.getCurrentUser();
 
         if (!Objects.equals(user, board.getCreatedBy())) {
             throw new ErrorException(ErrorCode.PERMISSION_DENIED);
@@ -170,7 +184,7 @@ public class BoardService {
         contentRepository.delete(content);
     }
 
-    private BoardResponse toResponse(Board board) {
+    private BoardResponse toResponse(Board board, long commentCount) {
         return BoardResponse.builder()
                 .id(board.getId())
                 .contentId(board.getContent().getId())
@@ -180,6 +194,7 @@ public class BoardService {
                 .body(board.getBody())
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
+                .commentCount(commentCount)
                 .build();
     }
 }

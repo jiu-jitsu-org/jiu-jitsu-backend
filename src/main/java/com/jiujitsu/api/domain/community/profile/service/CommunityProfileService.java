@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
+import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
@@ -27,6 +28,7 @@ public class CommunityProfileService {
 
     private final CommunityProfileRepository communityProfileRepository;
     private final UserRepository userRepository;
+    private final AuthenticationFacade authenticationFacade;
 
     /**
      * 커뮤니티 프로필 조회
@@ -55,10 +57,7 @@ public class CommunityProfileService {
      * 커뮤니티 프로필 등록/수정
      */
     public CommunityProfileResponse upsertMyProfile(CommunityProfileRequest request) {
-        Long userId = AuthenticationUtil.getCurrentUserId()
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        User user = authenticationFacade.getCurrentUser();
 
         CommunityProfile profile = communityProfileRepository.findByUser(user).orElse(new CommunityProfile(user));
 

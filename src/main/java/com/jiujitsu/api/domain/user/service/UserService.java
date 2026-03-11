@@ -33,6 +33,7 @@ public class UserService {
     private final CommunityProfileRepository communityProfileRepository;
     private final TokenBlacklistService tokenBlacklistService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationFacade authenticationFacade;
 
     /**
      * 회원가입
@@ -82,13 +83,8 @@ public class UserService {
      * 사용자 프로필 조회
      */
     public UserProfileResponse getUserProfile() {
-        // SecurityContext에서 인증된 사용자 ID 가져오기
-        Long userId = AuthenticationUtil.getCurrentUserId()
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-
         // 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        User user = authenticationFacade.getCurrentUser();
 
         return new UserProfileResponse(user);
     }
@@ -97,15 +93,11 @@ public class UserService {
      * 사용자 프로필 수정
      */
     public UpdateProfileResponse updateProfile(UpdateProfileRequest request) {
-        // SecurityContext에서 인증된 사용자 ID 가져오기
-        final Long userId = AuthenticationUtil.getCurrentUserId()
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
         final String nickname = StringUtils.trimToEmpty(request.getNickname());
         final String profileImageUrl = StringUtils.trimToEmpty(request.getProfileImageUrl());
 
         // 사용자 조회
-        User user = userRepository.findById(userId)
-        .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        User user = authenticationFacade.getCurrentUser();
 
         // 닉네임 중복체크
         checkNickname(nickname);
@@ -119,13 +111,8 @@ public class UserService {
      * 회원 비활성화
      */
     public void deactivateUser() {
-        // SecurityContext에서 인증된 사용자 ID 가져오기
-        Long userId = AuthenticationUtil.getCurrentUserId()
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-
         // 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        User user = authenticationFacade.getCurrentUser();
 
         // 이미 탈퇴한 사용자인 경우
         if (user.getStatus() == UserStatus.DELETED) {
@@ -157,13 +144,8 @@ public class UserService {
      * 관장/사범 신청
      */
     public UserProfileResponse requestOwnerRole(String ownerRequestImageUrl) {
-        // SecurityContext 에서 인증된 사용자 ID 가져오기
-        Long userId = AuthenticationUtil.getCurrentUserId()
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-
         // 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        User user = authenticationFacade.getCurrentUser();
 
         // 사용자 권한 변경
         user.requestOwner(ownerRequestImageUrl);
@@ -175,13 +157,8 @@ public class UserService {
      * 관장/사범 권한 부여
      */
     public UserProfileResponse grantOwnerRole() {
-        // SecurityContext에서 인증된 사용자 ID 가져오기
-        Long userId = AuthenticationUtil.getCurrentUserId()
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-
         // 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        User user = authenticationFacade.getCurrentUser();
 
         // 사용자 권한 변경
         user.updateRole(UserRole.OWNER);
@@ -193,7 +170,7 @@ public class UserService {
         ownerProfileRepository.save(ownerProfile);
 
         // 관장-커뮤 프로필 매핑
-        CommunityProfile communityProfile = communityProfileRepository.findByUserId(userId)
+        CommunityProfile communityProfile = communityProfileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ErrorException(ErrorCode.REQUIRED_PROFILE));
         communityProfile.insertOwnerProfile(ownerProfile);
 

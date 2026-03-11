@@ -1,9 +1,6 @@
 package com.jiujitsu.api.domain.community.board.controller;
 
-import com.jiujitsu.api.domain.community.board.dto.BoardCategoryResponse;
-import com.jiujitsu.api.domain.community.board.dto.BoardCreateRequest;
-import com.jiujitsu.api.domain.community.board.dto.BoardResponse;
-import com.jiujitsu.api.domain.community.board.dto.BoardUpdateRequest;
+import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.service.BoardService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
@@ -69,10 +66,10 @@ public class BoardController {
     @Operation(summary = "게시글 목록 조회", description = "카테고리별·페이징 게시글 목록을 조회합니다.")
     @GetMapping
     public Page<BoardResponse> getList(
-            @Parameter(description = "카테고리 ID (미입력 시 전체)") @RequestParam(required = false) Long categoryId,
+            @ModelAttribute BoardListRequest boardListRequest,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return boardService.getList(categoryId, pageable);
+        return boardService.getList(boardListRequest, pageable);
     }
 
     @Operation(summary = "게시글 수정", description = "게시글을 수정합니다.")
