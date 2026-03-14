@@ -35,6 +35,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation platform("org.springframework.cloud:spring-cloud-dependencies:2023.0.3")
+	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
 //	// JWT
 //	implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
@@ -53,6 +55,9 @@ dependencies {
 	// Apple JWT 검증에 필요한 java-jwt 및 jwks-rsa
 	implementation 'com.auth0:java-jwt:3.18.2'
 	implementation 'com.auth0:jwks-rsa:0.21.1'
+
+	// fcm
+	implementation 'com.google.firebase:firebase-admin:9.2.0'
 
 	// io.jsonwebtoken jjwt 최신 버전 (필요시 사용)
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.3'

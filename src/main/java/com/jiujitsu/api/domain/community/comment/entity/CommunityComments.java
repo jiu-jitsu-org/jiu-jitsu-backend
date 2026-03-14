@@ -30,7 +30,7 @@ public class CommunityComments extends BaseEntity {
     private Content content;
 
     @Column
-    private Long parentId;
+    private Long parentId;  // 대댓글 - comment 연동
 
     @Column
     private String body;        // 댓글 내용

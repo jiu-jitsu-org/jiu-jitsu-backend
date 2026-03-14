@@ -5,10 +5,8 @@ import com.jiujitsu.api.domain.community.profile.entity.OwnerProfile;
 import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepository;
 import com.jiujitsu.api.domain.community.profile.repository.OwnerProfileRepository;
 import com.jiujitsu.api.domain.user.dto.*;
-import com.jiujitsu.api.domain.user.entity.SnsProvider;
-import com.jiujitsu.api.domain.user.entity.User;
-import com.jiujitsu.api.domain.user.entity.UserRole;
-import com.jiujitsu.api.domain.user.entity.UserStatus;
+import com.jiujitsu.api.domain.user.entity.*;
+import com.jiujitsu.api.domain.user.repository.UserAppInfoRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -22,6 +20,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -31,6 +33,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final OwnerProfileRepository ownerProfileRepository;
     private final CommunityProfileRepository communityProfileRepository;
+    private final UserAppInfoRepository userAppInfoRepository;
     private final TokenBlacklistService tokenBlacklistService;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationFacade authenticationFacade;
@@ -190,6 +193,43 @@ public class UserService {
         if (userRepository.findByNickname(nickname).isPresent()) {
             throw new ErrorException(ErrorCode.NICKNAME_DUPLICATED);
         }
+        return true;
+    }
+
+    /**
+     * 앱 정보 등록
+     */
+    public Boolean insertUserAppInfo(UserAppInfoRequest userAppInfoRequest) {
+        // 사용자 조회
+        User user = authenticationFacade.getCurrentUser();
+
+        List<UserAppInfo> userAppInfos = user.getAppInfos();
+        Optional<UserAppInfo> userAppInfoOptional = userAppInfos.stream()
+                .filter(info -> Objects.equals(userAppInfoRequest.getFcmToken(), info.getToken()))
+                .findFirst();
+
+        if (userAppInfoOptional.isPresent()) {
+            // 동일한 fcm 토큰 있는 경우
+            UserAppInfo userAppInfo = userAppInfoOptional.get();
+            if (!Objects.equals(userAppInfo.getOsVersion(), userAppInfoRequest.getOsVersion())) {
+                userAppInfo.setOsVersion(userAppInfo.getOsVersion());
+                userAppInfoRepository.save(userAppInfo);
+            }
+        } else {
+            // deviceId 중복된 데이터 삭제
+            List<UserAppInfo> duplicateDevice = userAppInfos.stream()
+                    .filter(info -> Objects.equals(info.getDeviceId(), userAppInfoRequest.getDeviceId()))
+                    .toList();
+
+            userAppInfoRepository.deleteAll(duplicateDevice);
+
+            // 동일한 fcm 토큰 없는 경우
+            UserAppInfo userAppInfo = userAppInfoRequest.toEntity();
+            userAppInfo.setUser(user);
+
+            userAppInfoRepository.save(userAppInfo);
+        }
+
         return true;
     }
 
