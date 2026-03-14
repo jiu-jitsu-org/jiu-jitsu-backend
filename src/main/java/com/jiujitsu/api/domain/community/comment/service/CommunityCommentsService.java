@@ -7,7 +7,11 @@ import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRep
 import com.jiujitsu.api.domain.community.comment.repository.ReactionCountProjection;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
+import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserAppInfo;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
+import com.jiujitsu.api.global.fcm.service.FcmPushService;
+import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +35,7 @@ public class CommunityCommentsService {
     private final CommunityCommentsRepository communityCommentsRepository;
     private final ContentRepository contentRepository;
     private final AuthenticationFacade authenticationFacade;
+    private final FcmPushService fcmPushService;
 
     @Transactional
     public CommunityCommentsWriteResponse write(
@@ -49,6 +54,22 @@ public class CommunityCommentsService {
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
         communityCommentsRepository.createComment(content, parentId, body);
+
+        try {
+            // push 발송
+            // 1. 작성자 조회
+            User user = content.getCreatedBy();
+            List<UserAppInfo> appInfos = user.getAppInfos();
+
+            //todo:
+            // 1. 본인이 작성한 글이면 제외
+            // 2. 발송 서비스 호출
+            // 3. 앱에서 토큰 받아서 테스트 진행 필요
+            appInfos.forEach(info -> fcmPushService.send(info.getToken(), FcmPushType.NEW_COMMENTS));
+        } catch (Exception e) {
+
+        }
+
         return new CommunityCommentsWriteResponse(true);
     }
 
@@ -71,7 +92,7 @@ public class CommunityCommentsService {
             List<CommunityComments> childList = communityCommentsRepository.findByContentIdAndParentIdOrderByCreatedAtAsc(contentId.longValue(), communityComment.getId());
             List<ChildCommentItem> childListDto = new java.util.ArrayList<>(List.of());
 
-            childList.forEach(childComment -> {
+            childList.forEach(childComment ->
                 childListDto.add(
                         new ChildCommentItem(
                                 childComment.getId(),
@@ -86,8 +107,8 @@ public class CommunityCommentsService {
                                 childComment.getCreatedAt(),
                                 childComment.getUpdatedAt()
                         )
-                );
-            });
+                )
+            );
 
             returnValue.add(
                     new CommunityCommentsItem(
