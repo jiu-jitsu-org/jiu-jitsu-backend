@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
@@ -41,4 +42,7 @@ public class BoardResponse {
 
     @Schema(description = "상위 댓글 수 (대댓글 제외)", example = "5")
     private Long commentCount;
+
+    @Schema(description = "이미지 URL 리스트")
+    private List<String> imageUrlList;
 }

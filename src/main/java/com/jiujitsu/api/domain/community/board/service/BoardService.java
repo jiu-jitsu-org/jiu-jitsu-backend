@@ -9,6 +9,7 @@ import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRep
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
+import com.jiujitsu.api.domain.file.ImageUrl;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -90,10 +92,25 @@ public class BoardService {
             throw new ErrorException(ErrorCode.BOARD_CATEGORY_NOT_FOUND);
         }
 
-        // 컨텐츠(게시물) 저장
-        Content content = contentRepository.save(
-                Content.builder().contentType(ContentType.BOARD).build()
+        List<String> imageUrlList = request.getImageUrlList() == null
+                ? Collections.emptyList()
+                : request.getImageUrlList();
+
+        Content content = Content.builder()
+                .contentType(ContentType.BOARD)
+                .build();
+
+        content.addImageUrls(
+                imageUrlList.stream()
+                        .filter(Objects::nonNull)
+                        .map(String::trim)
+                        .filter(s -> !s.isBlank())
+                        .map(url -> ImageUrl.builder().imageUrl(url).build())
+                        .toList()
         );
+
+        // 컨텐츠(게시물) 저장 (imageUrls는 cascade로 함께 저장)
+        content = contentRepository.save(content);
         Board board = boardRepository.save(
                 Board.builder()
                         .category(category)
@@ -164,6 +181,20 @@ public class BoardService {
             board.changeBody(request.getBody());
         }
 
+        // 기존 이미지 모두 제거 (orphanRemoval 로 자동 삭제)
+        Content content = board.getContent();
+        content.getImageUrls().clear();
+
+        // 요청으로 온 URL 기준으로 재생성
+        content.addImageUrls(
+                request.getImageUrlList().stream()
+                        .filter(Objects::nonNull)
+                        .map(String::trim)
+                        .filter(s -> !s.isBlank())
+                        .map(url -> ImageUrl.builder().imageUrl(url).build())
+                        .toList()
+        );
+
         Board saved = boardRepository.save(board);
         return toResponse(saved, communityCommentsRepository.countByContent_IdAndParentIdIsNull(saved.getContent().getId()));
     }
@@ -185,9 +216,10 @@ public class BoardService {
     }
 
     private BoardResponse toResponse(Board board, long commentCount) {
+        Content content = board.getContent();
         return BoardResponse.builder()
                 .id(board.getId())
-                .contentId(board.getContent().getId())
+                .contentId(content.getId())
                 .categoryId(board.getCategory().getId())
                 .categoryName(board.getCategory().getName())
                 .title(board.getTitle())
@@ -195,6 +227,12 @@ public class BoardService {
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
                 .commentCount(commentCount)
+                .imageUrlList(
+                        content.getImageUrls()
+                                .stream()
+                                .map(ImageUrl::getImageUrl)
+                                .toList()
+                )
                 .build();
     }
 }

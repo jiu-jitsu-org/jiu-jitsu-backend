@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,4 +26,7 @@ public class BoardCreateRequest {
     @NotBlank(message = "내용은 필수입니다.")
     @Schema(description = "내용", example = "게시글 내용", requiredMode = Schema.RequiredMode.REQUIRED)
     private String body;
+
+    @Schema(description = "이미지 url")
+    private List<String> imageUrlList;
 }
