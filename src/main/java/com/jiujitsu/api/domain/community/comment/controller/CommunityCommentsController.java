@@ -34,7 +34,7 @@ public class CommunityCommentsController {
     ) {
         return communityCommentsService.write(
                 body.contentId(),
-                body.parentId(),
+                body.normalizedParentId(),
                 body.body()
         );
     }
@@ -47,7 +47,7 @@ public class CommunityCommentsController {
     @GetMapping("/all")
     public CommunityCommentsListResponse allComments(
             @Parameter(description = "커뮤니티 게시글 ID", example = "")
-            @RequestParam Integer contentId
+            @RequestParam Long contentId
     ) {
         return communityCommentsService.fetchCommentsList(contentId);
     }

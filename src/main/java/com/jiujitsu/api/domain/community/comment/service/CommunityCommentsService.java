@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -46,9 +45,6 @@ public class CommunityCommentsService {
         // 로그인 확인
         authenticationFacade.checkCurrentUser();
 
-        // parentId 0일경우 null 로 처리
-        parentId = Objects.equals(parentId, 0L) ? null : parentId;
-
         // 컨텐츠 조회
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
@@ -67,68 +63,50 @@ public class CommunityCommentsService {
             // 3. 앱에서 토큰 받아서 테스트 진행 필요
             appInfos.forEach(info -> fcmPushService.send(info.getToken(), FcmPushType.NEW_COMMENTS));
         } catch (Exception e) {
-
+            log.warn("FCM 푸시 발송 실패 (contentId={}): {}", contentId, e.getMessage());
         }
 
         return new CommunityCommentsWriteResponse(true);
     }
 
     @Transactional(readOnly = true)
-    public List<CommunityComments> listTopLevel(Long contentId) {
-        return communityCommentsRepository.findCommentsByContentId(contentId);
+    public CommunityCommentsListResponse fetchCommentsList(Long contentId) {
+        List<CommunityComments> parentsList = communityCommentsRepository.findCommentsByContentId(contentId);
+
+        List<CommunityCommentsItem> items = parentsList.stream()
+                .map(parent -> {
+                    List<ChildCommentItem> children = communityCommentsRepository
+                            .findByContentIdAndParentIdOrderByCreatedAtAsc(contentId, parent.getId())
+                            .stream()
+                            .map(child -> new ChildCommentItem(
+                                    child.getId(),
+                                    child.getContent().getId(),
+                                    child.getParentId(),
+                                    child.getBody(),
+                                    toCommentAuthor(child.getCreatedBy()),
+                                    child.getCreatedAt(),
+                                    child.getUpdatedAt()
+                            ))
+                            .toList();
+
+                    return new CommunityCommentsItem(
+                            parent.getId(),
+                            parent.getContent().getId(),
+                            parent.getParentId(),
+                            parent.getBody(),
+                            toCommentAuthor(parent.getCreatedBy()),
+                            parent.getCreatedAt(),
+                            parent.getUpdatedAt(),
+                            children
+                    );
+                })
+                .toList();
+
+        return new CommunityCommentsListResponse(items);
     }
 
-    @Transactional(readOnly = true)
-    public List<CommunityComments> listChild(Long contentId, Long parentId) {
-        return communityCommentsRepository.findByContentIdAndParentIdOrderByCreatedAtAsc(contentId, parentId);
-    }
-
-    @Transactional(readOnly = true)
-    public CommunityCommentsListResponse fetchCommentsList(Integer contentId) {
-        List<CommunityCommentsItem> returnValue = new java.util.ArrayList<>(List.of());
-        List<CommunityComments> parentsList = communityCommentsRepository.findCommentsByContentId(contentId.longValue());
-
-        parentsList.forEach(communityComment -> {
-            List<CommunityComments> childList = communityCommentsRepository.findByContentIdAndParentIdOrderByCreatedAtAsc(contentId.longValue(), communityComment.getId());
-            List<ChildCommentItem> childListDto = new java.util.ArrayList<>(List.of());
-
-            childList.forEach(childComment ->
-                childListDto.add(
-                        new ChildCommentItem(
-                                childComment.getId(),
-                                childComment.getContent().getId(),
-                                childComment.getParentId(),
-                                childComment.getBody(),
-                                new CommentAuthor(
-                                        childComment.getCreatedBy().getId(),
-                                        childComment.getCreatedBy().getNickname(),
-                                        childComment.getCreatedBy().getProfileImageUrl()
-                                ),
-                                childComment.getCreatedAt(),
-                                childComment.getUpdatedAt()
-                        )
-                )
-            );
-
-            returnValue.add(
-                    new CommunityCommentsItem(
-                            communityComment.getId(),
-                            communityComment.getContent().getId(),
-                            communityComment.getParentId(),
-                            communityComment.getBody(),
-                            new CommentAuthor(
-                                    communityComment.getCreatedBy().getId(),
-                                    communityComment.getCreatedBy().getNickname(),
-                                    communityComment.getCreatedBy().getProfileImageUrl()
-                            ),
-                            communityComment.getCreatedAt(),
-                            communityComment.getUpdatedAt(),
-                            childListDto
-                    )
-            );
-        });
-
-        return new CommunityCommentsListResponse(returnValue);
+    private CommentAuthor toCommentAuthor(User user) {
+        return new CommentAuthor(user.getId(), user.getNickname(), user.getProfileImageUrl());
     }
 
     public Map<Long, ReactionCountProjection> getReactionCount(Collection<Long> commentIds) {

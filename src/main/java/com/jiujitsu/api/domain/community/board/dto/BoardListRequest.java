@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Schema(description = "게시글 목록 검색 조건")
 public class BoardListRequest {
-    @NotNull(message = "목록 타입 코드")
+    @NotNull(message = "목록 타입은 필수입니다.")
     @Schema(description = "목록 타입 코드", example = "FEED", requiredMode = Schema.RequiredMode.REQUIRED)
     private BoardListType boardListType;
 

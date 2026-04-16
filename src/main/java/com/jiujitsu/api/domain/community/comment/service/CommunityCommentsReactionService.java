@@ -6,10 +6,6 @@ import com.jiujitsu.api.domain.community.comment.entity.CommunityCommentReaction
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentReactionRepository;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
-import com.jiujitsu.api.domain.user.entity.User;
-import com.jiujitsu.api.domain.user.repository.UserRepository;
-import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +18,6 @@ public class CommunityCommentsReactionService {
 
     private final CommunityCommentReactionRepository commentReactionRepository;
     private final CommunityCommentsRepository commentsRepository;
-    private final UserRepository userRepository;
 
     @Transactional
     public CommunityCommentReactionSummary toggle(
@@ -31,10 +26,6 @@ public class CommunityCommentsReactionService {
             CommunityCommentReactionType clickedType
     ) {
         CommunityComments comment = commentsRepository.getReferenceById(commentId);
-//        var comment = commentsRepository.findById(commentId);
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         Optional<CommunityCommentReaction> existingOpt = commentReactionRepository.findByCommentAndUser(commentId, userId);
 
