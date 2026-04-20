@@ -135,4 +135,14 @@ public class CommunityCommentsService {
         }
         return map;
     }
+
+    public long getCountComments(Long contentId) {
+        return communityCommentsRepository
+                .countByContent_IdAndParentIdIsNull(contentId);
+    }
+
+    public Map<Long, Long> getContentComments(List<Long> contentIds) {
+        return communityCommentsRepository.countTopLevelCommentsByContentIds(contentIds).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+    }
 }

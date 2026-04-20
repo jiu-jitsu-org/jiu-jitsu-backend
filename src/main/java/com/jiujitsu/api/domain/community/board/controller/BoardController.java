@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.community.board.controller;
 
 import com.jiujitsu.api.domain.community.board.dto.*;
+import com.jiujitsu.api.domain.community.board.service.BoardCategoryService;
 import com.jiujitsu.api.domain.community.board.service.BoardService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
@@ -26,6 +27,7 @@ import java.util.List;
 public class BoardController {
 
     private final BoardService boardService;
+    private final BoardCategoryService boardCategoryService;
 
     /**
      * 카테고리
@@ -33,14 +35,14 @@ public class BoardController {
     @Operation(summary = "카테고리 목록 조회", description = "카테고리 목록 조회(임시)")
     @GetMapping("/category")
     public List<BoardCategoryResponse> getCategory() {
-        return boardService.getCategory();
+        return boardCategoryService.getCategory();
     }
 
     //todo: 카테고리 생성 > 2차 오픈 시 관리자 메뉴로 이동
     @Operation(summary = "카테고리 생성(임시)", description = "카테고리 생성(임시)")
     @PostMapping("/category")
     public void createCategory() {
-       boardService.createCategory();
+        boardCategoryService.createCategory();
     }
 
 

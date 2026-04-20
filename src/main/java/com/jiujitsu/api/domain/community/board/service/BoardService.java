@@ -1,16 +1,17 @@
 package com.jiujitsu.api.domain.community.board.service;
 
-import com.jiujitsu.api.domain.community.board.dto.*;
+import com.jiujitsu.api.domain.community.board.dto.BoardCreateRequest;
+import com.jiujitsu.api.domain.community.board.dto.BoardListRequest;
+import com.jiujitsu.api.domain.community.board.dto.BoardResponse;
+import com.jiujitsu.api.domain.community.board.dto.BoardUpdateRequest;
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
-import com.jiujitsu.api.domain.community.board.repository.BoardCategoryRepository;
+import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
+import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
-import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
+import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
-import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
-import com.jiujitsu.api.domain.file.ImageUrl;
-import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -21,12 +22,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -34,81 +31,46 @@ import java.util.stream.Collectors;
 public class BoardService {
 
     private final BoardRepository boardRepository;
-    private final BoardCategoryRepository boardCategoryRepository;
+    private final BoardCategoryService boardCategoryService;
     private final ContentRepository contentRepository;
-    private final CommunityCommentsRepository communityCommentsRepository;
+    private final CommunityCommentsService communityCommentsService;
     private final AuthenticationFacade authenticationFacade;
-
-    @Transactional(readOnly = true)
-    public List<BoardCategoryResponse> getCategory() {
-        return boardCategoryRepository.findAll()
-                .stream()
-                .map(BoardCategoryResponse::new)
-                .toList();
-    }
-    @Transactional
-    public void createCategory() {
-        BoardCategory category1 = BoardCategory.builder()
-                .name("매트 위 수다")
-                .isActive(true)
-                .build();
-
-        BoardCategory category2 = BoardCategory.builder()
-                .name("훈련 & 기술")
-                .isActive(true)
-                .build();
-
-        BoardCategory category3 = BoardCategory.builder()
-                .name("도장")
-                .isActive(true)
-                .build();
-
-        BoardCategory category4 = BoardCategory.builder()
-                .name("장비")
-                .isActive(true)
-                .build();
-
-        BoardCategory category5 = BoardCategory.builder()
-                .name("대회")
-                .isActive(true)
-                .build();
-
-        boardCategoryRepository.saveAll(Arrays.asList(
-                category1, category2, category3, category4, category5
-        ));
-    }
+    private final BoardFactory boardFactory;
+    private final BoardMapper boardMapper;
 
     @Transactional
     public BoardResponse create(BoardCreateRequest request) {
         // 로그인 유저 체크
         authenticationFacade.checkCurrentUser();
 
-        BoardCategory category = findActiveCategory(request.getCategoryId());
+        // 등록 카테고리 조회
+        BoardCategory category = boardCategoryService.findActiveCategory(request.getCategoryId());
 
-        Content content = Content.builder()
-                .contentType(ContentType.BOARD)
-                .build();
+        // content 생성
+        Content content = boardFactory.createContent(request.getImageUrlList());
 
-        content.addImageUrls(toImageUrls(request.getImageUrlList()));
+        // Board 생성
+        Board board = boardFactory.createBoard(category, content, request.getTitle(), request.getBody());
+        board = boardRepository.save(board);
 
-        // 컨텐츠(게시물) 저장 (imageUrls는 cascade로 함께 저장)
-        content = contentRepository.save(content);
-        Board board = boardRepository.save(
-                Board.builder()
-                        .category(category)
-                        .content(content)
-                        .title(request.getTitle())
-                        .body(request.getBody())
-                        .build()
-        );
-        return toResponse(board, communityCommentsRepository.countByContent_IdAndParentIdIsNull(board.getContent().getId()));
+        // 댓글 수 조회
+        long commentCount = communityCommentsService.getCountComments(content.getId());
+
+        // dto 생성
+        return boardMapper.toResponse(board, commentCount);
     }
 
     @Transactional(readOnly = true)
     public BoardResponse getById(Long id) {
+        // 게시글 조회
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
-        return toResponse(board, communityCommentsRepository.countByContent_IdAndParentIdIsNull(board.getContent().getId()));
+
+        // 댓글 수 조회
+        long commentCount = communityCommentsService.getCountComments(board.getContent().getId());
+
+        // dto 생성
+        return boardMapper.toResponse(board, commentCount);
     }
 
     @Transactional(readOnly = true)
@@ -128,10 +90,9 @@ public class BoardService {
         // 댓글 조회
         Map<Long, Long> commentCountMap = contentIds.isEmpty()
                 ? Map.of()
-                : communityCommentsRepository.countTopLevelCommentsByContentIds(contentIds).stream()
-                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+                : communityCommentsService.getContentComments(contentIds);
 
-        return page.map(board -> toResponse(board, commentCountMap.getOrDefault(board.getContent().getId(), 0L)));
+        return page.map(board -> boardMapper.toResponse(board, commentCountMap.getOrDefault(board.getContent().getId(), 0L)));
     }
 
     @Transactional
@@ -140,16 +101,11 @@ public class BoardService {
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
-        // 로그인 유저 조회
-        User user = authenticationFacade.getCurrentUser();
-
         // 권한 체크
-        if (!Objects.equals(user, board.getCreatedBy())) {
-            throw new ErrorException(ErrorCode.PERMISSION_DENIED);
-        }
+        board.validateOwner(authenticationFacade.getCurrentUser());
 
         if (request.getCategoryId() != null) {
-            board.changeCategory(findActiveCategory(request.getCategoryId()));
+            board.changeCategory(boardCategoryService.findActiveCategory(request.getCategoryId()));
         }
         if (request.getTitle() != null && !request.getTitle().isBlank()) {
             board.changeTitle(request.getTitle());
@@ -161,10 +117,13 @@ public class BoardService {
         // 기존 이미지 모두 제거 후 재생성 (orphanRemoval 로 자동 삭제)
         Content content = board.getContent();
         content.getImageUrls().clear();
-        content.addImageUrls(toImageUrls(request.getImageUrlList()));
+        content.addImageUrls(boardFactory.createImageUrls(request.getImageUrlList()));
 
-        Board saved = boardRepository.save(board);
-        return toResponse(saved, communityCommentsRepository.countByContent_IdAndParentIdIsNull(saved.getContent().getId()));
+
+        // 댓글 수 조회
+        long commentCount = communityCommentsService.getCountComments(board.getContent().getId());
+
+        return boardMapper.toResponse(board, commentCount);
     }
 
     @Transactional
@@ -172,56 +131,9 @@ public class BoardService {
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
-        User user = authenticationFacade.getCurrentUser();
+        // 권한 체크
+        board.validateOwner(authenticationFacade.getCurrentUser());
 
-        if (!Objects.equals(user, board.getCreatedBy())) {
-            throw new ErrorException(ErrorCode.PERMISSION_DENIED);
-        }
-
-        Content content = board.getContent();
         boardRepository.delete(board);
-        contentRepository.delete(content);
-    }
-
-    private BoardCategory findActiveCategory(Long categoryId) {
-        BoardCategory category = boardCategoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_CATEGORY_NOT_FOUND));
-        if (!category.isActive()) {
-            throw new ErrorException(ErrorCode.BOARD_CATEGORY_NOT_FOUND);
-        }
-        return category;
-    }
-
-    private List<ImageUrl> toImageUrls(List<String> urls) {
-        if (urls == null || urls.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return urls.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(s -> !s.isBlank())
-                .map(url -> ImageUrl.builder().imageUrl(url).build())
-                .toList();
-    }
-
-    private BoardResponse toResponse(Board board, long commentCount) {
-        Content content = board.getContent();
-        return BoardResponse.builder()
-                .id(board.getId())
-                .contentId(content.getId())
-                .categoryId(board.getCategory().getId())
-                .categoryName(board.getCategory().getName())
-                .title(board.getTitle())
-                .body(board.getBody())
-                .createdAt(board.getCreatedAt())
-                .updatedAt(board.getUpdatedAt())
-                .commentCount(commentCount)
-                .imageUrlList(
-                        content.getImageUrls()
-                                .stream()
-                                .map(ImageUrl::getImageUrl)
-                                .toList()
-                )
-                .build();
     }
 }
