@@ -1,9 +1,6 @@
 package com.jiujitsu.api.domain.community.board.service;
 
-import com.jiujitsu.api.domain.community.board.dto.BoardCreateRequest;
-import com.jiujitsu.api.domain.community.board.dto.BoardListRequest;
-import com.jiujitsu.api.domain.community.board.dto.BoardResponse;
-import com.jiujitsu.api.domain.community.board.dto.BoardUpdateRequest;
+import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
 import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
@@ -11,7 +8,6 @@ import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
-import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -30,14 +26,62 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BoardService {
 
-    private final BoardRepository boardRepository;
-    private final BoardCategoryService boardCategoryService;
-    private final ContentRepository contentRepository;
-    private final CommunityCommentsService communityCommentsService;
     private final AuthenticationFacade authenticationFacade;
+    private final BoardRepository boardRepository;
     private final BoardFactory boardFactory;
     private final BoardMapper boardMapper;
+    private final BoardCategoryService boardCategoryService;
+    private final CommunityCommentsService communityCommentsService;
 
+
+    /**
+     * 게시물 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public Page<BoardListResponse> getList(BoardListRequest boardListRequest, Pageable pageable) {
+        Long categoryId = boardListRequest.getCategoryId();
+
+        // 게시판 조회
+        Page<Board> page = categoryId != null
+                ? boardRepository.findAllByCategory_Id(categoryId, pageable)
+                : boardRepository.findAll(pageable);
+
+        // 컨텐츠(공통) 조회
+        List<Long> contentIds = page.getContent().stream()
+                .map(b -> b.getContent().getId())
+                .toList();
+
+        // 댓글 조회
+        Map<Long, Long> commentCountMap = contentIds.isEmpty()
+                ? Map.of()
+                : communityCommentsService.getContentsComments(contentIds);
+
+        return page.map(board ->
+                boardMapper.toBoardListResponse(
+                        board,
+                        commentCountMap.getOrDefault(board.getContent().getId(), 0L)
+                ));
+    }
+
+    /**
+     * 게시물 상세 조회
+     */
+    @Transactional(readOnly = true)
+    public BoardResponse getById(Long id) {
+        // 게시글 조회
+        Board board = boardRepository.findById(id)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
+
+        // 댓글 수 조회
+        long commentCount = communityCommentsService.getCountComments(board.getContent().getId());
+
+        // dto 생성
+        return boardMapper.toResponse(board, commentCount);
+    }
+
+    /**
+     * 게시물 작성
+     */
     @Transactional
     public BoardResponse create(BoardCreateRequest request) {
         // 로그인 유저 체크
@@ -60,41 +104,9 @@ public class BoardService {
         return boardMapper.toResponse(board, commentCount);
     }
 
-    @Transactional(readOnly = true)
-    public BoardResponse getById(Long id) {
-        // 게시글 조회
-        Board board = boardRepository.findById(id)
-                .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
-
-        // 댓글 수 조회
-        long commentCount = communityCommentsService.getCountComments(board.getContent().getId());
-
-        // dto 생성
-        return boardMapper.toResponse(board, commentCount);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<BoardResponse> getList(BoardListRequest boardListRequest, Pageable pageable) {
-        Long categoryId = boardListRequest.getCategoryId();
-
-        // 게시판 조회
-        Page<Board> page = categoryId != null
-                ? boardRepository.findAllByCategory_Id(categoryId, pageable)
-                : boardRepository.findAll(pageable);
-
-        // 컨텐츠(공통) 조회
-        List<Long> contentIds = page.getContent().stream()
-                .map(b -> b.getContent().getId())
-                .toList();
-
-        // 댓글 조회
-        Map<Long, Long> commentCountMap = contentIds.isEmpty()
-                ? Map.of()
-                : communityCommentsService.getContentComments(contentIds);
-
-        return page.map(board -> boardMapper.toResponse(board, commentCountMap.getOrDefault(board.getContent().getId(), 0L)));
-    }
-
+    /**
+     * 게시물 수정
+     */
     @Transactional
     public BoardResponse update(Long id, BoardUpdateRequest request) {
         // 게시물 조회
@@ -123,9 +135,13 @@ public class BoardService {
         // 댓글 수 조회
         long commentCount = communityCommentsService.getCountComments(board.getContent().getId());
 
+        // dto 생성
         return boardMapper.toResponse(board, commentCount);
     }
 
+    /**
+     * 게시물 삭제
+     */
     @Transactional
     public void delete(Long id) {
         Board board = boardRepository.findById(id)

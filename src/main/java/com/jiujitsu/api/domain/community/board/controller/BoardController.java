@@ -49,11 +49,13 @@ public class BoardController {
     /**
      * 게시물
      */
-    @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다.")
-    @ApiErrorCodeExamples({ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER})
-    @PostMapping
-    public BoardResponse create(@Valid @RequestBody BoardCreateRequest request) {
-        return boardService.create(request);
+    @Operation(summary = "게시글 목록 조회", description = "카테고리별·페이징 게시글 목록을 조회합니다.")
+    @GetMapping
+    public Page<BoardListResponse> getList(
+            @ModelAttribute BoardListRequest boardListRequest,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return boardService.getList(boardListRequest, pageable);
     }
 
     @Operation(summary = "게시글 단건 조회", description = "ID로 게시글을 조회합니다.")
@@ -65,13 +67,11 @@ public class BoardController {
         return boardService.getById(id);
     }
 
-    @Operation(summary = "게시글 목록 조회", description = "카테고리별·페이징 게시글 목록을 조회합니다.")
-    @GetMapping
-    public Page<BoardResponse> getList(
-            @ModelAttribute BoardListRequest boardListRequest,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
-    ) {
-        return boardService.getList(boardListRequest, pageable);
+    @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다.")
+    @ApiErrorCodeExamples({ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER})
+    @PostMapping
+    public BoardResponse create(@Valid @RequestBody BoardCreateRequest request) {
+        return boardService.create(request);
     }
 
     @Operation(summary = "게시글 수정", description = "게시글을 수정합니다.")

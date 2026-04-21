@@ -1,16 +1,12 @@
 package com.jiujitsu.api.domain.community.board.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Schema(description = "커뮤니티 게시글 응답")
-public record BoardResponse(
+@Schema(description = "커뮤니티 목록 응답")
+public record BoardListResponse(
         @Schema(description = "게시글 ID", example = "1") Long id,
         @Schema(description = "Content ID", example = "1") Long contentId,
         @Schema(description = "카테고리 ID", example = "1") Long categoryId,
@@ -21,7 +17,5 @@ public record BoardResponse(
         @Schema(description = "수정 일시") LocalDateTime updatedAt,
         @Schema(description = "상위 댓글 수 (대댓글 제외)", example = "5") Long commentCount,
         @Schema(description = "이미지 URL 리스트") List<String> imageUrlList
-        //todo: + 태그, 조회수, 댓글 목록
 ) {
-
 }
