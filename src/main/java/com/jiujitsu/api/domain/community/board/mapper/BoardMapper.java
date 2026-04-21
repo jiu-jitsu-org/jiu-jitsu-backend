@@ -31,6 +31,10 @@ public class BoardMapper {
                 getImageUrlStrings(content)
         );
     }
+
+    /**
+     * 상세 response
+     */
     public BoardResponse toResponse(Board board, long commentCount) {
         Content content = board.getContent();
         return new BoardResponse(

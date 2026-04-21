@@ -85,6 +85,10 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
     List<Object[]> countTopLevelCommentsByContentIds(@Param("contentIds") List<Long> contentIds);
 
     /**
+     * contents의 전체 댓글 조회(댓글 + 대댓글)
+     */
+    List<CommunityComments> findByContentIdOrderByCreatedAtDesc(Long contentId);
+    /**
      * Content의 상위 댓글 수 조회 (parentId가 null인 댓글만, 대댓글 제외)
      */
     long countByContent_IdAndParentIdIsNull(Long content_Id);
