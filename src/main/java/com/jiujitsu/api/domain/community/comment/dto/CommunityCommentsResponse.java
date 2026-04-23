@@ -10,6 +10,8 @@ public record CommunityCommentsResponse(
         Long contentId,
         Long parentId,
         String body,
+        Long likes,
+        Boolean isLiked,
         CommunityProfileInfo author,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,

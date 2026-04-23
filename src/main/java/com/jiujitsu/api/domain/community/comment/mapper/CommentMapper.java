@@ -13,7 +13,10 @@ public class CommentMapper {
     /**
      * 댓글 response
      */
-    public CommunityCommentsResponse toCommunityCommentsResponse(CommunityComments comments, List<CommunityCommentsResponse> childrenList) {
+    public CommunityCommentsResponse toCommunityCommentsResponse(CommunityComments comments,
+                                                                 List<CommunityCommentsResponse> childrenList,
+                                                                 Long likeCount,
+                                                                 Boolean liked) {
         Content content = comments.getContent();
 
         return new CommunityCommentsResponse(
@@ -21,6 +24,29 @@ public class CommentMapper {
                 content.getId(),
                 comments.getParentId(),
                 comments.getBody(),
+                likeCount,
+                liked,
+                CommunityProfileInfo.from(comments.getCreatedBy()),
+                comments.getCreatedAt(),
+                comments.getUpdatedAt(),
+                childrenList
+        );
+    }
+
+    /**
+     * 댓글 response - 좋아요 없는 버전
+     */
+    public CommunityCommentsResponse toCommunityCommentsResponse(CommunityComments comments,
+                                                                 List<CommunityCommentsResponse> childrenList) {
+        Content content = comments.getContent();
+
+        return new CommunityCommentsResponse(
+                comments.getId(),
+                content.getId(),
+                comments.getParentId(),
+                comments.getBody(),
+                null,
+                null,
                 CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),

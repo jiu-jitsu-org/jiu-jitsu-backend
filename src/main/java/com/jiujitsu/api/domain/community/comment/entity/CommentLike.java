@@ -12,10 +12,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(
-        name = "community_comment_reaction",
+        name = "comment_like",
         indexes = {
-                @Index(name = "idx_reaction_comment", columnList = "comment_id"),
-                @Index(name = "idx_reaction_comment_type", columnList = "comment_id, reaction_type"),
+                @Index(name = "idx_comment_like", columnList = "comment_id")
         }
 )
 @Getter
@@ -23,7 +22,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class CommunityCommentReaction extends BaseEntity {
+public class CommentLike extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,12 +32,4 @@ public class CommunityCommentReaction extends BaseEntity {
     @JoinColumn(name = "comment_id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     private CommunityComments comment;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reaction_type", nullable = false, length = 16)
-    private CommunityCommentReactionType reactionType;
-
-    public void changeTo(CommunityCommentReactionType newType) {
-        this.reactionType = newType;
-    }
 }
