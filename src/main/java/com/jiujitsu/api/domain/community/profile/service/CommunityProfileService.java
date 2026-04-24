@@ -1,14 +1,13 @@
 package com.jiujitsu.api.domain.community.profile.service;
 
-import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepository;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileRequest;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
+import com.jiujitsu.api.domain.community.profile.mapper.CommunityProfileMapper;
+import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
-import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -16,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -25,6 +25,7 @@ public class CommunityProfileService {
 
     private final CommunityProfileRepository communityProfileRepository;
     private final AuthenticationFacade authenticationFacade;
+    private final CommunityProfileMapper communityProfileMapper;
 
     /**
      * 커뮤니티 프로필 조회
@@ -32,14 +33,12 @@ public class CommunityProfileService {
     @Transactional(readOnly = true)
     public CommunityProfileResponse getMyProfile() {
         User user = authenticationFacade.getCurrentUser();
-        return communityProfileRepository.findByUser(user)
-                .map(CommunityProfileResponse::new)
-                .orElseGet(() -> {
-                    CommunityProfileResponse response = new CommunityProfileResponse();
-                    response.setNickname(user.getNickname());
-                    response.setProfileImageUrl(user.getProfileImageUrl());
-                    return response;
-                });
+        Optional<CommunityProfile> communityProfile = communityProfileRepository.findByUser(user);
+
+        // 프로필 있으면 return, 없으면 user 정보만 return
+        return communityProfile
+                .map(communityProfileMapper::getCommunityProfileResponse)
+                .orElseGet(() -> communityProfileMapper.getCommunityProfileResponseUser(user));
     }
 
     /**
@@ -48,32 +47,42 @@ public class CommunityProfileService {
     public CommunityProfileResponse upsertMyProfile(CommunityProfileRequest request) {
         User user = authenticationFacade.getCurrentUser();
 
-        CommunityProfile profile = communityProfileRepository.findByUser(user).orElse(new CommunityProfile(user));
+        CommunityProfile profile = communityProfileRepository.findByUser(user)
+                .orElse(new CommunityProfile(user));
 
-        switch (request.getProfileRequestType()) {
-            case ACADEMY -> profile.upsertAcademy(StringUtils.trimToEmpty(request.getAcademyName()));
+        // 각 항목별 업데이트 처리
+        applyProfileUpdate(profile, request, user);
+
+        // save 명시(신규 생성일 수 있음)
+        communityProfileRepository.save(profile);
+
+        // return 생성
+        return communityProfileMapper.getCommunityProfileResponse(profile);
+    }
+
+    // 항목별 업데이트 처리
+    private void applyProfileUpdate(CommunityProfile profile, CommunityProfileRequest request, User user) {
+        switch (request.profileRequestType()) {
+            case ACADEMY -> profile.upsertAcademy(StringUtils.trimToEmpty(request.academyName()));
             case BELT_WEIGHT -> profile.upsertBeltWeight(
-                    request.getBeltRank(),
-                    request.getBeltStripe(),
-                    request.getGender(),
-                    request.getWeightKg(),
-                    request.getIsWeightHidden()
+                    request.beltRank(),
+                    request.beltStripe(),
+                    request.gender(),
+                    request.weightKg(),
+                    request.isWeightHidden()
             );
-            case POSITION_BEST -> profile.upsertBestPosition(request.getBestPosition());
-            case POSITION_FAVORITE -> profile.upsertFavoritePosition(request.getFavoritePosition());
-            case SUBMISSION_BEST -> profile.upsertBestSubmission(request.getBestSubmission());
-            case SUBMISSION_FAVORITE -> profile.upsertFavoriteSubmission(request.getFavoriteSubmission());
-            case TECHNIQUE_BEST -> profile.upsertBestTechnique(request.getBestTechnique());
-            case TECHNIQUE_FAVORITE -> profile.upsertFavoriteTechnique(request.getFavoriteTechnique());
-            case COMPETITION -> profile.upsertCompetitions(request.getCompetitionInfoList());
+            case POSITION_BEST -> profile.upsertBestPosition(request.bestPosition());
+            case POSITION_FAVORITE -> profile.upsertFavoritePosition(request.favoritePosition());
+            case SUBMISSION_BEST -> profile.upsertBestSubmission(request.bestSubmission());
+            case SUBMISSION_FAVORITE -> profile.upsertFavoriteSubmission(request.favoriteSubmission());
+            case TECHNIQUE_BEST -> profile.upsertBestTechnique(request.bestTechnique());
+            case TECHNIQUE_FAVORITE -> profile.upsertFavoriteTechnique(request.favoriteTechnique());
+            case COMPETITION -> profile.upsertCompetitions(request.competitionInfoListOrEmpty());
             case OWNER_INFO -> {
                 if (Objects.equals(user.getRole(), UserRole.OWNER)) {
-                    profile.upsertOwnerInfo(request.getTeachingPhilosophy(), request.getTeachingStartDate(), request.getTeachingDetail());
+                    profile.upsertOwnerInfo(request.teachingPhilosophy(), request.teachingStartDate(), request.teachingDetail());
                 }
             }
         }
-        communityProfileRepository.save(profile);
-
-        return new CommunityProfileResponse(profile);
     }
 }
