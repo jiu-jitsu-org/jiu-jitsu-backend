@@ -6,6 +6,7 @@ import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepo
 import com.jiujitsu.api.domain.community.profile.repository.OwnerProfileRepository;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.*;
+import com.jiujitsu.api.domain.user.mapper.AuthMapper;
 import com.jiujitsu.api.domain.user.repository.UserAppInfoRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -37,6 +38,7 @@ public class UserService {
     private final TokenBlacklistService tokenBlacklistService;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationFacade authenticationFacade;
+    private final AuthMapper authMapper;
 
     /**
      * 회원가입
@@ -70,7 +72,7 @@ public class UserService {
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
         // 응답 생성
-        AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
+        UserInfo userInfo = new UserInfo(
                 user.getId(),
                 user.getEmail(),
                 user.getNickname(),
@@ -79,7 +81,7 @@ public class UserService {
                 false
         );
 
-        return new AuthResponse(newAccessToken, newRefreshToken, userInfo);
+        return authMapper.toAccessResponse(newAccessToken, newRefreshToken, userInfo);
     }
 
     /**

@@ -16,14 +16,14 @@ public class AuthenticationFacade {
 
     public void checkCurrentUser() {
         // 현재 로그인 id
-        Long id = AuthenticationUtil.getCurrentUserId().orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        Long id = AuthenticationUtil.getCurrentUserId().orElseThrow(() -> new ErrorException(ErrorCode.LOGIN_NOT_ACCESS));
         // 유효한 유저인지 체크
         userRepository.findById(id).orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
     }
 
     public User getCurrentUser() {
         // 현재 로그인 id
-        Long id = AuthenticationUtil.getCurrentUserId().orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        Long id = AuthenticationUtil.getCurrentUserId().orElseThrow(() -> new ErrorException(ErrorCode.LOGIN_NOT_ACCESS));
         // 유효한 유저인지 체크
         return userRepository.findById(id).orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
     }
