@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.user.service;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
+import com.jiujitsu.api.domain.user.factory.UserFactory;
 import com.jiujitsu.api.domain.user.mapper.AuthMapper;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.sns.SnsClient;
@@ -29,6 +30,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
     private final AuthMapper authMapper;
+    private final UserFactory userFactory;
 
     /**
      * SNS Login - 로그인 분리
@@ -70,7 +72,7 @@ public class AuthService {
         return authMapper.toAccessResponse(
                 accessToken,
                 refreshToken,
-                createUserInfo(user, deactivatedWithinGrace)
+                userFactory.createUserInfo(user, deactivatedWithinGrace)
         );
     }
 
@@ -104,19 +106,8 @@ public class AuthService {
     }
 
     /**
-     * SNS 로그인 - UserInfo 생성
+     * 프로필 정보 업데이트
      */
-    private UserInfo createUserInfo(User user, boolean deactivatedWithinGrace) {
-        return new UserInfo(
-                user.getId(),
-                user.getEmail(),
-                user.getNickname(),
-                user.getProfileImageUrl(),
-                user.getSnsProvider(),
-                deactivatedWithinGrace
-        );
-    }
-
     private void updateUserInfo(User user, SnsUserInfo snsUserInfo) {
         // 프로필 정보가 변경되었을 경우 업데이트
         boolean needsUpdate = false;
@@ -149,7 +140,7 @@ public class AuthService {
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
         // 응답 생성
-        UserInfo userInfo  = createUserInfo(user, false);
+        UserInfo userInfo = userFactory.createUserInfo(user, false);
 
         return authMapper.toAccessResponse(newAccessToken, newRefreshToken, userInfo);
     }
