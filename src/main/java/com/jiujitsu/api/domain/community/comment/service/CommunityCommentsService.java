@@ -2,8 +2,8 @@ package com.jiujitsu.api.domain.community.comment.service;
 
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest;
-import com.jiujitsu.api.domain.community.comment.dto.reaction.CommentLikeRequest;
-import com.jiujitsu.api.domain.community.comment.dto.reaction.CommentLikeResponse;
+import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
+import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeResponse;
 import com.jiujitsu.api.domain.community.comment.entity.CommentLike;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import com.jiujitsu.api.domain.community.comment.factory.CommentFactory;

@@ -1,4 +1,4 @@
-package com.jiujitsu.api.domain.community.comment.dto.reaction;
+package com.jiujitsu.api.domain.community.comment.dto.like;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

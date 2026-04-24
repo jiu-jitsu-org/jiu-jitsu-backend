@@ -88,13 +88,13 @@ public class BoardService {
         authenticationFacade.checkCurrentUser();
 
         // 등록 카테고리 조회
-        BoardCategory category = boardCategoryService.findActiveCategory(request.getCategoryId());
+        BoardCategory category = boardCategoryService.findActiveCategory(request.categoryId());
 
         // content 생성
-        Content content = boardFactory.createContent(request.getImageUrlList());
+        Content content = boardFactory.createContent(request.imageUrlListOrEmpty());
 
         // Board 생성
-        Board board = boardFactory.createBoard(category, content, request.getTitle(), request.getBody());
+        Board board = boardFactory.createBoard(category, content, request.title(), request.body());
         board = boardRepository.save(board);
 
         // 댓글 수 조회

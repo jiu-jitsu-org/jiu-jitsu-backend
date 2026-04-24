@@ -1,6 +1,6 @@
 package com.jiujitsu.api.domain.community.comment.mapper;
 
-import com.jiujitsu.api.domain.community.comment.dto.reaction.CommentLikeResponse;
+import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeResponse;
 import com.jiujitsu.api.domain.community.comment.entity.CommentLike;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import org.springframework.stereotype.Component;
