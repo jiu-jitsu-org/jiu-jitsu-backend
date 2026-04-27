@@ -6,6 +6,9 @@ import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepo
 import com.jiujitsu.api.domain.community.profile.repository.OwnerProfileRepository;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.*;
+import com.jiujitsu.api.domain.user.factory.UserFactory;
+import com.jiujitsu.api.domain.user.mapper.AuthMapper;
+import com.jiujitsu.api.domain.user.mapper.UserMapper;
 import com.jiujitsu.api.domain.user.repository.UserAppInfoRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -37,49 +40,58 @@ public class UserService {
     private final TokenBlacklistService tokenBlacklistService;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationFacade authenticationFacade;
+    private final AuthMapper authMapper;
+    private final UserFactory userFactory;
+    private final UserMapper userMapper;
 
     /**
-     * 회원가입
+     * 회원가입 - 로직 분리
      */
     public AuthResponse createUser(CreateProfileRequest createProfileRequest) {
+        // 임시 유저 정보
         String tempToken = AuthenticationUtil.getCurrentToken()
                 .orElseThrow(() -> new ErrorException(ErrorCode.NO_TOKEN));
-        String nickname = StringUtils.trimToEmpty(createProfileRequest.getNickname());
 
-        // 임시 토큰 정보
-        if (!jwtTokenProvider.validateToken(tempToken)) {
-            throw new ErrorException(ErrorCode.INVALID_TOKEN);
-        }
-        if (!StringUtils.equals(jwtTokenProvider.getTokenTypeFromToken(tempToken), "temporary")) {
-            throw new ErrorException(ErrorCode.NOT_MATCH_CATEGORY);
-        }
-
-        Claims claims = jwtTokenProvider.getJWTClaims(tempToken);
-        String snsId = claims.getSubject();
-        String email = claims.get("email", String.class);
-        SnsProvider snsProvider = SnsProvider.valueOf(claims.get("snsProvider", String.class));
+        TempUserInfo tempUserInfo = jwtTokenProvider.parseTemporaryToken(tempToken);
 
         // 닉네임 valid 체크
-        this.checkNickname(nickname);
+        String nickname = StringUtils.trimToEmpty(createProfileRequest.nickname());
+        validateNickname(nickname);
+
 
         // 회원정보 생성
-        User user = createNewUser(snsProvider, new SnsUserInfo(snsId, email, nickname));
+        User user = createNewUser(tempUserInfo, nickname);
 
-        // 새로운 토큰 생성
-        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
-        String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+        // 응답 생성(토큰 생성)
+        return generateAuthResponse(user);
+    }
 
-        // 응답 생성
-        AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
-                user.getId(),
-                user.getEmail(),
-                user.getNickname(),
-                user.getProfileImageUrl(),
-                user.getSnsProvider(),
-                false
+    /**
+     * 회원가입 - 신규 user 생성
+     */
+    private User createNewUser(TempUserInfo tempUserInfo, String nickname) {
+        User user = userFactory.createNewUser(
+                tempUserInfo.snsProvider(),
+                new SnsUserInfo(
+                        tempUserInfo.snsId(),
+                        tempUserInfo.email(),
+                        nickname
+                )
         );
 
-        return new AuthResponse(newAccessToken, newRefreshToken, userInfo);
+        return userRepository.save(user);
+    }
+
+    /**
+     * 회원가입 - 로그인 토큰 / AuthResponse 생성
+     */
+    private AuthResponse generateAuthResponse(User user) {
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+        UserInfo userInfo = userFactory.createUserInfo(user, false);
+
+        return authMapper.toAccessResponse(accessToken, refreshToken, userInfo);
     }
 
     /**
@@ -87,15 +99,13 @@ public class UserService {
      */
     public UserProfileResponse getUserProfile() {
         // 사용자 조회
-        User user = authenticationFacade.getCurrentUser();
-
-        return new UserProfileResponse(user);
+        return userMapper.toUserProfileResponse(authenticationFacade.getCurrentUser());
     }
 
     /**
      * 사용자 프로필 수정
      */
-    public UpdateProfileResponse updateProfile(UpdateProfileRequest request) {
+    public UserProfileResponse updateProfile(UpdateProfileRequest request) {
         final String nickname = StringUtils.trimToEmpty(request.getNickname());
         final String profileImageUrl = StringUtils.trimToEmpty(request.getProfileImageUrl());
 
@@ -103,11 +113,11 @@ public class UserService {
         User user = authenticationFacade.getCurrentUser();
 
         // 닉네임 중복체크
-        checkNickname(nickname);
+        validateNickname(nickname);
         // 프로필 업데이트
         user.updateProfile(nickname, profileImageUrl);
 
-        return new UpdateProfileResponse(user);
+        return userMapper.toUserProfileResponse(user);
     }
 
     /**
@@ -153,7 +163,7 @@ public class UserService {
         // 사용자 권한 변경
         user.requestOwner(ownerRequestImageUrl);
 
-        return new UserProfileResponse(user);
+        return userMapper.toUserProfileResponse(user);
     }
 
     /**
@@ -177,13 +187,13 @@ public class UserService {
                 .orElseThrow(() -> new ErrorException(ErrorCode.REQUIRED_PROFILE));
         communityProfile.insertOwnerProfile(ownerProfile);
 
-        return new UserProfileResponse(user);
+        return userMapper.toUserProfileResponse(user);
     }
 
     /**
      * 닉네임 유효성 체크
      */
-    public Boolean checkNickname(String nickname) {
+    public Boolean validateNickname(String nickname) {
         // 유효성 체크
         String pattern = "^[가-힣a-zA-Z0-9]{2,12}$";
         if (!nickname.matches(pattern)) {

@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.community.content.entity;
 
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
+import com.jiujitsu.api.domain.file.ImageUrl;
 import com.jiujitsu.api.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -29,4 +30,23 @@ public class Content extends BaseEntity {
     @OneToMany(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<CommunityComments> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ImageUrl> imageUrls = new ArrayList<>();
+
+    public void addImageUrls(List<ImageUrl> imageUrls) {
+        if (imageUrls == null || imageUrls.isEmpty()) {
+            return;
+        }
+        imageUrls.forEach(this::addImageUrl);
+    }
+
+    public void addImageUrl(ImageUrl imageUrl) {
+        if (imageUrl == null) {
+            return;
+        }
+        imageUrl.attachTo(this);
+        this.imageUrls.add(imageUrl);
+    }
 }

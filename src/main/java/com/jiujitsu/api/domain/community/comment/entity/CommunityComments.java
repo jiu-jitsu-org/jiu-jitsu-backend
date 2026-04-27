@@ -11,6 +11,9 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "community_comments")
 @Getter
@@ -32,6 +35,10 @@ public class CommunityComments extends BaseEntity {
     @Column
     private Long parentId;  // 대댓글 - comment 연동
 
-    @Column
+    @Column(nullable = false)
     private String body;        // 댓글 내용
+
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CommentLike> likes = new ArrayList<>();   // 좋아요
 }

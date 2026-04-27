@@ -1,12 +1,17 @@
 package com.jiujitsu.api.domain.community.board.entity;
 
 import com.jiujitsu.api.domain.community.content.entity.Content;
+import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.global.entity.BaseEntity;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.util.Objects;
 
 @Entity
 @Table(name = "board")
@@ -23,7 +28,7 @@ public class Board extends BaseEntity {
     @JoinColumn(name = "category_id", nullable = false)
     private BoardCategory category; // 카테고리
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "content_id", nullable = false, unique = true)
     private Content content;    // 컨텐츠 join
 
@@ -46,5 +51,12 @@ public class Board extends BaseEntity {
 
     public void changeCategory(BoardCategory category) {
         this.category = category;
+    }
+
+    // 수정권한 체크
+    public void validateOwner(User user) {
+        if (!Objects.equals(this.getCreatedBy(), user)) {
+            throw new ErrorException(ErrorCode.PERMISSION_DENIED);
+        }
     }
 }
