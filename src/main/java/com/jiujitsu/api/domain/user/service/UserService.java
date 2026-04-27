@@ -67,7 +67,7 @@ public class UserService {
     }
 
     /**
-     * 신규 user 생성
+     * 회원가입 - 신규 user 생성
      */
     private User createNewUser(TempUserInfo tempUserInfo, String nickname) {
         User user = userFactory.createNewUser(
@@ -83,7 +83,7 @@ public class UserService {
     }
 
     /**
-     * 토큰 / AuthResponse 생성
+     * 회원가입 - 로그인 토큰 / AuthResponse 생성
      */
     private AuthResponse generateAuthResponse(User user) {
         String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
