@@ -1,7 +1,6 @@
 package com.jiujitsu.api.domain.community.comment.entity;
 
-import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsUpdateRequest;
-import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -10,11 +9,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "community_comments")
@@ -27,25 +25,20 @@ public class CommunityComments extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;    // id
+    private Long id;
 
-    // TODO 25.10.24 게시글 데이블 만들어지면 연결
-    @Column(nullable = false)
-    private Long postId;
-
-    @Column(nullable = true)
-    private Long parentId;
-//
-//    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-//    @JoinColumn(name = "author_id", nullable = false)
-//    @OnDelete(action = OnDeleteAction.CASCADE)
-//    private User author; // 유저정보
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "content_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private Content content;
 
     @Column
+    private Long parentId;  // 대댓글 - comment 연동
+
+    @Column(nullable = false)
     private String body;        // 댓글 내용
 
-    public void updateFrom(CommunityCommentsUpdateRequest request, User author) {
-//        this.author = author;
-        this.body = request.body();
-    }
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CommentLike> likes = new ArrayList<>();   // 좋아요
 }

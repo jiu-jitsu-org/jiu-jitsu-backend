@@ -164,15 +164,18 @@ public class CommunityProfile {
      * 대회정보 수정
      */
     public void upsertCompetitions(List<CompetitionInfoDto> competitionInfos) {
-        this.competitions = competitionInfos.isEmpty()
-                ? null
-                : competitionInfos.stream().map(CompetitionInfoDto::toEntity).collect(Collectors.toList());
+        this.competitions = competitionInfos.stream()
+                .map(CompetitionInfoDto::toEntity)
+                .collect(Collectors.toList());
     }
 
     /**
      * 관장 프로필 수정
      */
     public void upsertOwnerInfo(String teachingPhilosophy, LocalDate teachingStartDate, String teachingDetail) {
+        if (this.ownerProfile == null) {
+            throw new IllegalStateException("ownerProfile이 등록되지 않은 사용자입니다.");
+        }
         this.ownerProfile.update(teachingPhilosophy, teachingStartDate, teachingDetail);
     }
 

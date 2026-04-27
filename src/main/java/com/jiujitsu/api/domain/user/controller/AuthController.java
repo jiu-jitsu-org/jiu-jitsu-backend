@@ -31,17 +31,16 @@ public class AuthController {
         return authService.snsLogin(request);
     }
 
-    @Operation(
-            summary = "로그아웃",
-            description = "액세스 토큰과 리프레시 토큰을 무효화하여 로그아웃합니다."
-    )
-    @PostMapping("/logout")
-    public LogoutResponse logout(@Valid @RequestBody LogoutRequest request) {
-        return authService.logout(request);
+    @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
+    @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY,
+            ErrorCode.USER_NOT_FOUND})
+    @PostMapping("/refresh")
+    public AuthResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        return authService.refreshToken(request.getRefreshToken());
     }
 
     @Operation(
-            summary = "로그인",
+            summary = "(관리자) 로그인",
             description = "관리자 로그인 테스트"
     )
     @PostMapping("/login")
@@ -49,11 +48,12 @@ public class AuthController {
         return new LoginResponse();
     }
 
-    @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
-    @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY,
-            ErrorCode.USER_NOT_FOUND})
-    @PostMapping("/refresh")
-    public AuthResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-        return authService.refreshToken(request.getRefreshToken());
+    @Operation(
+            summary = "로그아웃",
+            description = "액세스 토큰과 리프레시 토큰을 무효화하여 로그아웃합니다."
+    )
+    @PostMapping("/logout")
+    public LogoutResponse logout(@Valid @RequestBody LogoutRequest request) {
+        return authService.logout(request);
     }
 }

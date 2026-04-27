@@ -2,7 +2,10 @@ package com.jiujitsu.api.global.security;
 
 
 import com.auth0.jwt.interfaces.Claim;
+import com.jiujitsu.api.domain.user.dto.TempUserInfo;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -121,5 +124,43 @@ public class JwtTokenProvider {
                 .getPayload();
         
         return claims.get("type", String.class);
+    }
+
+    //todo: access, refresh 파싱도 추가 작업 진행 필요
+    public TempUserInfo parseTemporaryToken(String token) {
+        Claims claims = parseAndValidate(token);
+
+        validateTokenType(claims, "temporary");
+
+        String snsId = claims.getSubject();
+        String email = claims.get("email", String.class);
+        String provider = claims.get("snsProvider", String.class);
+
+        return new TempUserInfo(
+                snsId,
+                email,
+                SnsProvider.valueOf(provider)
+        );
+    }
+
+    private Claims parseAndValidate(String token) {
+        try {
+            return Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (JwtException | IllegalArgumentException e) {
+            log.debug("Invalid JWT token: {}", e.getMessage());
+            throw new ErrorException(ErrorCode.INVALID_TOKEN);
+        }
+    }
+
+    private void validateTokenType(Claims claims, String expectedType) {
+        String type = claims.get("type", String.class);
+
+        if (!expectedType.equals(type)) {
+            throw new ErrorException(ErrorCode.NOT_MATCH_CATEGORY);
+        }
     }
 }

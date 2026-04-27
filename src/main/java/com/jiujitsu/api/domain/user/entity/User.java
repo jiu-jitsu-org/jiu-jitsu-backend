@@ -7,6 +7,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -61,6 +63,10 @@ public class User {
 
     @Column
     private LocalDateTime deletedAt;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<UserAppInfo> appInfos = new ArrayList<>();
 
     public void updateProfile(String nickname, String profileImageUrl) {
         if (nickname != null && !nickname.trim().isEmpty()) {

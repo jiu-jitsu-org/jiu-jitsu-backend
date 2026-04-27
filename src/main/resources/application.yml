@@ -48,3 +48,10 @@ springdoc:
 # Apple Key 공통
 apple:
   filePath: ./jiujitsuLab_AuthKey_Z3HRNZG68M.p8
+
+# fcm 공통
+fcm:
+  file_path: resources/fcm/jiu-jitsu-lab-firebase-adminsdk-fbsvc-3955e0b618.json
+  url: https://fcm.googleapis.com/v1/projects/jiu-jitsu-lab/messages:send
+  google_api: https://www.googleapis.com/auth/cloud-platform
+  project_id: jiu-jitsu-lab

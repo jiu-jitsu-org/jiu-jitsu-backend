@@ -3,6 +3,8 @@ package com.jiujitsu.api.domain.user.service;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
+import com.jiujitsu.api.domain.user.factory.UserFactory;
+import com.jiujitsu.api.domain.user.mapper.AuthMapper;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.sns.SnsClient;
 import com.jiujitsu.api.domain.user.service.sns.SnsClientFactory;
@@ -15,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Slf4j
 @Service
@@ -27,59 +29,85 @@ public class AuthService {
     private final SnsClientFactory snsClientFactory;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
+    private final AuthMapper authMapper;
+    private final UserFactory userFactory;
 
+    /**
+     * SNS Login - 로그인 분리
+     */
     public AuthResponse snsLogin(SnsLoginRequest request) {
-        // SNS 클라이언트를 통해 사용자 정보 조회
-        SnsClient snsClient = snsClientFactory.getClient(request.getSnsProvider());
-        SnsUserInfo snsUserInfo = snsClient.getUserInfo(request.getAccessToken());
+        // SNS 사용자 정보 조회
+        SnsUserInfo snsUserInfo = getSnsUserInfo(request);
 
-        // 회원 정보 조회
-        Optional<User> userOptional = userRepository.findBySnsProviderAndSnsId(request.getSnsProvider(), snsUserInfo.getSnsId());
-
-        if (userOptional.isPresent()) {
-            // 1. 기존 회원 > 로그인
-            User user = userOptional.get();
-
-            boolean deactivatedWithinGrace = false;
-
-            // 탈퇴 계정 처리: 30일 이내 재로그인 시 복구, 만료 시 에러
-            if (user.getStatus() == UserStatus.DELETED) {
-                if (user.isWithinGracePeriod()) {
-                    // 복구 처리
-                    user.updateStatus(UserStatus.ACTIVE); // 내부에서 deletedAt null 처리
-                    deactivatedWithinGrace = true;
-                } else {
-                    // 이미 30일 경과하여 계정 만료
-                    throw new ErrorException(ErrorCode.USER_ACCOUNT_EXPIRED);
-                }
-            }
-
-            // 사용자 정보 업데이트 (프로필 정보가 변경되었을 수 있음)
-            updateUserInfo(user, snsUserInfo);
-
-            // JWT 토큰 생성
-            String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
-            String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-
-            // 응답 생성
-            AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
-                    user.getId(),
-                    user.getEmail(),
-                    user.getNickname(),
-                    user.getProfileImageUrl(),
-                    user.getSnsProvider(),
-                    deactivatedWithinGrace
-            );
-
-            return new AuthResponse(accessToken, refreshToken, userInfo);
-        } else {
-            // 2. 신규 회원 > 임시 토큰 생성
-            String tempToken = jwtTokenProvider.createTemporaryToken(
-                    snsUserInfo.getSnsId(), snsUserInfo.getEmail(), request.getSnsProvider());
-            return new AuthResponse(tempToken);
-        }
+        // response 세팅
+        return userRepository
+                .findBySnsProviderAndSnsId(request.snsProvider(), snsUserInfo.getSnsId())
+                .map(user -> handleExistingUser(user, snsUserInfo)) // 기존회원 처리
+                .orElseGet(() -> handleNewUser(request, snsUserInfo));  // 신규회원 처리
     }
 
+    /**
+     * SNS 로그인 - snsUserInfo 조회
+     */
+    private SnsUserInfo getSnsUserInfo(SnsLoginRequest request) {
+        SnsClient snsClient = snsClientFactory.getClient(request.snsProvider());
+        return snsClient.getUserInfo(request.accessToken());
+    }
+
+    /**
+     * SNS 로그인 - 기존 유저 처리
+     */
+    private AuthResponse handleExistingUser(User user, SnsUserInfo snsUserInfo) {
+        // 탈퇴회원 확인
+        boolean deactivatedWithinGrace = handleUserStatus(user);
+
+        // 회원정보 업데이트
+        updateUserInfo(user, snsUserInfo);
+
+        // 토큰 생성
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+        // 응답 세팅
+        return authMapper.toAccessResponse(
+                accessToken,
+                refreshToken,
+                userFactory.createUserInfo(user, deactivatedWithinGrace)
+        );
+    }
+
+    /**
+     * SNS 로그인 - 탈퇴/복구
+     */
+    private boolean handleUserStatus(User user) {
+        if (user.getStatus() != UserStatus.DELETED) {
+            return false;
+        }
+
+        if (!user.isWithinGracePeriod()) {
+            throw new ErrorException(ErrorCode.USER_ACCOUNT_EXPIRED);
+        }
+
+        user.updateStatus(UserStatus.ACTIVE);
+        return true;
+    }
+
+    /**
+     * SNS 로그인 - 신규 유저 처리
+     */
+    private AuthResponse handleNewUser(SnsLoginRequest request, SnsUserInfo snsUserInfo) {
+        String tempToken = jwtTokenProvider.createTemporaryToken(
+                snsUserInfo.getSnsId(),
+                snsUserInfo.getEmail(),
+                request.snsProvider()
+        );
+
+        return authMapper.toTempResponse(tempToken);
+    }
+
+    /**
+     * 프로필 정보 업데이트
+     */
     private void updateUserInfo(User user, SnsUserInfo snsUserInfo) {
         // 프로필 정보가 변경되었을 경우 업데이트
         boolean needsUpdate = false;
@@ -97,7 +125,27 @@ public class AuthService {
         }
     }
 
+    /**
+     * 토큰 갱신
+     */
     public AuthResponse refreshToken(String refreshToken) {
+        Long userId = validateAndExtractUserId(refreshToken);
+
+        // 사용자 정보 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        // 새로운 토큰 생성
+        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+        // 응답 생성
+        UserInfo userInfo = userFactory.createUserInfo(user, false);
+
+        return authMapper.toAccessResponse(newAccessToken, newRefreshToken, userInfo);
+    }
+
+    public Long validateAndExtractUserId(String refreshToken) {
         // 리프레시 토큰 검증
         if (!jwtTokenProvider.validateToken(refreshToken)) {
             throw new ErrorException(ErrorCode.INVALID_REFRESH_TOKEN);
@@ -109,43 +157,24 @@ public class AuthService {
             throw new ErrorException(ErrorCode.NOT_MATCH_CATEGORY);
         }
 
-        // 사용자 정보 조회
-        Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-
-        // 새로운 토큰 생성
-        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
-        String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-
-        // 응답 생성
-        AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
-                user.getId(),
-                user.getEmail(),
-                user.getNickname(),
-                user.getProfileImageUrl(),
-                user.getSnsProvider(),
-                false
-        );
-
-        return new AuthResponse(newAccessToken, newRefreshToken, userInfo);
+        return jwtTokenProvider.getUserIdFromToken(refreshToken);
     }
 
     public LogoutResponse logout(LogoutRequest request) {
-        // 액세스 토큰 검증 및 블랙리스트 추가
-        if (request.getAccessToken() != null && !request.getAccessToken().trim().isEmpty()) {
-            if (jwtTokenProvider.validateToken(request.getAccessToken())) {
-                tokenBlacklistService.blacklistToken(request.getAccessToken());
-            }
+        processLogoutToken(request.accessToken());
+        processLogoutToken(request.refreshToken());
+
+        return authMapper.toLogoutResponse();
+    }
+
+    private void processLogoutToken(String token) {
+        if (isBlank(token)) {
+            return;
         }
 
-        // 리프레시 토큰이 제공된 경우 블랙리스트 추가
-        if (request.getRefreshToken() != null && !request.getRefreshToken().trim().isEmpty()) {
-            if (jwtTokenProvider.validateToken(request.getRefreshToken())) {
-                tokenBlacklistService.blacklistToken(request.getRefreshToken());
-            }
+        if (!jwtTokenProvider.validateToken(token)) {
+            return;
         }
-
-        return new LogoutResponse(true, "로그아웃이 완료되었습니다");
+        tokenBlacklistService.blacklistToken(token);
     }
 }

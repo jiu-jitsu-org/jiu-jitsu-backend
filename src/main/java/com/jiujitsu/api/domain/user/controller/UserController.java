@@ -47,7 +47,7 @@ public class UserController {
     )
     @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.AUTHENTICATION_FAILED})
     @PutMapping("/profile")
-    public UpdateProfileResponse updateProfile(
+    public UserProfileResponse updateProfile(
             @Valid @RequestBody UpdateProfileRequest request) {
         return userService.updateProfile(request);
     }
@@ -80,6 +80,15 @@ public class UserController {
     @ApiErrorCodeExamples({ErrorCode.NICKNAME_DUPLICATED, ErrorCode.NICKNAME_VALIDATION})
     @GetMapping("/check/nickname")
     public Boolean duplicateNickname(@RequestParam(value = "nickname") String nickname) {
-        return userService.checkNickname(nickname);
+        return userService.validateNickname(nickname);
+    }
+
+    @Operation(
+            summary = "회원 앱 정보 등록",
+            description = "로그인 회원의 앱 정보를 등록합니다."
+    )
+    @PostMapping("/appInfo")
+    public Boolean insertUserAppInfo(@RequestBody UserAppInfoRequest request) {
+        return userService.insertUserAppInfo(request);
     }
 }

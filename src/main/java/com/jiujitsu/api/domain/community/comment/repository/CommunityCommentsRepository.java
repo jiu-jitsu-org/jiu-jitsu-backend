@@ -7,64 +7,31 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Objects;
 
 @Repository
 public interface CommunityCommentsRepository extends JpaRepository<CommunityComments, Long> {
 
     /**
-     * 댓글 작성
-     * @param postId   게시글ID
-     * @param parentId  부모 댓글 ID
-     * @param body      댓글내용
-     * @return  댓글
-     */
-    default CommunityComments createComment(
-            Long postId,
-            Long parentId,
-            String body
-    ) {
-        Objects.requireNonNull(postId, "postId must not be null");
-        Objects.requireNonNull(body, "body must not be null");
-
-        CommunityComments comment = CommunityComments.builder()
-                .postId(postId)
-                .parentId(parentId)
-                .body(body)
-                .build();
-        return save(comment);
-    }
-
-    /**
-     * 상위 댓글만 조회
-     * @param postId 게시글ID
-     * @return 댓글 리스트
+     * Content 다건의 상위 댓글 수 조회 (parentId가 null인 댓글만, 대댓글 제외)
+     * @param contentIds Content ID 목록
+     * @return [contentId, count] 형태의 리스트
      */
     @Query("""
-        select c
+        select c.content.id, count(c)
         from CommunityComments c
-        where c.postId = :postId
+        where c.content.id in :contentIds
             and c.parentId is null
-        order by c.createdAt asc, c.id asc
+        group by c.content.id
    \s""")
-    List<CommunityComments> findCommentsByPostId(@Param("postId") Long postId);
+    List<Object[]> countTopLevelCommentsByContentIds(@Param("contentIds") List<Long> contentIds);
 
     /**
-     * 하위 댓글만 조회
-     * @param postId  게시글ID
-     * @param parentId 부모 댓글 ID
-     * @return  댓글 리스트
+     * Content 단건의 상위 댓글 수 조회 (parentId가 null인 댓글만, 대댓글 제외)
      */
-    @Query("""
-        select c
-        from CommunityComments c
-        where c.postId = :postId
-            and c.parentId = :parentId
-        order by c.createdAt asc, c.id asc
-   \s""")
-    List<CommunityComments> findByPostIdAndParentIdOrderByCreatedAtAsc(
-            @Param("postId") Long postId,
-            @Param("parentId") Long parentId
-    );
+    long countByContent_IdAndParentIdIsNull(Long content_Id);
 
+    /**
+     * contents의 전체 댓글 조회(댓글 + 대댓글)
+     */
+    List<CommunityComments> findByContentIdOrderByCreatedAtDesc(Long contentId);
 }
