@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.board.controller;
 import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.service.BoardCategoryService;
 import com.jiujitsu.api.domain.community.board.service.BoardService;
+import com.jiujitsu.api.domain.community.content.dto.ContentLikeResponse;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
@@ -91,5 +92,14 @@ public class BoardController {
             @Parameter(description = "게시글 ID", required = true) @PathVariable Long id
     ) {
         boardService.delete(id);
+    }
+
+    @Operation(summary = "게시물 좋아요 등록/취소", description = "게시물 좋아요를 등록/취소합니다.")
+    @ApiErrorCodeExample(ErrorCode.CONTENT_NOT_FOUND)
+    @PutMapping("/like/{id}")
+    public ContentLikeResponse like(
+            @Parameter(description = "게시글 ID", required = true) @PathVariable Long id
+    ) {
+        return boardService.like(id);
     }
 }

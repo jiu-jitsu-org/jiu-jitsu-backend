@@ -15,11 +15,10 @@ public class BoardMapper {
     /**
      * 목록 response
      */
-    public BoardListResponse toBoardListResponse(Board board, long commentCount) {
+    public BoardListResponse toBoardListResponse(Board board, long commentCount, long likeCount) {
         Content content = board.getContent();
 
         return new BoardListResponse(
-                board.getId(),
                 content.getId(),
                 board.getCategory().getId(),
                 board.getCategory().getName(),
@@ -28,6 +27,7 @@ public class BoardMapper {
                 board.getCreatedAt(),
                 board.getUpdatedAt(),
                 commentCount,
+                likeCount,
                 getImageUrlStrings(content)
         );
     }
@@ -35,10 +35,9 @@ public class BoardMapper {
     /**
      * 상세 response
      */
-    public BoardResponse toResponse(Board board, long commentCount) {
+    public BoardResponse toResponse(Board board, Long commentCount, Long likeCount) {
         Content content = board.getContent();
         return new BoardResponse(
-                board.getId(),
                 content.getId(),
                 board.getCategory().getId(),
                 board.getCategory().getName(),
@@ -47,6 +46,7 @@ public class BoardMapper {
                 board.getCreatedAt(),
                 board.getUpdatedAt(),
                 commentCount,
+                likeCount,
                 getImageUrlStrings(content)
         );
     }

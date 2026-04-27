@@ -14,7 +14,7 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
     /**
      * Content 다건의 상위 댓글 수 조회 (parentId가 null인 댓글만, 대댓글 제외)
      * @param contentIds Content ID 목록
-     * @return [contentId, count] 형태의 리스트
+     * @return [id, count] 형태의 리스트
      */
     @Query("""
         select c.content.id, count(c)
