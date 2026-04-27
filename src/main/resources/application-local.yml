@@ -10,8 +10,8 @@ spring:
       settings:
         web-allow-others: true
   datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
+    url: jdbc:p6spy:h2:mem:testdb   # ✅ p6spy prefix 추가
+    driver-class-name: com.p6spy.engine.spy.P6SpyDriver  # ✅ 드라이버 변경
     username: sa
     password:
   jpa:
@@ -20,6 +20,13 @@ spring:
       ddl-auto: update
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+
+# logging
+logging:
+  level:
+    p6spy: info
+    org.hibernate.SQL: off
+    org.hibernate.type.descriptor.sql: off
 
 # CORS
 cors:
