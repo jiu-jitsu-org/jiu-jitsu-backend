@@ -114,4 +114,15 @@ public class BoardController {
     ) {
         return contentService.save(id);
     }
+
+    @Operation(summary = "내가 작성한 글 조회", description = "내가 작성한 글 목록을 조회합니다.")
+    @GetMapping("/write")
+    public Page<BoardListResponse> writeList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return boardService.getWriteList(pageable);
+    }
+    @Operation(summary = "내가 저장한 글 조회", description = "내가 저장한 글 목록을 조회합니다.")
+    @GetMapping("/save")
+    public Page<BoardListResponse> saveList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return boardService.getSaveList(pageable);
+    }
 }

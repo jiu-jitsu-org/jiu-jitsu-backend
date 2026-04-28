@@ -8,12 +8,6 @@ import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
-import com.jiujitsu.api.domain.community.content.factory.ContentLikeFactory;
-import com.jiujitsu.api.domain.community.content.factory.ContentSaveFactory;
-import com.jiujitsu.api.domain.community.content.mapper.ContentLikeMapper;
-import com.jiujitsu.api.domain.community.content.mapper.ContentSaveMapper;
-import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
-import com.jiujitsu.api.domain.community.content.repository.ContentSaveRepository;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -40,13 +34,6 @@ public class BoardService {
     private final BoardCategoryService boardCategoryService;
     private final CommunityCommentsService communityCommentsService;
     private final ContentService contentService;
-
-    private final ContentLikeRepository contentLikeRepository;
-    private final ContentLikeFactory contentLikeFactory;
-    private final ContentLikeMapper contentLikeMapper;
-    private final ContentSaveRepository contentSaveRepository;
-    private final ContentSaveFactory contentSaveFactory;
-    private final ContentSaveMapper contentSaveMapper;
 
     /**
      * 게시물 목록 조회
@@ -212,6 +199,90 @@ public class BoardService {
         board.validateOwner(authenticationFacade.getCurrentUser());
 
         boardRepository.delete(board);
+    }
+
+    /**
+     * 내가 작성한 게시물 조회
+     */
+    @Transactional(readOnly = true)
+    public Page<BoardListResponse> getWriteList(Pageable pageable) {
+        User user = authenticationFacade.getCurrentUser();
+        Page<Board> page = boardRepository.findAllByCreatedBy(user, pageable);
+
+        // 컨텐츠(공통) 조회
+        List<Long> contentIds = page.getContent().stream()
+                .map(b -> b.getContent().getId())
+                .toList();
+
+        // 댓글 조회
+        Map<Long, Long> commentCountMap = contentIds.isEmpty()
+                ? Map.of()
+                : communityCommentsService.getContentsComments(contentIds);
+
+        // 좋아요 조회
+        Map<Long, Long> contentLikeMap = contentIds.isEmpty()
+                ? Map.of()
+                : contentService.getContentLikeCount(contentIds);
+
+        // 설정 여부 전화
+        Set<Long> commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.getId(), contentIds);
+        Set<Long> likedContentIds = contentService.getUserLikedContentIds(user.getId(), contentIds);
+        Set<Long> savedContentIds = contentService.getUserSavedContentIds(user.getId(), contentIds);
+        return page.map(board -> {
+                    Long contentId = board.getContent().getId();
+
+                    return boardMapper.toBoardListResponse(
+                            board,
+                            commentCountMap.getOrDefault(contentId, 0L),
+                            contentLikeMap.getOrDefault(contentId, 0L),
+                            commentedContentIds.contains(contentId),
+                            likedContentIds.contains(contentId),
+                            savedContentIds.contains(contentId)
+                    );
+                }
+        );
+    }
+
+    /**
+     * 내가 저장한 게시물 조회
+     */
+    @Transactional(readOnly = true)
+    public Page<BoardListResponse> getSaveList(Pageable pageable) {
+        User user = authenticationFacade.getCurrentUser();
+        Page<Board> page = boardRepository.findSavedBoards(user.getId(), pageable);
+
+        // 컨텐츠(공통) 조회
+        List<Long> contentIds = page.getContent().stream()
+                .map(b -> b.getContent().getId())
+                .toList();
+
+        // 댓글 조회
+        Map<Long, Long> commentCountMap = contentIds.isEmpty()
+                ? Map.of()
+                : communityCommentsService.getContentsComments(contentIds);
+
+        // 좋아요 조회
+        Map<Long, Long> contentLikeMap = contentIds.isEmpty()
+                ? Map.of()
+                : contentService.getContentLikeCount(contentIds);
+
+        // 설정 여부 전화
+        Set<Long> commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.getId(), contentIds);
+        Set<Long> likedContentIds = contentService.getUserLikedContentIds(user.getId(), contentIds);
+        Set<Long> savedContentIds = contentService.getUserSavedContentIds(user.getId(), contentIds);
+        return page.map(board -> {
+                    Long contentId = board.getContent().getId();
+
+                    return boardMapper.toBoardListResponse(
+                            board,
+                            commentCountMap.getOrDefault(contentId, 0L),
+                            contentLikeMap.getOrDefault(contentId, 0L),
+                            commentedContentIds.contains(contentId),
+                            likedContentIds.contains(contentId),
+                            savedContentIds.contains(contentId)
+                    );
+                }
+        );
     }
 
 
