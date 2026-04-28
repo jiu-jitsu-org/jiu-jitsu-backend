@@ -8,6 +8,7 @@ import com.jiujitsu.api.domain.file.ImageUrl;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 
 @Component
 public class BoardMapper {
@@ -45,6 +46,7 @@ public class BoardMapper {
                 board.getBody(),
                 board.getCreatedAt(),
                 board.getUpdatedAt(),
+                !Objects.equals(board.getCreatedAt(), board.getUpdatedAt()),
                 commentCount,
                 likeCount,
                 getImageUrlStrings(content)

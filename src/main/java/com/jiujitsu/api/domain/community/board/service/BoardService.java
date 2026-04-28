@@ -149,6 +149,9 @@ public class BoardService {
         content.getImageUrls().clear();
         content.addImageUrls(boardFactory.createImageUrls(request.getImageUrlList()));
 
+        // 수정여부 업데이트를 위한 flush 강제호출
+        boardRepository.flush();
+
         // dto 생성
         return boardMapper.toResponse(board, null, null);
     }
