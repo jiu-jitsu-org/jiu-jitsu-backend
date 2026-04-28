@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface CommunityCommentsRepository extends JpaRepository<CommunityComments, Long> {
@@ -34,4 +35,12 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
      * contents의 전체 댓글 조회(댓글 + 대댓글)
      */
     List<CommunityComments> findByContentIdOrderByCreatedAtDesc(Long contentId);
+
+    @Query("""
+    select distinct c.content.id
+    from CommunityComments c
+    where c.createdBy.id = :userId
+      and c.content.id in :contentIds
+    """)
+    Set<Long> findUserCommentedContentIds(@Param("userId")Long userId, @Param("contentIds")List<Long> contentIds);
 }

@@ -8,6 +8,8 @@ import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 @RequiredArgsConstructor
 public class AuthenticationFacade {
@@ -26,5 +28,11 @@ public class AuthenticationFacade {
         Long id = AuthenticationUtil.getCurrentUserId().orElseThrow(() -> new ErrorException(ErrorCode.LOGIN_NOT_ACCESS));
         // 유효한 유저인지 체크
         return userRepository.findById(id).orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    public Optional<User> getCurrentUserOptional() {
+        // 현재 로그인 id
+        Optional<Long> id = AuthenticationUtil.getCurrentUserId();
+        return id.flatMap(userRepository::findById);
     }
 }

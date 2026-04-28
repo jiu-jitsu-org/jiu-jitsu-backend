@@ -169,4 +169,12 @@ public class CommunityCommentsService {
         return communityCommentsRepository.countTopLevelCommentsByContentIds(contentIds).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
     }
+
+    /**
+     * 게시글 - 댓글id 조회
+     */
+    public Set<Long> getUserCommentedContentIds(Long userId, List<Long> contentIds) {
+        return communityCommentsRepository.findUserCommentedContentIds(userId, contentIds);
+    }
+
 }

@@ -7,12 +7,14 @@ import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
-import com.jiujitsu.api.domain.community.content.dto.ContentLikeResponse;
 import com.jiujitsu.api.domain.community.content.entity.Content;
-import com.jiujitsu.api.domain.community.content.entity.ContentLike;
 import com.jiujitsu.api.domain.community.content.factory.ContentLikeFactory;
+import com.jiujitsu.api.domain.community.content.factory.ContentSaveFactory;
 import com.jiujitsu.api.domain.community.content.mapper.ContentLikeMapper;
+import com.jiujitsu.api.domain.community.content.mapper.ContentSaveMapper;
 import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
+import com.jiujitsu.api.domain.community.content.repository.ContentSaveRepository;
+import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -24,10 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -40,10 +39,14 @@ public class BoardService {
     private final BoardMapper boardMapper;
     private final BoardCategoryService boardCategoryService;
     private final CommunityCommentsService communityCommentsService;
+    private final ContentService contentService;
+
     private final ContentLikeRepository contentLikeRepository;
     private final ContentLikeFactory contentLikeFactory;
     private final ContentLikeMapper contentLikeMapper;
-
+    private final ContentSaveRepository contentSaveRepository;
+    private final ContentSaveFactory contentSaveFactory;
+    private final ContentSaveMapper contentSaveMapper;
 
     /**
      * 게시물 목록 조회
@@ -70,14 +73,36 @@ public class BoardService {
         // 좋아요 조회
         Map<Long, Long> contentLikeMap = contentIds.isEmpty()
                 ? Map.of()
-                : getContentLikeCount(contentIds);
+                : contentService.getContentLikeCount(contentIds);
 
-        return page.map(board ->
-                boardMapper.toBoardListResponse(
-                        board,
-                        commentCountMap.getOrDefault(board.getContent().getId(), 0L),
-                        contentLikeMap.getOrDefault(board.getContent().getId(), 0L)
-                ));
+        // 설정 여부 전화
+        Set<Long> commentedContentIds = new HashSet<>();
+        Set<Long> likedContentIds = new HashSet<>();
+        Set<Long> savedContentIds = new HashSet<>();
+
+        Optional<User> user = authenticationFacade.getCurrentUserOptional();
+        if (user.isPresent()) {
+            commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), contentIds);
+            likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), contentIds);
+            savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), contentIds);
+        }
+
+        Set<Long> finalCommentedContentIds = commentedContentIds;
+        Set<Long> finalLikedContentIds = likedContentIds;
+        Set<Long> finalSavedContentIds = savedContentIds;
+        return page.map(board -> {
+                    Long contentId = board.getContent().getId();
+
+                    return boardMapper.toBoardListResponse(
+                            board,
+                            commentCountMap.getOrDefault(contentId, 0L),
+                            contentLikeMap.getOrDefault(contentId, 0L),
+                            finalCommentedContentIds.contains(contentId),
+                            finalLikedContentIds.contains(contentId),
+                            finalSavedContentIds.contains(contentId)
+                    );
+                }
+        );
     }
 
     /**
@@ -88,16 +113,35 @@ public class BoardService {
         // 게시글 조회
         Board board = boardRepository.findByContent_Id(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
-        Content content = board.getContent();
+        Long contentId = board.getContent().getId();
 
         // 댓글 수 조회
-        long commentCount = communityCommentsService.getCountComments(content.getId());
+        long commentCount = communityCommentsService.getCountComments(contentId);
 
         // 좋아요 수 조회
-        long likeCount = contentLikeRepository.countByContent_Id(content.getId());
+        long likeCount = contentService.getContentLikeCount(Collections.singletonList(contentId))
+                .getOrDefault(contentId, 0L);
+
+        // 설정 여부 전화
+        Set<Long> commentedContentIds = new HashSet<>();
+        Set<Long> likedContentIds = new HashSet<>();
+        Set<Long> savedContentIds = new HashSet<>();
+
+        Optional<User> user = authenticationFacade.getCurrentUserOptional();
+        if (user.isPresent()) {
+            commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), Collections.singletonList(contentId));
+            likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), Collections.singletonList(contentId));
+            savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), Collections.singletonList(contentId));
+        }
 
         // dto 생성
-        return boardMapper.toResponse(board, commentCount, likeCount);
+        return boardMapper.toResponse(
+                board,
+                commentCount,
+                likeCount,
+                commentedContentIds.contains(contentId),
+                likedContentIds.contains(contentId),
+                savedContentIds.contains(contentId));
     }
 
     /**
@@ -119,7 +163,7 @@ public class BoardService {
         board = boardRepository.save(board);
 
         // dto 생성
-        return boardMapper.toResponse(board, null, null);
+        return boardMapper.toResponse(board);
     }
 
     /**
@@ -153,7 +197,7 @@ public class BoardService {
         boardRepository.flush();
 
         // dto 생성
-        return boardMapper.toResponse(board, null, null);
+        return boardMapper.toResponse(board);
     }
 
     /**
@@ -170,40 +214,5 @@ public class BoardService {
         boardRepository.delete(board);
     }
 
-    /**
-     * 게시물 좋아요 등록/삭제
-     */
-    @Transactional
-    public ContentLikeResponse like(Long id) {
-        // 로그인 유저 정보 조회
-        User user = authenticationFacade.getCurrentUser();
 
-        // 게시물 조회
-        Board board = boardRepository.findByContent_Id(id)
-                .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
-        Content content = board.getContent();
-
-        // 기존 좋아요 조회
-        ContentLike newLike = null;
-        Optional<ContentLike> existLike = contentLikeRepository.findByContentIdAndCreatedBy(id, user);
-
-        if (existLike.isPresent()) {
-            // 좋아요 취소
-            contentLikeRepository.delete(existLike.get());
-        } else {
-            // 좋아요 등록
-            newLike = contentLikeFactory.createCommentLike(content);
-            contentLikeRepository.save(newLike);
-        }
-
-        return contentLikeMapper.toContentLikeResponse(content, newLike);
-    }
-
-    /**
-     * 게시글 목록 > 좋아요 카운트 카운트 조회
-     */
-    public Map<Long, Long> getContentLikeCount(List<Long> contentIds) {
-        return contentLikeRepository.countContentLikeByContentIds(contentIds).stream()
-                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
-    }
 }

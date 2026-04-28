@@ -12,9 +12,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(
-        name = "content_like",
+        name = "content_save",
         indexes = {
-                @Index(name = "idx_content_like", columnList = "content_id")
+                @Index(name = "idx_content_save", columnList = "content_id")
         }
 )
 @Getter
@@ -22,7 +22,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class ContentLike extends BaseEntity {
+public class ContentSave extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

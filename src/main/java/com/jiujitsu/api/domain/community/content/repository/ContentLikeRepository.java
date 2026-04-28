@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface ContentLikeRepository extends JpaRepository<ContentLike, Long> {
@@ -23,4 +24,12 @@ public interface ContentLikeRepository extends JpaRepository<ContentLike, Long> 
     List<Object[]> countContentLikeByContentIds(@Param("contentIds") List<Long> contentIds);
 
     long countByContent_Id(Long content_Id);
+
+    @Query("""
+    select distinct c.content.id
+    from ContentLike c
+    where c.createdBy.id = :userId
+      and c.content.id in :contentIds
+    """)
+    Set<Long> findUserLikedContentIds(@Param("userId") Long userId, @Param("contentIds") List<Long> contentIds);
 }

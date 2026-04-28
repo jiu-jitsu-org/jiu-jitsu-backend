@@ -16,7 +16,7 @@ public class BoardMapper {
     /**
      * 목록 response
      */
-    public BoardListResponse toBoardListResponse(Board board, long commentCount, long likeCount) {
+    public BoardListResponse toBoardListResponse(Board board, long commentCount, long likeCount, boolean isCommented, boolean isLiked, boolean isSaved) {
         Content content = board.getContent();
 
         return new BoardListResponse(
@@ -29,6 +29,9 @@ public class BoardMapper {
                 board.getUpdatedAt(),
                 commentCount,
                 likeCount,
+                isCommented,
+                isLiked,
+                isSaved,
                 getImageUrlStrings(content)
         );
     }
@@ -36,7 +39,7 @@ public class BoardMapper {
     /**
      * 상세 response
      */
-    public BoardResponse toResponse(Board board, Long commentCount, Long likeCount) {
+    public BoardResponse toResponse(Board board, Long commentCount, Long likeCount, boolean isCommented, boolean isLiked, boolean isSaved) {
         Content content = board.getContent();
         return new BoardResponse(
                 content.getId(),
@@ -49,6 +52,29 @@ public class BoardMapper {
                 !Objects.equals(board.getCreatedAt(), board.getUpdatedAt()),
                 commentCount,
                 likeCount,
+                isCommented,
+                isLiked,
+                isSaved,
+                getImageUrlStrings(content)
+        );
+    }
+
+    public BoardResponse toResponse(Board board) {
+        Content content = board.getContent();
+        return new BoardResponse(
+                content.getId(),
+                board.getCategory().getId(),
+                board.getCategory().getName(),
+                board.getTitle(),
+                board.getBody(),
+                board.getCreatedAt(),
+                board.getUpdatedAt(),
+                !Objects.equals(board.getCreatedAt(), board.getUpdatedAt()),
+                null,
+                null,
+                null,
+                null,
+                null,
                 getImageUrlStrings(content)
         );
     }

@@ -4,6 +4,8 @@ import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.service.BoardCategoryService;
 import com.jiujitsu.api.domain.community.board.service.BoardService;
 import com.jiujitsu.api.domain.community.content.dto.ContentLikeResponse;
+import com.jiujitsu.api.domain.community.content.dto.ContentSaveResponse;
+import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
@@ -29,6 +31,7 @@ public class BoardController {
 
     private final BoardService boardService;
     private final BoardCategoryService boardCategoryService;
+    private final ContentService contentService;
 
     /**
      * 카테고리
@@ -100,6 +103,15 @@ public class BoardController {
     public ContentLikeResponse like(
             @Parameter(description = "게시글 ID", required = true) @PathVariable Long id
     ) {
-        return boardService.like(id);
+        return contentService.like(id);
+    }
+
+    @Operation(summary = "게시물 저장/취소", description = "게시물을 저장/취소합니다.")
+    @ApiErrorCodeExample(ErrorCode.CONTENT_NOT_FOUND)
+    @PutMapping("/save/{id}")
+    public ContentSaveResponse save(
+            @Parameter(description = "게시글 ID", required = true) @PathVariable Long id
+    ) {
+        return contentService.save(id);
     }
 }
