@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Tag(name = "user-controller", description = "사용자 정보 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER})
 @RestController
@@ -90,5 +92,14 @@ public class UserController {
     @PostMapping("/appInfo")
     public Boolean insertUserAppInfo(@RequestBody UserAppInfoRequest request) {
         return userService.insertUserAppInfo(request);
+    }
+
+    @Operation(
+            summary = "(TEST) 회원 앱 정보 조회",
+            description = "로그인 회원의 앱 정보 조회합니다."
+    )
+    @GetMapping("/appInfo")
+    public List<UserAppInfoResponse> getUserAppInfo() {
+        return userService.getUserAppInfo();
     }
 }

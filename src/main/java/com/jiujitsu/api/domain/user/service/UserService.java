@@ -16,13 +16,13 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.security.JwtTokenProvider;
 import com.jiujitsu.api.global.security.TokenBlacklistService;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
-import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -256,5 +256,17 @@ public class UserService {
                 .build();
 
         return userRepository.save(newUser);
+    }
+
+    public List<UserAppInfoResponse> getUserAppInfo() {
+        User user = authenticationFacade.getCurrentUser();
+        List<UserAppInfoResponse> result = new ArrayList<>();
+        for (UserAppInfo appInfo : user.getAppInfos()) {
+            result.add(
+                    UserAppInfoResponse.toResponse(appInfo, user.getNickname())
+            );
+        }
+
+        return result;
     }
 }
