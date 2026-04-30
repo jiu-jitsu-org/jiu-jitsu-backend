@@ -35,6 +35,10 @@ public class Content extends BaseEntity {
     @Builder.Default
     private List<ImageUrl> imageUrls = new ArrayList<>();
 
+    @OneToMany(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ContentLike> likes = new ArrayList<>();   // 좋아요
+
     public void addImageUrls(List<ImageUrl> imageUrls) {
         if (imageUrls == null || imageUrls.isEmpty()) {
             return;

@@ -4,10 +4,10 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:postgresql://postgres:5432/jiujitsu
+    url: jdbc:p6spy:postgresql://postgres:5432/jiujitsu   # ✅ 변경
     username: jiujitsu
     password: jiujitsu_pw
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: com.p6spy.engine.spy.P6SpyDriver   # ✅ 변경
     initialization-mode: never
     hikari:
       maximum-pool-size: 10
@@ -19,7 +19,7 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -29,6 +29,13 @@ spring:
     open-in-view: false
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+
+# logging
+logging:
+  level:
+    p6spy: info
+    org.hibernate.SQL: off
+    org.hibernate.type.descriptor.sql: off
 
 # CORS
 cors:
