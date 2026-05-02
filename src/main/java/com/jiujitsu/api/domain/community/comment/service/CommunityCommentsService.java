@@ -18,6 +18,7 @@ import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.service.FcmPushService;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
@@ -122,6 +123,10 @@ public class CommunityCommentsService {
         // 댓글 entity 생성
         CommunityComments communityComments = commentFactory.createComments(content, request.parentId(), request.body());
         communityCommentsRepository.save(communityComments);
+
+        // 알림 설정
+        User user = content.getCreatedBy();
+        fcmPushService.send(user, FcmPushType.NEW_COMMENTS);
 
         return commentMapper.toCommunityCommentsResponse(communityComments, new ArrayList<>());
     }

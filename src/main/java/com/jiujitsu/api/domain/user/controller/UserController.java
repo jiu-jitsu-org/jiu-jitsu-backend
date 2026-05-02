@@ -102,4 +102,13 @@ public class UserController {
     public List<UserAppInfoResponse> getUserAppInfo() {
         return userService.getUserAppInfo();
     }
+
+    @Operation(
+            summary = "(TEST) 닉네임 기반 회원 앱 정보 조회",
+            description = "닉네임 검색으로 일치하는 회원의 앱 정보 조회합니다."
+    )
+    @GetMapping("/appInfo/nickname")
+    public List<UserAppInfoResponse> getUserAppInfoByNickname(@RequestParam(value = "nickname") String nickname) {
+        return userService.getUserAppInfoByNickname(nickname);
+    }
 }
