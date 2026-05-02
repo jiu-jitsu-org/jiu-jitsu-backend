@@ -269,4 +269,17 @@ public class UserService {
 
         return result;
     }
+
+    public List<UserAppInfoResponse> getUserAppInfoByNickname(String nickname) {
+        User user = userRepository.findByNickname(StringUtils.trimToEmpty(nickname))
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        List<UserAppInfoResponse> result = new ArrayList<>();
+        for (UserAppInfo appInfo : user.getAppInfos()) {
+            result.add(
+                    UserAppInfoResponse.toResponse(appInfo, user.getNickname())
+            );
+        }
+
+        return result;
+    }
 }
