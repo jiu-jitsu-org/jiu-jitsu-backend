@@ -33,4 +33,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByIdAndStatus(Long id, UserStatus status);
 
     Optional<User> findByNickname(String nickname);
+
+    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.appInfos WHERE u.id = :id")
+    Optional<User> findByIdWithAppInfos(@Param("id") Long id);
 }

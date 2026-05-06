@@ -19,7 +19,7 @@ import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
-import com.jiujitsu.api.global.fcm.service.FcmPushService;
+import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +38,7 @@ public class CommunityCommentsService {
     private final CommunityCommentsRepository communityCommentsRepository;
     private final ContentRepository contentRepository;
     private final AuthenticationFacade authenticationFacade;
-    private final FcmPushService fcmPushService;
+    private final FcmPushEventPublisher fcmPushEventPublisher;
     private final CommentFactory commentFactory;
     private final CommentMapper commentMapper;
     private final CommentLikeFactory commentLikeFactory;
@@ -124,9 +124,9 @@ public class CommunityCommentsService {
         CommunityComments communityComments = commentFactory.createComments(content, request.parentId(), request.body());
         communityCommentsRepository.save(communityComments);
 
-        // 알림 설정
-        User user = content.getCreatedBy();
-        fcmPushService.send(user, FcmPushType.NEW_COMMENTS);
+        // 알림 설정 (커밋 후 FCM 발송)
+        User recipient = content.getCreatedBy();
+        fcmPushEventPublisher.publish(recipient.getId(), FcmPushType.NEW_COMMENTS);
 
         return commentMapper.toCommunityCommentsResponse(communityComments, new ArrayList<>());
     }
