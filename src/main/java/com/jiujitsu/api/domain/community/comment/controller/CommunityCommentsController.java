@@ -29,9 +29,9 @@ public class CommunityCommentsController {
             description = "현재 커뮤니티 게시물의 댓글을 조회합니다."
     )
     @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.CONTENT_NOT_FOUND})
-    @GetMapping
+    @GetMapping("/{id}")
     public List<CommunityCommentsResponse> getComments(
-            @Parameter(description = "커뮤니티 게시글 ID", example = "1") @RequestParam Long contentId
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long contentId
     ) {
         return communityCommentsService.getComments(contentId);
     }

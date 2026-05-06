@@ -114,19 +114,45 @@ public class CommunityCommentsService {
     @Transactional
     public CommunityCommentsResponse createComment(CommunityCommentsWriteRequest request) {
         // 로그인 확인
-        authenticationFacade.checkCurrentUser();
+        User user = authenticationFacade.getCurrentUser();
 
         // 컨텐츠 조회
         Content content = contentRepository.findById(request.contentId())
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
+
+        // 대댓글일 경우 부모댓글 조회
+        Optional<CommunityComments> parentComments = communityCommentsRepository.findById(request.parentId());
 
         // 댓글 entity 생성
         CommunityComments communityComments = commentFactory.createComments(content, request.parentId(), request.body());
         communityCommentsRepository.save(communityComments);
 
         // 알림 설정 (커밋 후 FCM 발송)
-        User recipient = content.getCreatedBy();
-        fcmPushEventPublisher.publish(recipient.getId(), FcmPushType.NEW_COMMENTS);
+        User boardWriter = content.getCreatedBy();
+
+        // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
+        if (!Objects.equals(user.getId(), boardWriter.getId())) {
+            FcmPushType pushType = FcmPushType.NEW_COMMENTS;
+
+            Map<String, String> pushData = new HashMap<>();
+            pushData.put("type", pushType.getActionType().toString());
+            pushData.put("data", content.getId().toString());
+
+            fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
+        }
+
+        // 알림2 - 댓글에 대댓글 달렸을 때 댓글 작성자에게
+        if (parentComments.isPresent()) {
+            if (!Objects.equals(user.getId(), parentComments.get().getCreatedBy().getId())) {
+                FcmPushType pushType = FcmPushType.NEW_CHILD_COMMENTS;
+
+                Map<String, String> pushData = new HashMap<>();
+                pushData.put("type", pushType.getActionType().toString());
+                pushData.put("data", content.getId().toString());
+
+                fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
+            }
+        }
 
         return commentMapper.toCommunityCommentsResponse(communityComments, new ArrayList<>());
     }
@@ -154,6 +180,16 @@ public class CommunityCommentsService {
             // 좋아요 등록
             newLike = commentLikeFactory.createCommentLike(comment);
             commentLikeRepository.save(newLike);
+
+            if (!Objects.equals(user.getId(), comment.getCreatedBy().getId())) {
+                FcmPushType pushType = FcmPushType.COMMENTS_LIKE;
+
+                Map<String, String> pushData = new HashMap<>();
+                pushData.put("type", pushType.getActionType().toString());
+                pushData.put("data", comment.getId().toString());
+
+                fcmPushEventPublisher.publish(comment.getCreatedBy().getId(), pushType, pushData);
+            }
         }
 
         return commentLikeMapper.toCommentLikeResponse(comment, newLike);

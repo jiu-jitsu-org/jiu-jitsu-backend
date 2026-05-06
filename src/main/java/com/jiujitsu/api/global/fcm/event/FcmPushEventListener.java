@@ -23,7 +23,7 @@ public class FcmPushEventListener {
     public void handleFcmPushRequested(FcmPushRequestedEvent event) {
         userRepository.findByIdWithAppInfos(event.recipientUserId())
                 .ifPresentOrElse(
-                        user -> fcmPushService.send(user, event.pushType()),
+                        user -> fcmPushService.send(user, event.pushType(), event.data()),
                         () -> log.warn("FCM push skipped: user not found. userId={}", event.recipientUserId())
                 );
     }

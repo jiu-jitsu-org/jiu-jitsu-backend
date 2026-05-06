@@ -16,15 +16,14 @@ import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.fcm.entity.FcmPushType;
+import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +38,7 @@ public class ContentService {
     private final ContentSaveRepository contentSaveRepository;
     private final ContentSaveFactory contentSaveFactory;
     private final ContentSaveMapper contentSaveMapper;
+    private final FcmPushEventPublisher fcmPushEventPublisher;
 
     /**
      * 게시물 좋아요 등록/삭제
@@ -63,6 +63,16 @@ public class ContentService {
             // 좋아요 등록
             newLike = contentLikeFactory.createCommentLike(content);
             contentLikeRepository.save(newLike);
+
+            if (!Objects.equals(user.getId(), content.getCreatedBy().getId())) {
+                FcmPushType pushType = FcmPushType.CONTENTS_LIKE;
+
+                Map<String, String> pushData = new HashMap<>();
+                pushData.put("type", pushType.getActionType().toString());
+                pushData.put("data", content.getId().toString());
+
+                fcmPushEventPublisher.publish(content.getCreatedBy().getId(), pushType, pushData);
+            }
         }
 
         return contentLikeMapper.toContentLikeResponse(content, newLike);

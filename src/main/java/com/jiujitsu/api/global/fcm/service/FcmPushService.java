@@ -8,9 +8,12 @@ import com.google.firebase.messaging.Notification;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserAppInfo;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
+import com.jiujitsu.api.global.fcm.entity.PushActionType;
 import com.jiujitsu.api.global.fcm.entity.PushSendLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -18,11 +21,15 @@ public class FcmPushService {
     private final FirebaseMessaging firebaseMessaging;
     private final PushSendLogService pushSendLogService;
 
-    public void send(User user, FcmPushType pushType) {
+    public void send(User user, FcmPushType pushType, Map<String, String> data) {
+        String actionType = data.get("type");
+        String pushData = data.get("data");
+
         for (UserAppInfo appInfo : user.getAppInfos()) {
             boolean isSuccess = true;
             String errorCode = null;
             String errorMessage = null;
+
 
             try {
                 Message message = Message.builder()
@@ -33,6 +40,8 @@ public class FcmPushService {
                                         .setBody(pushType.getBody())
                                         .build()
                         )
+                        .putData("type", actionType)
+                        .putData("data", pushData)
                         .build();
 
                 // 의미있는 response 값이 오지는 않지만, 추후 관리 차원에서 일단 변수로 받아놓음
@@ -55,6 +64,8 @@ public class FcmPushService {
                     .pushType(pushType)
                     .title(pushType.getTitle())
                     .body(pushType.getBody())
+                    .pushActionType(PushActionType.from(data.get("type")))
+                    .data(pushData)
                     .userAppInfo(appInfo)
                     .build();
 
