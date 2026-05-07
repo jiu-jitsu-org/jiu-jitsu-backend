@@ -1,7 +1,10 @@
 package com.jiujitsu.api.domain.community.comment.entity;
 
 import com.jiujitsu.api.domain.community.content.entity.Content;
+import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.global.entity.BaseEntity;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,6 +16,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "community_comments")
@@ -41,4 +45,11 @@ public class CommunityComments extends BaseEntity {
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<CommentLike> likes = new ArrayList<>();   // 좋아요
+
+    // 수정권한 체크
+    public void validateOwner(User user) {
+        if (!Objects.equals(this.getCreatedBy(), user)) {
+            throw new ErrorException(ErrorCode.PERMISSION_DENIED);
+        }
+    }
 }

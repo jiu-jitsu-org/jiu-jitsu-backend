@@ -1,5 +1,7 @@
 package com.jiujitsu.api.domain.community.comment.service;
 
+import com.jiujitsu.api.domain.community.comment.dto.CommentsListRequest;
+import com.jiujitsu.api.domain.community.comment.dto.CommentsSortType;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
@@ -49,7 +51,10 @@ public class CommunityCommentsService {
      * 댓글 목록 조회
      */
     @Transactional(readOnly = true)
-    public List<CommunityCommentsResponse> getComments(Long contentId) {
+    public List<CommunityCommentsResponse> getComments(CommentsListRequest request) {
+        Long contentId = request.id();
+        CommentsSortType sortType = request.sortType();
+
         // 컨텐츠 조회
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
@@ -74,7 +79,10 @@ public class CommunityCommentsService {
                 .map(userId -> new HashSet<>(commentLikeRepository.findLikedCommentIds(commentIds, userId)))
                 .orElse(new HashSet<>());
 
-        // 전체 댓글 Response로 mapping
+        // 작성자 여부
+        User userOptional = authenticationFacade.getCurrentUserOptional().orElse(null);
+
+        // 전체 댓글 Response 로 mapping
         Map<Long, CommunityCommentsResponse> commentsMap = comments.stream()
                 .collect(Collectors.toMap(
                         CommunityComments::getId,
@@ -82,7 +90,8 @@ public class CommunityCommentsService {
                                 c,
                                 new ArrayList<>(),    // 대댓글 하단에서 추가하기 위해 mutable list 사용
                                 likeCountMap.getOrDefault(c.getId(), 0L),
-                                likedCommentIds.contains(c.getId()))
+                                likedCommentIds.contains(c.getId()),
+                                Objects.equals(c.getCreatedBy(), userOptional))
                         ));
 
         // 결과에 댓글/대댓글 나눠 넣기
@@ -105,7 +114,9 @@ public class CommunityCommentsService {
         }
 
         // 부모 기준 정렬하여 return
-        return result;
+        return Objects.equals(sortType, CommentsSortType.CREATE_DESC)
+                ? result.stream().sorted(Comparator.comparing(CommunityCommentsResponse::createdAt).reversed()).toList()
+                : result.stream().sorted(Comparator.comparing(CommunityCommentsResponse::createdAt)).toList();
     }
 
     /**
@@ -193,6 +204,19 @@ public class CommunityCommentsService {
         }
 
         return commentLikeMapper.toCommentLikeResponse(comment, newLike);
+    }
+
+    /**
+     * 댓글 삭제
+     */
+    public void deleteComment(Long commentId) {
+        CommunityComments comment = communityCommentsRepository.findById(commentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
+
+        // 수정 권한 체크
+        comment.validateOwner(authenticationFacade.getCurrentUser());
+
+        communityCommentsRepository.delete(comment);
     }
 
     /**
