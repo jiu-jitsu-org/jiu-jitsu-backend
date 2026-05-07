@@ -16,6 +16,7 @@ import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepositor
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
+import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CommunityCommentsService {
 
     private final CommentLikeRepository commentLikeRepository;
@@ -45,6 +47,7 @@ public class CommunityCommentsService {
     private final CommentMapper commentMapper;
     private final CommentLikeFactory commentLikeFactory;
     private final CommentLikeMapper commentLikeMapper;
+    private final NoticeService noticeService;
 
 
     /**
@@ -122,7 +125,6 @@ public class CommunityCommentsService {
     /**
      * 댓글 작성
      */
-    @Transactional
     public CommunityCommentsResponse createComment(CommunityCommentsWriteRequest request) {
         // 로그인 확인
         User user = authenticationFacade.getCurrentUser();
@@ -150,6 +152,7 @@ public class CommunityCommentsService {
             pushData.put("data", content.getId().toString());
 
             fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
+            noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
         }
 
         // 알림2 - 댓글에 대댓글 달렸을 때 댓글 작성자에게
@@ -162,6 +165,7 @@ public class CommunityCommentsService {
                 pushData.put("data", content.getId().toString());
 
                 fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
+                noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
             }
         }
 
@@ -171,7 +175,6 @@ public class CommunityCommentsService {
     /**
      * 댓글 좋아요 등록
      */
-    @Transactional
     public CommentLikeResponse createCommentLike(CommentLikeRequest request) {
         // 로그인 유저 정보 조회
         User user = authenticationFacade.getCurrentUser();
@@ -200,6 +203,7 @@ public class CommunityCommentsService {
                 pushData.put("data", comment.getId().toString());
 
                 fcmPushEventPublisher.publish(comment.getCreatedBy().getId(), pushType, pushData);
+                noticeService.saveNotice(comment.getCreatedBy().getId(), pushType, pushData);
             }
         }
 

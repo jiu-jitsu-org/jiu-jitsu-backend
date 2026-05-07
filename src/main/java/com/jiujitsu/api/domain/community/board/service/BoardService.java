@@ -25,6 +25,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class BoardService {
 
     private final AuthenticationFacade authenticationFacade;
@@ -134,7 +135,6 @@ public class BoardService {
     /**
      * 게시물 작성
      */
-    @Transactional
     public BoardResponse create(BoardCreateRequest request) {
         // 로그인 유저 체크
         authenticationFacade.checkCurrentUser();
@@ -156,7 +156,6 @@ public class BoardService {
     /**
      * 게시물 수정
      */
-    @Transactional
     public BoardResponse update(Long id, BoardUpdateRequest request) {
         // 게시물 조회
         Board board = boardRepository.findById(id)
@@ -190,7 +189,6 @@ public class BoardService {
     /**
      * 게시물 삭제
      */
-    @Transactional
     public void delete(Long id) {
         Board board = boardRepository.findByContent_Id(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
