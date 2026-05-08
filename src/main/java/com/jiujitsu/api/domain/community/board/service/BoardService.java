@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.board.service;
 import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
+import com.jiujitsu.api.domain.community.board.entity.BoardListType;
 import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
@@ -15,6 +16,7 @@ import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class BoardService {
 
     private final AuthenticationFacade authenticationFacade;
@@ -40,12 +43,20 @@ public class BoardService {
      */
     @Transactional(readOnly = true)
     public Page<BoardListResponse> getList(BoardListRequest boardListRequest, Pageable pageable) {
-        Long categoryId = boardListRequest.getCategoryId();
+        BoardListType boardListType = boardListRequest.boardListType();
 
         // 게시판 조회
-        Page<Board> page = categoryId != null
-                ? boardRepository.findAllByCategory_Id(categoryId, pageable)
-                : boardRepository.findAll(pageable);
+        Page<Board> page = switch (boardListType) {
+            case CATEGORY -> {
+                Long categoryId = boardListRequest.categoryId();
+                yield boardRepository.findAllByCategory_Id(categoryId, pageable);
+            }
+            case SEARCH -> {
+                String keyword = StringUtils.trimToEmpty(boardListRequest.searchKeyword()).toUpperCase(Locale.ROOT);
+                yield boardRepository.findByTitleBodyKeyword(keyword, pageable);
+            }
+            default -> boardRepository.findAll(pageable);
+        };
 
         // 컨텐츠(공통) 조회
         List<Long> contentIds = page.getContent().stream()
@@ -67,6 +78,7 @@ public class BoardService {
         Set<Long> likedContentIds = new HashSet<>();
         Set<Long> savedContentIds = new HashSet<>();
 
+        // 좋아요/댓글/저장 여부
         Optional<User> user = authenticationFacade.getCurrentUserOptional();
         if (user.isPresent()) {
             commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), contentIds);
@@ -134,7 +146,6 @@ public class BoardService {
     /**
      * 게시물 작성
      */
-    @Transactional
     public BoardResponse create(BoardCreateRequest request) {
         // 로그인 유저 체크
         authenticationFacade.checkCurrentUser();
@@ -156,7 +167,6 @@ public class BoardService {
     /**
      * 게시물 수정
      */
-    @Transactional
     public BoardResponse update(Long id, BoardUpdateRequest request) {
         // 게시물 조회
         Board board = boardRepository.findById(id)
@@ -190,7 +200,6 @@ public class BoardService {
     /**
      * 게시물 삭제
      */
-    @Transactional
     public void delete(Long id) {
         Board board = boardRepository.findByContent_Id(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));

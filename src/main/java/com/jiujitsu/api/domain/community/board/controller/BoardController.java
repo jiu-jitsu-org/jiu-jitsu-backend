@@ -66,7 +66,7 @@ public class BoardController {
     @ApiErrorCodeExample(ErrorCode.BOARD_NOT_FOUND)
     @GetMapping("/{id}")
     public BoardResponse getById(
-            @Parameter(description = "게시글 ID", required = true) @PathVariable Long id
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
     ) {
         return boardService.getById(id);
     }
@@ -82,7 +82,7 @@ public class BoardController {
     @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND, ErrorCode.BOARD_CATEGORY_NOT_FOUND})
     @PutMapping("/{id}")
     public BoardResponse update(
-            @Parameter(description = "게시글 ID", required = true) @PathVariable Long id,
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable Long id,
             @RequestBody BoardUpdateRequest request
     ) {
         return boardService.update(id, request);
@@ -92,7 +92,7 @@ public class BoardController {
     @ApiErrorCodeExample(ErrorCode.BOARD_NOT_FOUND)
     @DeleteMapping("/{id}")
     public void delete(
-            @Parameter(description = "게시글 ID", required = true) @PathVariable Long id
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
     ) {
         boardService.delete(id);
     }
@@ -101,7 +101,7 @@ public class BoardController {
     @ApiErrorCodeExample(ErrorCode.CONTENT_NOT_FOUND)
     @PutMapping("/like/{id}")
     public ContentLikeResponse like(
-            @Parameter(description = "게시글 ID", required = true) @PathVariable Long id
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
     ) {
         return contentService.like(id);
     }
@@ -110,7 +110,7 @@ public class BoardController {
     @ApiErrorCodeExample(ErrorCode.CONTENT_NOT_FOUND)
     @PutMapping("/save/{id}")
     public ContentSaveResponse save(
-            @Parameter(description = "게시글 ID", required = true) @PathVariable Long id
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
     ) {
         return contentService.save(id);
     }

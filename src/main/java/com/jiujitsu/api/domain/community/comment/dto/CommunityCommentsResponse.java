@@ -12,6 +12,7 @@ public record CommunityCommentsResponse(
         String body,
         Long likes,
         Boolean isLiked,
+        Boolean isAuthor,
         CommunityProfileInfo author,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,

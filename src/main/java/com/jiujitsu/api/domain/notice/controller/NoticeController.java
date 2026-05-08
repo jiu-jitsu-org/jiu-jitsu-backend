@@ -1,0 +1,43 @@
+package com.jiujitsu.api.domain.notice.controller;
+
+import com.jiujitsu.api.domain.notice.dto.NoticeListResponse;
+import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Tag(name = "notice-controller", description = "알림 API")
+@ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
+@RestController
+@RequestMapping("/notice")
+@RequiredArgsConstructor
+public class NoticeController {
+
+    private final NoticeService noticeService;
+
+    @Operation(summary = "알림 목록 조회", description = "알림 목록을 조회합니다.")
+    @GetMapping
+    public List<NoticeListResponse> getCategory() {
+        return noticeService.getNoticeList();
+    }
+
+    @Operation(summary = "알림 모두 읽음 처리", description = "모든 알림을 읽음 처리합니다.")
+    @PutMapping
+    public Boolean readAllNotice() {
+        return noticeService.readAllNotice();
+    }
+
+    @Operation(summary = "알림 개별 읽음 처리", description = "개별 알림을 읽음 처리합니다.")
+    @PutMapping("/{id}")
+    public Boolean readNotice(
+            @Parameter(name = "id", description = "알림 ID", required = true) @PathVariable(name = "id") Long id
+    ) {
+        return noticeService.readNotice(id);
+    }
+}

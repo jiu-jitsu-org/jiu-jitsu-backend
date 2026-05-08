@@ -16,7 +16,8 @@ public class CommentMapper {
     public CommunityCommentsResponse toCommunityCommentsResponse(CommunityComments comments,
                                                                  List<CommunityCommentsResponse> childrenList,
                                                                  Long likeCount,
-                                                                 Boolean liked) {
+                                                                 Boolean liked,
+                                                                 Boolean isAuthor) {
         Content content = comments.getContent();
 
         return new CommunityCommentsResponse(
@@ -26,6 +27,7 @@ public class CommentMapper {
                 comments.getBody(),
                 likeCount,
                 liked,
+                isAuthor,
                 CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
@@ -45,6 +47,7 @@ public class CommentMapper {
                 content.getId(),
                 comments.getParentId(),
                 comments.getBody(),
+                null,
                 null,
                 null,
                 CommunityProfileInfo.from(comments.getCreatedBy()),
