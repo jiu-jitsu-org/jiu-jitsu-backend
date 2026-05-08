@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.board.service;
 import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
+import com.jiujitsu.api.domain.community.board.entity.BoardListType;
 import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
@@ -15,6 +16,7 @@ import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -41,12 +43,20 @@ public class BoardService {
      */
     @Transactional(readOnly = true)
     public Page<BoardListResponse> getList(BoardListRequest boardListRequest, Pageable pageable) {
-        Long categoryId = boardListRequest.getCategoryId();
+        BoardListType boardListType = boardListRequest.boardListType();
 
         // 게시판 조회
-        Page<Board> page = categoryId != null
-                ? boardRepository.findAllByCategory_Id(categoryId, pageable)
-                : boardRepository.findAll(pageable);
+        Page<Board> page = switch (boardListType) {
+            case CATEGORY -> {
+                Long categoryId = boardListRequest.categoryId();
+                yield boardRepository.findAllByCategory_Id(categoryId, pageable);
+            }
+            case SEARCH -> {
+                String keyword = StringUtils.trimToEmpty(boardListRequest.searchKeyword()).toUpperCase(Locale.ROOT);
+                yield boardRepository.findByTitleBodyKeyword(keyword, pageable);
+            }
+            default -> boardRepository.findAll(pageable);
+        };
 
         // 컨텐츠(공통) 조회
         List<Long> contentIds = page.getContent().stream()
@@ -68,6 +78,7 @@ public class BoardService {
         Set<Long> likedContentIds = new HashSet<>();
         Set<Long> savedContentIds = new HashSet<>();
 
+        // 좋아요/댓글/저장 여부
         Optional<User> user = authenticationFacade.getCurrentUserOptional();
         if (user.isPresent()) {
             commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), contentIds);

@@ -17,6 +17,14 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     Page<Board> findAllByCategory_Id(Long categoryId, Pageable pageable);
     Optional<Board> findByContent_Id(Long contentId);
 
+    @Query("""
+            select b
+            from Board b
+            where b.title like %:keyword%
+            or b.body like %:keyword%
+            """)
+    Page<Board> findByTitleBodyKeyword(@Param("keyword") String keyword, Pageable pageable);
+
     Page<Board> findAllByCreatedBy(User createdBy, Pageable pageable);
     @Query("""
     select b
