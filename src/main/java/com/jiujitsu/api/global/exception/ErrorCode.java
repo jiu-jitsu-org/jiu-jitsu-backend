@@ -18,7 +18,9 @@ public enum ErrorCode {
     CONTENT_NOT_FOUND(404, "C0001", "존재하지 않는 게시물입니다."),
     BOARD_NOT_FOUND(404, "C0002", "존재하지 않는 게시글입니다."),
     BOARD_CATEGORY_NOT_FOUND(404, "C0003", "존재하지 않는 카테고리입니다."),
-    COMMENT_NOT_FOUND(404, "C0004", "존재하지 않는 게시물입니다."),
+    COMMENT_NOT_FOUND(404, "C0004", "존재하지 않는 댓글입니다."),
+    NOTICE_NOT_FOUND(404, "C0004", "존재하지 않는 게시물입니다."),
+
 
     /**
      * 응답 에러

@@ -12,24 +12,25 @@ import com.jiujitsu.api.domain.community.content.mapper.ContentSaveMapper;
 import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.community.content.repository.ContentSaveRepository;
+import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.fcm.entity.FcmPushType;
+import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Transactional
 public class ContentService {
     private final AuthenticationFacade authenticationFacade;
     private final ContentRepository contentRepository;
@@ -39,11 +40,12 @@ public class ContentService {
     private final ContentSaveRepository contentSaveRepository;
     private final ContentSaveFactory contentSaveFactory;
     private final ContentSaveMapper contentSaveMapper;
+    private final FcmPushEventPublisher fcmPushEventPublisher;
+    private final NoticeService noticeService;
 
     /**
      * 게시물 좋아요 등록/삭제
      */
-    @Transactional
     public ContentLikeResponse like(Long id) {
         // 로그인 유저 정보 조회
         User user = authenticationFacade.getCurrentUser();
@@ -63,6 +65,17 @@ public class ContentService {
             // 좋아요 등록
             newLike = contentLikeFactory.createCommentLike(content);
             contentLikeRepository.save(newLike);
+
+            if (!Objects.equals(user.getId(), content.getCreatedBy().getId())) {
+                FcmPushType pushType = FcmPushType.CONTENTS_LIKE;
+
+                Map<String, String> pushData = new HashMap<>();
+                pushData.put("type", pushType.getActionType().toString());
+                pushData.put("data", content.getId().toString());
+
+                fcmPushEventPublisher.publish(content.getCreatedBy().getId(), pushType, pushData);
+                noticeService.saveNotice(content.getCreatedBy().getId(), pushType, pushData);
+            }
         }
 
         return contentLikeMapper.toContentLikeResponse(content, newLike);
@@ -71,6 +84,7 @@ public class ContentService {
     /**
      * 게시글 목록 > 좋아요 카운트 조회
      */
+    @Transactional(readOnly = true)
     public Map<Long, Long> getContentLikeCount(List<Long> contentIds) {
         return contentLikeRepository.countContentLikeByContentIds(contentIds).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
@@ -79,7 +93,6 @@ public class ContentService {
     /**
      * 게시물 저장 등록/삭제
      */
-    @Transactional
     public ContentSaveResponse save(Long id) {
         // 로그인 유저 정보 조회
         User user = authenticationFacade.getCurrentUser();
@@ -107,6 +120,7 @@ public class ContentService {
     /**
      * 게시글 - 좋아요id 조회
      */
+    @Transactional(readOnly = true)
     public Set<Long> getUserLikedContentIds(Long userId, List<Long> contentIds) {
         return contentLikeRepository.findUserLikedContentIds(userId, contentIds);
     }
@@ -114,6 +128,7 @@ public class ContentService {
     /**
      * 게시글 - 저장id 조회
      */
+    @Transactional(readOnly = true)
     public Set<Long> getUserSavedContentIds(Long userId, List<Long> contentIds) {
         return contentSaveRepository.findUserSavedContentIds(userId, contentIds);
     }

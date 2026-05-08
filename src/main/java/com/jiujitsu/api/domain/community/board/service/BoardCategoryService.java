@@ -16,6 +16,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class BoardCategoryService {
     private final BoardCategoryRepository boardCategoryRepository;
 
@@ -33,7 +34,6 @@ public class BoardCategoryService {
     /**
      * 카테고리 생성 임시(하드코딩)
      */
-    @Transactional
     public void createCategory() {
         BoardCategory category1 = BoardCategory.builder()
                 .name("매트 위 수다")
