@@ -31,6 +31,11 @@ public class AuthController {
         return authService.snsLogin(request);
     }
 
+    //todo: 삭제
+    @Operation(summary = "앱 테스트용 로그인(닉네임)")
+    @PostMapping("/test-login")
+    public AuthResponse testLogin(@Valid @RequestBody SnsLoginRequest request) { return authService.testLogin(request); }
+
     @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
     @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY,
             ErrorCode.USER_NOT_FOUND})
