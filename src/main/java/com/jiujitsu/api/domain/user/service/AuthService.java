@@ -32,6 +32,22 @@ public class AuthService {
     private final AuthMapper authMapper;
     private final UserFactory userFactory;
 
+    // 테스트 로그인
+    public AuthResponse testLogin(SnsLoginRequest request) {
+        User user = userRepository.findBySnsProviderAndNickname(request.snsProvider(), request.accessToken())
+                .orElseThrow();
+
+        // 토큰 생성
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+        // 응답 세팅
+        return authMapper.toAccessResponse(
+                accessToken,
+                refreshToken,
+                userFactory.createUserInfo(user, false)
+        );
+    }
     /**
      * SNS Login - 로그인 분리
      */

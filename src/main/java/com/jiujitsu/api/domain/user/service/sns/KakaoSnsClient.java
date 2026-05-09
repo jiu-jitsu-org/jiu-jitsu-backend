@@ -42,7 +42,7 @@ public class KakaoSnsClient implements SnsClient {
             return new SnsUserInfo(snsId, email);
 
         } catch (Exception e) {
-            log.error("구글 사용자 정보 조회 실패", e);
+            log.error("카카오 사용자 정보 조회 실패", e);
             throw new ErrorException(ErrorCode.KEY_PARSING_ERROR);
         }
     }
