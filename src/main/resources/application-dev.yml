@@ -41,6 +41,8 @@ logging:
 cors:
   allowed-origins:
     - https://api.developer-chanq.xyz
+    - http://localhost:3000
+    #todo: 로컬호스트 삭제
 
 # Swagger server URL
 springdoc:
