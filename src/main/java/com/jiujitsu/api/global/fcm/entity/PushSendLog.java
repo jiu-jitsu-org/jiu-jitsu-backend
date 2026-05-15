@@ -40,6 +40,13 @@ public class PushSendLog {
     @Column
     private String body;
 
+    @Column
+    @Enumerated(EnumType.STRING)
+    private PushActionType pushActionType;
+
+    @Column
+    private String data;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_app_info_id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)

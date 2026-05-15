@@ -8,6 +8,7 @@ import com.jiujitsu.api.domain.file.ImageUrl;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 
 @Component
 public class BoardMapper {
@@ -15,11 +16,10 @@ public class BoardMapper {
     /**
      * 목록 response
      */
-    public BoardListResponse toBoardListResponse(Board board, long commentCount) {
+    public BoardListResponse toBoardListResponse(Board board, long commentCount, long likeCount, boolean isCommented, boolean isLiked, boolean isSaved) {
         Content content = board.getContent();
 
         return new BoardListResponse(
-                board.getId(),
                 content.getId(),
                 board.getCategory().getId(),
                 board.getCategory().getName(),
@@ -28,6 +28,10 @@ public class BoardMapper {
                 board.getCreatedAt(),
                 board.getUpdatedAt(),
                 commentCount,
+                likeCount,
+                isCommented,
+                isLiked,
+                isSaved,
                 getImageUrlStrings(content)
         );
     }
@@ -35,10 +39,9 @@ public class BoardMapper {
     /**
      * 상세 response
      */
-    public BoardResponse toResponse(Board board, long commentCount) {
+    public BoardResponse toResponse(Board board, Long commentCount, Long likeCount, boolean isCommented, boolean isLiked, boolean isSaved) {
         Content content = board.getContent();
         return new BoardResponse(
-                board.getId(),
                 content.getId(),
                 board.getCategory().getId(),
                 board.getCategory().getName(),
@@ -46,7 +49,32 @@ public class BoardMapper {
                 board.getBody(),
                 board.getCreatedAt(),
                 board.getUpdatedAt(),
+                !Objects.equals(board.getCreatedAt(), board.getUpdatedAt()),
                 commentCount,
+                likeCount,
+                isCommented,
+                isLiked,
+                isSaved,
+                getImageUrlStrings(content)
+        );
+    }
+
+    public BoardResponse toResponse(Board board) {
+        Content content = board.getContent();
+        return new BoardResponse(
+                content.getId(),
+                board.getCategory().getId(),
+                board.getCategory().getName(),
+                board.getTitle(),
+                board.getBody(),
+                board.getCreatedAt(),
+                board.getUpdatedAt(),
+                !Objects.equals(board.getCreatedAt(), board.getUpdatedAt()),
+                null,
+                null,
+                null,
+                null,
+                null,
                 getImageUrlStrings(content)
         );
     }

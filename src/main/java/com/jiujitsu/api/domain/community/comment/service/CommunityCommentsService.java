@@ -1,5 +1,7 @@
 package com.jiujitsu.api.domain.community.comment.service;
 
+import com.jiujitsu.api.domain.community.comment.dto.CommentsListRequest;
+import com.jiujitsu.api.domain.community.comment.dto.CommentsSortType;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
@@ -14,11 +16,13 @@ import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepositor
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
+import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
-import com.jiujitsu.api.global.fcm.service.FcmPushService;
+import com.jiujitsu.api.global.fcm.entity.FcmPushType;
+import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,24 +35,29 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CommunityCommentsService {
 
     private final CommentLikeRepository commentLikeRepository;
     private final CommunityCommentsRepository communityCommentsRepository;
     private final ContentRepository contentRepository;
     private final AuthenticationFacade authenticationFacade;
-    private final FcmPushService fcmPushService;
+    private final FcmPushEventPublisher fcmPushEventPublisher;
     private final CommentFactory commentFactory;
     private final CommentMapper commentMapper;
     private final CommentLikeFactory commentLikeFactory;
     private final CommentLikeMapper commentLikeMapper;
+    private final NoticeService noticeService;
 
 
     /**
      * 댓글 목록 조회
      */
     @Transactional(readOnly = true)
-    public List<CommunityCommentsResponse> getComments(Long contentId) {
+    public List<CommunityCommentsResponse> getComments(CommentsListRequest request) {
+        Long contentId = request.id();
+        CommentsSortType sortType = request.sortType();
+
         // 컨텐츠 조회
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
@@ -73,7 +82,10 @@ public class CommunityCommentsService {
                 .map(userId -> new HashSet<>(commentLikeRepository.findLikedCommentIds(commentIds, userId)))
                 .orElse(new HashSet<>());
 
-        // 전체 댓글 Response로 mapping
+        // 작성자 여부
+        User userOptional = authenticationFacade.getCurrentUserOptional().orElse(null);
+
+        // 전체 댓글 Response 로 mapping
         Map<Long, CommunityCommentsResponse> commentsMap = comments.stream()
                 .collect(Collectors.toMap(
                         CommunityComments::getId,
@@ -81,7 +93,8 @@ public class CommunityCommentsService {
                                 c,
                                 new ArrayList<>(),    // 대댓글 하단에서 추가하기 위해 mutable list 사용
                                 likeCountMap.getOrDefault(c.getId(), 0L),
-                                likedCommentIds.contains(c.getId()))
+                                likedCommentIds.contains(c.getId()),
+                                Objects.equals(c.getCreatedBy(), userOptional))
                         ));
 
         // 결과에 댓글/대댓글 나눠 넣기
@@ -104,24 +117,57 @@ public class CommunityCommentsService {
         }
 
         // 부모 기준 정렬하여 return
-        return result;
+        return Objects.equals(sortType, CommentsSortType.CREATE_DESC)
+                ? result.stream().sorted(Comparator.comparing(CommunityCommentsResponse::createdAt).reversed()).toList()
+                : result.stream().sorted(Comparator.comparing(CommunityCommentsResponse::createdAt)).toList();
     }
 
     /**
      * 댓글 작성
      */
-    @Transactional
     public CommunityCommentsResponse createComment(CommunityCommentsWriteRequest request) {
         // 로그인 확인
-        authenticationFacade.checkCurrentUser();
+        User user = authenticationFacade.getCurrentUser();
 
         // 컨텐츠 조회
         Content content = contentRepository.findById(request.contentId())
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
+        // 대댓글일 경우 부모댓글 조회
+        Optional<CommunityComments> parentComments = communityCommentsRepository.findById(request.parentId());
+
         // 댓글 entity 생성
         CommunityComments communityComments = commentFactory.createComments(content, request.parentId(), request.body());
         communityCommentsRepository.save(communityComments);
+
+        // 알림 설정 (커밋 후 FCM 발송)
+        User boardWriter = content.getCreatedBy();
+
+        // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
+        if (!Objects.equals(user.getId(), boardWriter.getId())) {
+            FcmPushType pushType = FcmPushType.NEW_COMMENTS;
+
+            Map<String, String> pushData = new HashMap<>();
+            pushData.put("type", pushType.getActionType().toString());
+            pushData.put("data", content.getId().toString());
+
+            fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
+            noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
+        }
+
+        // 알림2 - 댓글에 대댓글 달렸을 때 댓글 작성자에게
+        if (parentComments.isPresent()) {
+            if (!Objects.equals(user.getId(), parentComments.get().getCreatedBy().getId())) {
+                FcmPushType pushType = FcmPushType.NEW_CHILD_COMMENTS;
+
+                Map<String, String> pushData = new HashMap<>();
+                pushData.put("type", pushType.getActionType().toString());
+                pushData.put("data", content.getId().toString());
+
+                fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
+                noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
+            }
+        }
 
         return commentMapper.toCommunityCommentsResponse(communityComments, new ArrayList<>());
     }
@@ -129,7 +175,6 @@ public class CommunityCommentsService {
     /**
      * 댓글 좋아요 등록
      */
-    @Transactional
     public CommentLikeResponse createCommentLike(CommentLikeRequest request) {
         // 로그인 유저 정보 조회
         User user = authenticationFacade.getCurrentUser();
@@ -149,9 +194,33 @@ public class CommunityCommentsService {
             // 좋아요 등록
             newLike = commentLikeFactory.createCommentLike(comment);
             commentLikeRepository.save(newLike);
+
+            if (!Objects.equals(user.getId(), comment.getCreatedBy().getId())) {
+                FcmPushType pushType = FcmPushType.COMMENTS_LIKE;
+
+                Map<String, String> pushData = new HashMap<>();
+                pushData.put("type", pushType.getActionType().toString());
+                pushData.put("data", comment.getId().toString());
+
+                fcmPushEventPublisher.publish(comment.getCreatedBy().getId(), pushType, pushData);
+                noticeService.saveNotice(comment.getCreatedBy().getId(), pushType, pushData);
+            }
         }
 
         return commentLikeMapper.toCommentLikeResponse(comment, newLike);
+    }
+
+    /**
+     * 댓글 삭제
+     */
+    public void deleteComment(Long commentId) {
+        CommunityComments comment = communityCommentsRepository.findById(commentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
+
+        // 수정 권한 체크
+        comment.validateOwner(authenticationFacade.getCurrentUser());
+
+        communityCommentsRepository.delete(comment);
     }
 
     /**
@@ -169,4 +238,12 @@ public class CommunityCommentsService {
         return communityCommentsRepository.countTopLevelCommentsByContentIds(contentIds).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
     }
+
+    /**
+     * 게시글 - 댓글id 조회
+     */
+    public Set<Long> getUserCommentedContentIds(Long userId, List<Long> contentIds) {
+        return communityCommentsRepository.findUserCommentedContentIds(userId, contentIds);
+    }
+
 }

@@ -20,6 +20,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: dev
       IMAGEKIT_PRIVATE_KEY: "private_wxr5zzataMwfAQvBitzvLTVWS94="
+      GOOGLE_APPLICATION_CREDENTIALS: /app/config/firebase-key.json
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep UP || exit 1"]
       interval: 30s

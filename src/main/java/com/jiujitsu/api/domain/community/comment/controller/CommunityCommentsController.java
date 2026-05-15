@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.comment.controller;
 
+import com.jiujitsu.api.domain.community.comment.dto.CommentsListRequest;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
@@ -30,10 +31,8 @@ public class CommunityCommentsController {
     )
     @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.CONTENT_NOT_FOUND})
     @GetMapping
-    public List<CommunityCommentsResponse> getComments(
-            @Parameter(description = "커뮤니티 게시글 ID", example = "1") @RequestParam Long contentId
-    ) {
-        return communityCommentsService.getComments(contentId);
+    public List<CommunityCommentsResponse> getComments(@ModelAttribute CommentsListRequest request) {
+        return communityCommentsService.getComments(request);
     }
 
     @Operation(
@@ -54,5 +53,17 @@ public class CommunityCommentsController {
     @PostMapping("/like")
     public CommentLikeResponse createCommentLike(@RequestBody CommentLikeRequest request) {
         return communityCommentsService.createCommentLike(request);
+    }
+
+    @Operation(
+            summary = "댓글 삭제",
+            description = "작성한 댓글을 삭제합니다."
+    )
+    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.COMMENT_NOT_FOUND})
+    @DeleteMapping("/{id}")
+    public void deleteComment(
+            @Parameter(name = "id", description = "댓글 ID", required = true) @PathVariable(name = "id") Long commentId
+    ) {
+        communityCommentsService.deleteComment(commentId);
     }
 }

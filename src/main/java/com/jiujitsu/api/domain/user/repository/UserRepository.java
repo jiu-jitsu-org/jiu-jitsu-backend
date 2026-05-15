@@ -17,7 +17,9 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     
     Optional<User> findBySnsProviderAndSnsId(SnsProvider snsProvider, String snsId);
-    
+    //todo: 테스트용 삭제(findBySnsProviderAndNickname)
+    Optional<User> findBySnsProviderAndNickname(SnsProvider snsProvider, String nickname);
+
     Optional<User> findByEmail(String email);
     
     boolean existsByEmail(String email);
@@ -33,4 +35,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByIdAndStatus(Long id, UserStatus status);
 
     Optional<User> findByNickname(String nickname);
+
+    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.appInfos WHERE u.id = :id")
+    Optional<User> findByIdWithAppInfos(@Param("id") Long id);
 }

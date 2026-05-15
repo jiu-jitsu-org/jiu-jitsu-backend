@@ -37,6 +37,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation platform("org.springframework.cloud:spring-cloud-dependencies:2023.0.3")
 	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+	implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.1'
 
 	// WebClient
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'

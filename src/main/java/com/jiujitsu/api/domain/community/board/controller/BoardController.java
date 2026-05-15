@@ -3,6 +3,9 @@ package com.jiujitsu.api.domain.community.board.controller;
 import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.service.BoardCategoryService;
 import com.jiujitsu.api.domain.community.board.service.BoardService;
+import com.jiujitsu.api.domain.community.content.dto.ContentLikeResponse;
+import com.jiujitsu.api.domain.community.content.dto.ContentSaveResponse;
+import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
@@ -28,6 +31,7 @@ public class BoardController {
 
     private final BoardService boardService;
     private final BoardCategoryService boardCategoryService;
+    private final ContentService contentService;
 
     /**
      * 카테고리
@@ -62,7 +66,7 @@ public class BoardController {
     @ApiErrorCodeExample(ErrorCode.BOARD_NOT_FOUND)
     @GetMapping("/{id}")
     public BoardResponse getById(
-            @Parameter(description = "게시글 ID", required = true) @PathVariable Long id
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
     ) {
         return boardService.getById(id);
     }
@@ -78,7 +82,7 @@ public class BoardController {
     @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND, ErrorCode.BOARD_CATEGORY_NOT_FOUND})
     @PutMapping("/{id}")
     public BoardResponse update(
-            @Parameter(description = "게시글 ID", required = true) @PathVariable Long id,
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable Long id,
             @RequestBody BoardUpdateRequest request
     ) {
         return boardService.update(id, request);
@@ -88,8 +92,38 @@ public class BoardController {
     @ApiErrorCodeExample(ErrorCode.BOARD_NOT_FOUND)
     @DeleteMapping("/{id}")
     public void delete(
-            @Parameter(description = "게시글 ID", required = true) @PathVariable Long id
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
     ) {
         boardService.delete(id);
+    }
+
+    @Operation(summary = "게시물 좋아요 등록/취소", description = "게시물 좋아요를 등록/취소합니다.")
+    @ApiErrorCodeExample(ErrorCode.CONTENT_NOT_FOUND)
+    @PutMapping("/like/{id}")
+    public ContentLikeResponse like(
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
+    ) {
+        return contentService.like(id);
+    }
+
+    @Operation(summary = "게시물 저장/취소", description = "게시물을 저장/취소합니다.")
+    @ApiErrorCodeExample(ErrorCode.CONTENT_NOT_FOUND)
+    @PutMapping("/save/{id}")
+    public ContentSaveResponse save(
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
+    ) {
+        return contentService.save(id);
+    }
+
+    @Operation(summary = "내가 작성한 글 조회", description = "내가 작성한 글 목록을 조회합니다.")
+    @GetMapping("/write")
+    public Page<BoardListResponse> writeList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return boardService.getWriteList(pageable);
+    }
+
+    @Operation(summary = "내가 저장한 글 조회", description = "내가 저장한 글 목록을 조회합니다.")
+    @GetMapping("/save")
+    public Page<BoardListResponse> saveList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return boardService.getSaveList(pageable);
     }
 }
