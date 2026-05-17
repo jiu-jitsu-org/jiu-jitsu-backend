@@ -94,7 +94,7 @@ jobs:
 
           # 배포 서버가 일반 Linux 서버라면 linux/amd64 하나면 충분합니다.
           # 서버가 ARM 계열이면 linux/arm64로 바꾸거나 multi-platform 구성을 추가하세요.
-          platforms: linux/amd64
+          platforms: inux/amd64,linux/arm64
 
           tags: ${{ steps.tags.outputs.value }}
 
