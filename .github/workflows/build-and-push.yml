@@ -1,57 +1,110 @@
+# 현재 hooks.json은 workflow_run.name == "Build & Push to GHCR"일 때만 app-api 재배포를 실행합니다.
 name: Build & Push to GHCR
-# Token Expires 2026 04 
+
 on:
+  # develop 브랜치에 push되면 이미지를 빌드하고 GHCR에 push합니다.
+  # deploy/webhook/hooks.json도 develop 브랜치만 허용합니다.
   push:
-    branches:
-      - develop
+    branches: ["develop"]
+
+  # GitHub Actions 화면에서 수동 실행할 수 있게 합니다.
+  # hooks.json도 workflow_dispatch 이벤트를 허용하고 있습니다.
   workflow_dispatch:
 
+  # PR에서는 운영 이미지 push를 하지 않는 편이 안전합니다.
+  # 필요하다면 별도 CI workflow에서 test/build만 수행하세요.
+  # pull_request:
+  #   branches: ["develop"]
+
+# GITHUB_TOKEN 권한을 최소화합니다.
+# contents: read  -> checkout으로 소스 읽기
+# packages: write -> ghcr.io에 Docker image push
 permissions:
   contents: read
-  packages: write   # GITHUB_TOKEN 사용할 때 필요. PAT만 써도 둬도 무방 
+  packages: write
+
+# develop에 여러 push가 빠르게 들어오면 이전 빌드를 취소합니다.
+# 오래된 커밋의 이미지가 늦게 push되어 최신 이미지를 덮는 상황을 줄입니다.
+concurrency:
+  group: app-api-image-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-  GHCR_IMAGE: ghcr.io/jiu-jitsu-org/jiu-jitsu-backend-api
+  REGISTRY: ghcr.io
+
+  # 현재 deploy/docker-compose.yml의 api.image와 맞춰야 합니다.
+  # deploy 쪽은 ghcr.io/jiu-jitsu-org/jiu-jitsu-backend-api:latest-develop 를 pull합니다.
+  IMAGE_NAME: jiu-jitsu-org/jiu-jitsu-backend-api
+
+  # Dockerfile이 repo 루트에 있다는 가정입니다.
+  # Dockerfile 위치가 다르면 ./Dockerfile 값을 수정하세요.
+  DOCKERFILE: ./Dockerfile
+  CONTEXT: .
 
 jobs:
-  docker:
+  build-and-push:
+    name: Build and push app-api image
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # GitHub runner에 repository 소스를 내려받습니다.
+      - name: Checkout source
+        uses: actions/checkout@v6
 
-      - name: Set up QEMU (multi-arch)
-        uses: docker/setup-qemu-action@v3
+      # Docker Buildx builder를 준비합니다.
+      # cache, multi-platform build, provenance 등 최신 Docker build 기능을 사용하기 위한 단계입니다.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # ⬇️ PAT 로그인: username은 PAT 소유자(예: kyuchanE). 하드코딩 대신 시크릿 권장
-      # 26.05.02 임시로 .env 파일의 변수로 USERNAME / PAT 저장함 수정 필요 
-      - name: Login to GHCR (PAT)
-        uses: docker/login-action@v3
+      # GitHub Container Registry 로그인.
+      # 같은 GitHub 조직/저장소에서 GHCR로 push하는 경우 PAT보다 GITHUB_TOKEN 사용을 우선 권장합니다.
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
         with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}   # <- 리포 시크릿에 저장 
-          password: ${{ secrets.GHCR_PAT }}        # <- write:packages (+repo) 스코프, SSO 승인
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.GHCR_IMAGE }}
-          tags: |
-            type=raw,value=latest-develop
-            type=sha,format=short,prefix=sha-
+      # 배포용 태그와 추적용 태그를 함께 만듭니다.
+      # latest-develop: 배포 서버 docker-compose.yml이 실제로 pull하는 태그
+      # sha-xxxx: 특정 커밋으로 롤백하거나 원인 추적할 때 사용
+      # run-번호: GitHub Actions 실행 단위 추적용
+      - name: Prepare image tags
+        id: tags
+        shell: bash
+        run: |
+          SHORT_SHA="${GITHUB_SHA::12}"
 
-      - name: Build & Push (multi-arch)
-        uses: docker/build-push-action@v6
+          {
+            echo "value<<EOF"
+            echo "${REGISTRY}/${IMAGE_NAME}:latest-develop"
+            echo "${REGISTRY}/${IMAGE_NAME}:sha-${SHORT_SHA}"
+            echo "${REGISTRY}/${IMAGE_NAME}:run-${GITHUB_RUN_NUMBER}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # Docker image를 빌드하고 GHCR에 push합니다.
+      # deploy/webhook/deploy.sh는 이 latest-develop 이미지를 pull한 뒤 api 컨테이너를 재생성합니다.
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7
         with:
-          context: .
+          context: ${{ env.CONTEXT }}
+          file: ${{ env.DOCKERFILE }}
           push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+
+          # 배포 서버가 일반 Linux 서버라면 linux/amd64 하나면 충분합니다.
+          # 서버가 ARM 계열이면 linux/arm64로 바꾸거나 multi-platform 구성을 추가하세요.
+          platforms: linux/amd64
+
+          tags: ${{ steps.tags.outputs.value }}
+
+          # OCI 표준 label입니다. 이미지가 어떤 repo/commit에서 만들어졌는지 추적할 수 있습니다.
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=jiu-jitsu-backend-api
+
+          # GitHub Actions cache를 Docker layer cache로 사용합니다.
+          # Gradle/Maven 의존성까지 Dockerfile layer로 잘 나뉘어 있으면 빌드 시간이 줄어듭니다.
           cache-from: type=gha
           cache-to: type=gha,mode=max
