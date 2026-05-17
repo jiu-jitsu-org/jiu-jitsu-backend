@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
-@Tag(name = "[SYS] AppVersion", description = "강제업데이트, 선택업데이트 >> 26.05.17 GitHubWebhooks > my webhook container Test!!!!!!!!!!")
+@Tag(name = "[SYS] AppVersion", description = "강제업데이트, 선택업데이트 >> 26.05.17 GitHubWebhooks > my webhook container Test!!!!!!!!!!!")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
 @RestController
 @RequestMapping("/bootstrap")
