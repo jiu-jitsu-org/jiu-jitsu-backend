@@ -47,6 +47,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                                 .requestMatchers(mvc.pattern("/auth/**")).permitAll()
                                 .requestMatchers(mvc.pattern("/admin/auth/login")).permitAll()
+                                .requestMatchers(mvc.pattern("/admin/auth/signup")).permitAll()
                                 .requestMatchers(mvc.pattern("/admin/**")).hasRole("ADMIN")
                                 .requestMatchers(mvc.pattern("/swagger-ui/**")).permitAll()
                                 .requestMatchers(mvc.pattern("/v3/api-docs/**")).permitAll()
