@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.user.repository;
 
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -35,6 +36,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByIdAndStatus(Long id, UserStatus status);
 
     Optional<User> findByNickname(String nickname);
+
+    Optional<User> findByEmailAndRole(String email, UserRole role);
 
     @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.appInfos WHERE u.id = :id")
     Optional<User> findByIdWithAppInfos(@Param("id") Long id);

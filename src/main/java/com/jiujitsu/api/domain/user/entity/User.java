@@ -32,6 +32,9 @@ public class User {
 
     private String profileImageUrl;
 
+    @Column
+    private String password;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SnsProvider snsProvider;
