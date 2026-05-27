@@ -77,6 +77,14 @@ public class User {
         }
     }
 
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void updateProfileImage(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
     public void updateStatus(UserStatus status) {
         this.status = status;
         if (status == UserStatus.DELETED) {

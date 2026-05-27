@@ -103,19 +103,27 @@ public class UserService {
     }
 
     /**
-     * 사용자 프로필 수정
+     * 사용자 닉네임 수정
      */
-    public UserProfileResponse updateProfile(UpdateProfileRequest request) {
-        final String nickname = StringUtils.trimToEmpty(request.getNickname());
-        final String profileImageUrl = StringUtils.trimToEmpty(request.getProfileImageUrl());
-
+    public UserProfileResponse updateProfileNickname(String nickname) {
         // 사용자 조회
         User user = authenticationFacade.getCurrentUser();
 
         // 닉네임 중복체크
         validateNickname(nickname);
         // 프로필 업데이트
-        user.updateProfile(nickname, profileImageUrl);
+        user.updateNickname(nickname);
+
+        return userMapper.toUserProfileResponse(user);
+    }
+
+    /**
+     * 사용자 프로필 이미지 수정
+     */
+    public UserProfileResponse updateProfileImage(String profileImageUrl) {
+        // 사용자 조회
+        User user = authenticationFacade.getCurrentUser();
+        user.updateProfileImage(profileImageUrl);
 
         return userMapper.toUserProfileResponse(user);
     }
