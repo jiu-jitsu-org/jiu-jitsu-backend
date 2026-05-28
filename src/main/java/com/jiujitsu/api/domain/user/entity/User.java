@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.user.entity;
 
+import com.jiujitsu.api.domain.notice.entity.UserNoticeSetting;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -67,6 +68,9 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserAppInfo> appInfos = new ArrayList<>();
+
+    @OneToOne
+    private UserNoticeSetting userNoticeSetting;
 
     public void updateProfile(String nickname, String profileImageUrl) {
         if (nickname != null && !nickname.trim().isEmpty()) {
