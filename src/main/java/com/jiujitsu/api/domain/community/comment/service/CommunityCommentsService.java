@@ -144,24 +144,16 @@ public class CommunityCommentsService {
         User boardWriter = content.getCreatedBy();
 
         // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
-        FcmPushType pushType2 = FcmPushType.NEW_COMMENTS;
+        if (!Objects.equals(user.getId(), boardWriter.getId())) {
+            FcmPushType pushType = FcmPushType.NEW_COMMENTS;
 
-        Map<String, String> pushData2 = new HashMap<>();
-        pushData2.put("type", pushType2.getActionType().toString());
-        pushData2.put("data", content.getId().toString());
+            Map<String, String> pushData = new HashMap<>();
+            pushData.put("type", pushType.getActionType().toString());
+            pushData.put("data", content.getId().toString());
 
-        fcmPushEventPublisher.publish(boardWriter.getId(), pushType2, pushData2);
-        noticeService.saveNotice(boardWriter.getId(), pushType2, pushData2);
-//        if (!Objects.equals(user.getId(), boardWriter.getId())) {
-//            FcmPushType pushType = FcmPushType.NEW_COMMENTS;
-//
-//            Map<String, String> pushData = new HashMap<>();
-//            pushData.put("type", pushType.getActionType().toString());
-//            pushData.put("data", content.getId().toString());
-//
-//            fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
-//            noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
-//        }
+            fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
+            noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
+        }
 
         // 알림2 - 댓글에 대댓글 달렸을 때 댓글 작성자에게
         if (parentComments.isPresent()) {
