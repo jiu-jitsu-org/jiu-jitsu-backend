@@ -4,6 +4,8 @@ import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.entity.OwnerProfile;
 import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepository;
 import com.jiujitsu.api.domain.community.profile.repository.OwnerProfileRepository;
+import com.jiujitsu.api.domain.notice.entity.UserNoticeSetting;
+import com.jiujitsu.api.domain.notice.repository.UserNoticeSettingRepository;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.*;
 import com.jiujitsu.api.domain.user.factory.UserFactory;
@@ -37,6 +39,7 @@ public class UserService {
     private final OwnerProfileRepository ownerProfileRepository;
     private final CommunityProfileRepository communityProfileRepository;
     private final UserAppInfoRepository userAppInfoRepository;
+    private final UserNoticeSettingRepository userNoticeSettingRepository;
     private final TokenBlacklistService tokenBlacklistService;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationFacade authenticationFacade;
@@ -79,6 +82,8 @@ public class UserService {
                 )
         );
 
+        UserNoticeSetting userNoticeSetting = userNoticeSettingRepository.save(new UserNoticeSetting(user));
+        user.setUserNoticeSetting(userNoticeSetting);
         return userRepository.save(user);
     }
 
