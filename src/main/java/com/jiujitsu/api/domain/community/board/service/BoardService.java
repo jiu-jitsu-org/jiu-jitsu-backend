@@ -12,6 +12,7 @@ import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
+import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class BoardService {
     private final BoardCategoryService boardCategoryService;
     private final CommunityCommentsService communityCommentsService;
     private final ContentService contentService;
+    private final UserBlockService userBlockService;
 
     /**
      * 게시물 목록 조회
@@ -44,18 +46,25 @@ public class BoardService {
     @Transactional(readOnly = true)
     public Page<BoardListResponse> getList(BoardListRequest boardListRequest, Pageable pageable) {
         BoardListType boardListType = boardListRequest.boardListType();
+        List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
 
         // 게시판 조회
         Page<Board> page = switch (boardListType) {
             case CATEGORY -> {
                 Long categoryId = boardListRequest.categoryId();
-                yield boardRepository.findAllByCategory_Id(categoryId, pageable);
+                yield blockedUserIds.isEmpty()
+                        ? boardRepository.findAllByCategory_Id(categoryId, pageable)
+                        : boardRepository.findAllByCategoryExcludingBlockedUsers(categoryId, blockedUserIds, pageable);
             }
             case SEARCH -> {
                 String keyword = StringUtils.trimToEmpty(boardListRequest.searchKeyword()).toUpperCase(Locale.ROOT);
-                yield boardRepository.findByTitleBodyKeyword(keyword, pageable);
+                yield blockedUserIds.isEmpty()
+                        ? boardRepository.findByTitleBodyKeyword(keyword, pageable)
+                        : boardRepository.findByTitleBodyKeywordExcludingBlockedUsers(keyword, blockedUserIds, pageable);
             }
-            default -> boardRepository.findAll(pageable);
+            default -> blockedUserIds.isEmpty()
+                    ? boardRepository.findAll(pageable)
+                    : boardRepository.findAllExcludingBlockedUsers(blockedUserIds, pageable);
         };
 
         // 컨텐츠(공통) 조회

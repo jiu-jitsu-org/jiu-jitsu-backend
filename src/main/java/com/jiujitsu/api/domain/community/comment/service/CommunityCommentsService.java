@@ -19,6 +19,7 @@ import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
+import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
@@ -42,6 +43,7 @@ public class CommunityCommentsService {
     private final CommunityCommentsRepository communityCommentsRepository;
     private final ContentRepository contentRepository;
     private final AuthenticationFacade authenticationFacade;
+    private final UserBlockService userBlockService;
     private final FcmPushEventPublisher fcmPushEventPublisher;
     private final CommentFactory commentFactory;
     private final CommentMapper commentMapper;
@@ -63,7 +65,10 @@ public class CommunityCommentsService {
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
         // 댓글 전체 리스트 조회(댓글+대댓글) > n+1 조회 이슈로 전체 조회 후 여기서 세팅...
-        List<CommunityComments> comments = communityCommentsRepository.findByContentIdOrderByCreatedAtDesc(contentId);
+        List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
+        List<CommunityComments> comments = blockedUserIds.isEmpty()
+                ? communityCommentsRepository.findByContentIdOrderByCreatedAtDesc(contentId)
+                : communityCommentsRepository.findByContentIdExcludingBlockedUsersOrderByCreatedAtDesc(contentId, blockedUserIds);
 
 
         // 좋아요 조회(n+1 방지 > 전체 조회 후 mapping)

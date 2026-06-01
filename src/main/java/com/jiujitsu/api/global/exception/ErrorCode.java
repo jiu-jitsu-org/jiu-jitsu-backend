@@ -37,6 +37,7 @@ public enum ErrorCode {
     PERMISSION_DENIED(403, "U0003", "권한이 없습니다."),
     USER_ALREADY_DEACTIVATED(400, "U0004", "이미 탈퇴 처리된 계정입니다."),
     USER_ACCOUNT_EXPIRED(400, "U0005", "탈퇴 후 30일이 지나 계정이 영구 삭제되었습니다."),
+    SELF_BLOCK_NOT_ALLOWED(400, "U0006", "자기 자신을 차단할 수 없습니다."),
 
     /**
      * 인증 에러
