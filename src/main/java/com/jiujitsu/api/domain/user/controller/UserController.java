@@ -60,8 +60,8 @@ public class UserController {
     @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.AUTHENTICATION_FAILED})
     @PutMapping("/profile/image")
     public UserProfileResponse updateProfileImage(
-            @RequestParam(value = "profileImageUrl") String profileImageUrl) {
-        return userService.updateProfileImage(profileImageUrl);
+            @RequestParam(value = "imageFileId") Long imageFileId) {
+        return userService.updateProfileImage(imageFileId);
     }
 
     @Operation(
@@ -98,9 +98,9 @@ public class UserController {
             summary = "관장/사범 인증 요청",
             description = "관장/사범 인증 이미지를 업로드하고 권한 요청합니다."
     )
-    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.REQUIRED_PROFILE, ErrorCode.PERMISSION_DENIED})
+    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.PERMISSION_DENIED})
     @PutMapping("/owner")
-    public UserProfileResponse requestOwner(@RequestParam(name = "imageUrl") String imageUrl) {
-        return userService.requestOwnerRole(imageUrl);
+    public UserProfileResponse requestOwner(@RequestParam(name = "imageFileId") Long imageFileId) {
+        return userService.requestOwnerRole(imageFileId);
     }
 }

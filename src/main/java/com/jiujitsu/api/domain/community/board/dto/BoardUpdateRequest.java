@@ -22,6 +22,6 @@ public class BoardUpdateRequest {
     @Schema(description = "내용", example = "수정된 내용")
     private String body;
 
-    @Schema(description = "이미지 URL 리스트 (전체)", example = "[\"https://.../1.png\", \"https://.../2.png\"]")
-    private List<String> imageUrlList;
+    @Schema(description = "이미지 파일 ID 리스트 (전체)")
+    private List<Long> imageFileIdList;
 }

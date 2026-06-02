@@ -17,10 +17,10 @@ public record BoardCreateRequest(
         @NotBlank(message = "내용은 필수입니다.")
         @Schema(description = "내용", example = "게시글 내용", requiredMode = Schema.RequiredMode.REQUIRED)
             String body,
-        @Schema(description = "이미지 url")
-            List<String> imageUrlList
+        @Schema(description = "이미지 파일 ID 리스트")
+            List<Long> imageFileIdList
 ) {
-    public List<String> imageUrlListOrEmpty() {
-        return imageUrlList == null ? List.of() : imageUrlList;
+    public List<Long> imageFileIdListOrEmpty() {
+        return imageFileIdList == null ? List.of() : imageFileIdList;
     }
 }

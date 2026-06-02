@@ -1,5 +1,8 @@
 package com.jiujitsu.api.domain.user.service;
 
+import com.jiujitsu.api.domain.file.ImageFile;
+import com.jiujitsu.api.domain.file.ImageFileStatus;
+import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
@@ -26,6 +29,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final ImageFileRepository imageFileRepository;
     private final SnsClientFactory snsClientFactory;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
@@ -125,20 +129,24 @@ public class AuthService {
      * 프로필 정보 업데이트
      */
     private void updateUserInfo(User user, SnsUserInfo snsUserInfo) {
-        // 프로필 정보가 변경되었을 경우 업데이트
-        boolean needsUpdate = false;
+        boolean nicknameChanged = snsUserInfo.getNickname() != null
+                && !snsUserInfo.getNickname().equals(user.getNickname());
 
-        if (snsUserInfo.getNickname() != null && !snsUserInfo.getNickname().equals(user.getNickname())) {
-            needsUpdate = true;
-        }
+        String currentImageUrl = user.getProfileImageFile() != null
+                ? user.getProfileImageFile().getImageUrl() : null;
+        boolean imageChanged = snsUserInfo.getProfileImageUrl() != null
+                && !snsUserInfo.getProfileImageUrl().equals(currentImageUrl);
 
-        if (snsUserInfo.getProfileImageUrl() != null && !snsUserInfo.getProfileImageUrl().equals(user.getProfileImageUrl())) {
-            needsUpdate = true;
-        }
+        if (!nicknameChanged && !imageChanged) return;
 
-        if (needsUpdate) {
-            user.updateProfile(snsUserInfo.getNickname(), snsUserInfo.getProfileImageUrl());
+        ImageFile newProfileImageFile = null;
+        if (imageChanged) {
+            newProfileImageFile = imageFileRepository.save(ImageFile.builder()
+                    .imageUrl(snsUserInfo.getProfileImageUrl())
+                    .status(ImageFileStatus.ACTIVE)
+                    .build());
         }
+        user.updateProfile(snsUserInfo.getNickname(), newProfileImageFile);
     }
 
     /**

@@ -1,6 +1,11 @@
 package com.jiujitsu.api.domain.file.service;
 
+import com.jiujitsu.api.domain.file.ImageFile;
+import com.jiujitsu.api.domain.file.ImageFileStatus;
 import com.jiujitsu.api.domain.file.dto.CdnSignatureResponse;
+import com.jiujitsu.api.domain.file.dto.ImageFileRegisterRequest;
+import com.jiujitsu.api.domain.file.dto.ImageFileResponse;
+import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +20,17 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ImageService {
 
-    private final String IMAGEKIT_PRIVATE_KEY =  System.getenv("IMAGEKIT_PRIVATE_KEY");
+    private final String IMAGEKIT_PRIVATE_KEY = System.getenv("IMAGEKIT_PRIVATE_KEY");
+    private final ImageFileRepository imageFileRepository;
+
+    public ImageFileResponse registerImageFile(ImageFileRegisterRequest request) {
+        ImageFile imageFile = ImageFile.builder()
+                .cdnId(request.cdnId())
+                .imageUrl(request.imageUrl())
+                .status(ImageFileStatus.TEMP)
+                .build();
+        return ImageFileResponse.from(imageFileRepository.save(imageFile));
+    }
 
     /**
      * CDN 요청용 서명 생성
