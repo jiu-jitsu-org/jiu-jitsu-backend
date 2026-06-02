@@ -51,4 +51,8 @@ public class OwnerProfile {
         this.teachingStartDate = teachingStartDate;
         this.teachingDetail = teachingDetail;
     }
+
+    public void clearDocumentImageFile() {
+        this.documentImageFile = null;
+    }
 }

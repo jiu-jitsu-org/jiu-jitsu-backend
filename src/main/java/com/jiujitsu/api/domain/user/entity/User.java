@@ -118,4 +118,8 @@ public class User {
         this.ownerRequested = true;
         this.ownerRequestImageFile = ownerRequestImageFile;
     }
+
+    public void clearOwnerRequestImageFile() {
+        this.ownerRequestImageFile = null;
+    }
 }

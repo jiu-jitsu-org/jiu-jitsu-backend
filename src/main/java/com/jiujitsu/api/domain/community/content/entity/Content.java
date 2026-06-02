@@ -31,7 +31,12 @@ public class Content extends BaseEntity {
     @Builder.Default
     private List<CommunityComments> comments = new ArrayList<>();
 
-    @OneToMany(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ManyToMany
+    @JoinTable(
+            name = "content_image_file",
+            joinColumns = @JoinColumn(name = "content_id"),
+            inverseJoinColumns = @JoinColumn(name = "image_file_id")
+    )
     @Builder.Default
     private List<ImageFile> imageFiles = new ArrayList<>();
 
@@ -50,7 +55,7 @@ public class Content extends BaseEntity {
         if (imageFile == null) {
             return;
         }
-        imageFile.attachTo(this);
+        imageFile.activate();
         this.imageFiles.add(imageFile);
     }
 }
