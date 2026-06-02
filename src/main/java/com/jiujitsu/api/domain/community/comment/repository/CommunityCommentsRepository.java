@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -43,4 +44,14 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
       and c.content.id in :contentIds
     """)
     Set<Long> findUserCommentedContentIds(@Param("userId")Long userId, @Param("contentIds")List<Long> contentIds);
+
+    @Query("""
+    select c from CommunityComments c
+    where c.content.id = :contentId
+    and c.createdBy.id not in :blockedUserIds
+    order by c.createdAt desc
+    """)
+    List<CommunityComments> findByContentIdExcludingBlockedUsersOrderByCreatedAtDesc(
+            @Param("contentId") Long contentId,
+            @Param("blockedUserIds") Collection<Long> blockedUserIds);
 }

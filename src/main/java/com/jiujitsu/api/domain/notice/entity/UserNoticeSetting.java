@@ -6,8 +6,6 @@ import com.jiujitsu.api.global.fcm.entity.NoticeGroupType;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.Objects;
-
 @Entity
 @Table(name = "user_notice_setting")
 @Getter
@@ -17,7 +15,7 @@ import java.util.Objects;
 @AllArgsConstructor
 public class UserNoticeSetting {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column
