@@ -1,6 +1,5 @@
 package com.jiujitsu.api.domain.file;
 
-import com.jiujitsu.api.domain.community.content.entity.Content;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -36,10 +35,6 @@ public class ImageFile {
     @Builder.Default
     private ImageFileStatus status = ImageFileStatus.TEMP;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "content_id")
-    private Content content;
-
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -48,8 +43,7 @@ public class ImageFile {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    public void attachTo(Content content) {
-        this.content = content;
+    public void activate() {
         this.status = ImageFileStatus.ACTIVE;
     }
 }

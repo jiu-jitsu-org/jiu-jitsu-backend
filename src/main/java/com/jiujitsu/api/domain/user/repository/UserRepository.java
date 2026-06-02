@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.user.repository;
 
+import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
@@ -40,4 +41,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByIdWithAppInfos(@Param("id") Long id);
 
     List<User> findByOwnerRequestedTrueAndOwnerRequestImageFileIsNotNullAndRole(UserRole role);
+
+    Optional<User> findByProfileImageFile(ImageFile imageFile);
+
+    Optional<User> findByOwnerRequestImageFile(ImageFile imageFile);
 }

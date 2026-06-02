@@ -1,17 +1,21 @@
 package com.jiujitsu.api.domain.file.service;
 
+import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
+import com.jiujitsu.api.domain.community.profile.repository.OwnerProfileRepository;
 import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.file.ImageFileStatus;
 import com.jiujitsu.api.domain.file.dto.CdnSignatureResponse;
 import com.jiujitsu.api.domain.file.dto.ImageFileRegisterRequest;
 import com.jiujitsu.api.domain.file.dto.ImageFileResponse;
 import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
+import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -27,8 +31,12 @@ public class ImageService {
 
     private final String IMAGEKIT_PRIVATE_KEY = System.getenv("IMAGEKIT_PRIVATE_KEY");
     private final ImageFileRepository imageFileRepository;
+    private final ContentRepository contentRepository;
+    private final UserRepository userRepository;
+    private final OwnerProfileRepository ownerProfileRepository;
     private final WebClient webClient;
 
+    @Transactional
     public void deleteImageFile(Long id) {
         ImageFile imageFile = imageFileRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
@@ -36,6 +44,22 @@ public class ImageService {
         if (imageFile.getCdnId() != null) {
             deleteCdnFile(imageFile.getCdnId());
         }
+
+        // Content join table 정리
+        contentRepository.findByImageFile(imageFile)
+                .forEach(content -> content.getImageFiles().remove(imageFile));
+
+        // User 프로필 이미지 참조 제거
+        userRepository.findByProfileImageFile(imageFile)
+                .ifPresent(user -> user.updateProfileImage(null));
+
+        // User 관장 신청 이미지 참조 제거
+        userRepository.findByOwnerRequestImageFile(imageFile)
+                .ifPresent(user -> user.clearOwnerRequestImageFile());
+
+        // OwnerProfile 서류 이미지 참조 제거
+        ownerProfileRepository.findByDocumentImageFile(imageFile)
+                .ifPresent(ownerProfile -> ownerProfile.clearDocumentImageFile());
 
         imageFileRepository.delete(imageFile);
     }
