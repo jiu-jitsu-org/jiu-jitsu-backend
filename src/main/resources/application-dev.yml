@@ -44,6 +44,6 @@ cors:
 
 # Swagger server URL
 springdoc:
-  swagger:
+  swagger-ui:
     server:
       url: https://api.developer-chanq.xyz/api
