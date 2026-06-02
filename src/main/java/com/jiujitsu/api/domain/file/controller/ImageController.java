@@ -8,6 +8,7 @@ import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,5 +40,17 @@ public class ImageController {
     @PostMapping
     public ImageFileResponse registerImageFile(@RequestBody @Valid ImageFileRegisterRequest request) {
         return imageService.registerImageFile(request);
+    }
+
+    @Operation(
+            summary = "이미지 삭제",
+            description = "이미지 파일을 삭제합니다. cdnId가 있는 경우 CDN에서도 함께 삭제됩니다."
+    )
+    @ApiErrorCodeExamples({ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.FAILED_CDN_DELETE})
+    @DeleteMapping("/{id}")
+    public void deleteImageFile(
+            @Parameter(description = "이미지 파일 ID") @PathVariable Long id
+    ) {
+        imageService.deleteImageFile(id);
     }
 }
