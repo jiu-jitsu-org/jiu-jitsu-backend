@@ -173,10 +173,23 @@ public class UserService {
         // 사용자 조회
         User user = authenticationFacade.getCurrentUser();
 
+        // 신청 권한체크
+        if (!Objects.equals(user.getRole(), UserRole.USER)) {
+            throw new ErrorException(ErrorCode.PERMISSION_DENIED);
+        }
+
         // 사용자 권한 변경
         user.requestOwner(ownerRequestImageUrl);
 
         return userMapper.toUserProfileResponse(user);
+    }
+
+    /**
+     * 관장/사범 목록 조회
+     */
+    public List<UserProfileResponse> getRequestOwner() {
+        List<User> userList = userRepository.findByOwnerRequestedTrueAndOwnerRequestImageUrlIsNotNullAndRole(UserRole.USER);
+        return userList.stream().map(userMapper::toUserProfileResponse).toList();
     }
 
     /**
