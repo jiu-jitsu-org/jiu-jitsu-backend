@@ -1,17 +1,17 @@
 package com.jiujitsu.api.domain.user.controller;
 
-import com.jiujitsu.api.domain.user.dto.*;
+import com.jiujitsu.api.domain.user.dto.AuthResponse;
+import com.jiujitsu.api.domain.user.dto.CreateProfileRequest;
+import com.jiujitsu.api.domain.user.dto.UserAppInfoRequest;
+import com.jiujitsu.api.domain.user.dto.UserProfileResponse;
 import com.jiujitsu.api.domain.user.service.UserService;
 import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Tag(name = "user-controller", description = "사용자 정보 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER})
@@ -22,7 +22,6 @@ public class UserController {
 
     private final UserService userService;
 
-    // todo: 약관동의 업데이트
     @Operation(
             summary = "회원 가입",
             description = "인증정보, 닉네임, SNS 정보를 저장합니다."
@@ -77,16 +76,6 @@ public class UserController {
     }
 
     @Operation(
-            summary = "(관리자로 옮길거임) 관장/사범 권한 부여",
-            description = "사용자에게 관장/사범 권한을 부여합니다."
-    )
-    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
-    @PutMapping("/grant/owner-role")
-    public UserProfileResponse grantOwnerRole() {
-        return userService.grantOwnerRole();
-    }
-
-    @Operation(
             summary = "닉네임 유효성 체크",
             description = "중복되거나 유효하지 않은 닉네임인지 확인합니다."
     )
@@ -103,23 +92,5 @@ public class UserController {
     @PostMapping("/appInfo")
     public Boolean insertUserAppInfo(@RequestBody UserAppInfoRequest request) {
         return userService.insertUserAppInfo(request);
-    }
-
-    @Operation(
-            summary = "(TEST) 회원 앱 정보 조회",
-            description = "로그인 회원의 앱 정보 조회합니다."
-    )
-    @GetMapping("/appInfo")
-    public List<UserAppInfoResponse> getUserAppInfo() {
-        return userService.getUserAppInfo();
-    }
-
-    @Operation(
-            summary = "(TEST) 닉네임 기반 회원 앱 정보 조회",
-            description = "닉네임 검색으로 일치하는 회원의 앱 정보 조회합니다."
-    )
-    @GetMapping("/appInfo/nickname")
-    public List<UserAppInfoResponse> getUserAppInfoByNickname(@RequestParam(value = "nickname") String nickname) {
-        return userService.getUserAppInfoByNickname(nickname);
     }
 }
