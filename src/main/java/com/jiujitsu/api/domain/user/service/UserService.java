@@ -4,6 +4,8 @@ import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.entity.OwnerProfile;
 import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepository;
 import com.jiujitsu.api.domain.community.profile.repository.OwnerProfileRepository;
+import com.jiujitsu.api.domain.file.ImageFile;
+import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
 import com.jiujitsu.api.domain.notice.entity.UserNoticeSetting;
 import com.jiujitsu.api.domain.notice.repository.UserNoticeSettingRepository;
 import com.jiujitsu.api.domain.user.dto.*;
@@ -36,6 +38,7 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final ImageFileRepository imageFileRepository;
     private final OwnerProfileRepository ownerProfileRepository;
     private final CommunityProfileRepository communityProfileRepository;
     private final UserAppInfoRepository userAppInfoRepository;
@@ -125,11 +128,11 @@ public class UserService {
     /**
      * 사용자 프로필 이미지 수정
      */
-    public UserProfileResponse updateProfileImage(String profileImageUrl) {
-        // 사용자 조회
+    public UserProfileResponse updateProfileImage(Long imageFileId) {
         User user = authenticationFacade.getCurrentUser();
-        user.updateProfileImage(profileImageUrl);
-
+        ImageFile imageFile = imageFileRepository.findById(imageFileId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
+        user.updateProfileImage(imageFile);
         return userMapper.toUserProfileResponse(user);
     }
 
@@ -169,17 +172,16 @@ public class UserService {
     /**
      * 관장/사범 신청
      */
-    public UserProfileResponse requestOwnerRole(String ownerRequestImageUrl) {
-        // 사용자 조회
+    public UserProfileResponse requestOwnerRole(Long imageFileId) {
         User user = authenticationFacade.getCurrentUser();
 
-        // 신청 권한체크
         if (!Objects.equals(user.getRole(), UserRole.USER)) {
             throw new ErrorException(ErrorCode.PERMISSION_DENIED);
         }
 
-        // 사용자 권한 변경
-        user.requestOwner(ownerRequestImageUrl);
+        ImageFile imageFile = imageFileRepository.findById(imageFileId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
+        user.requestOwner(imageFile);
 
         return userMapper.toUserProfileResponse(user);
     }
@@ -188,7 +190,7 @@ public class UserService {
      * 관장/사범 목록 조회
      */
     public List<UserProfileResponse> getRequestOwner() {
-        List<User> userList = userRepository.findByOwnerRequestedTrueAndOwnerRequestImageUrlIsNotNullAndRole(UserRole.USER);
+        List<User> userList = userRepository.findByOwnerRequestedTrueAndOwnerRequestImageFileIsNotNullAndRole(UserRole.USER);
         return userList.stream().map(userMapper::toUserProfileResponse).toList();
     }
 
@@ -203,9 +205,7 @@ public class UserService {
         user.updateRole(UserRole.OWNER);
 
         // 관장 프로필 생성
-        OwnerProfile ownerProfile = OwnerProfile.builder()
-                .documentImageUrl("defaultDocument")
-                .build();
+        OwnerProfile ownerProfile = OwnerProfile.builder().build();
         ownerProfileRepository.save(ownerProfile);
 
         // 관장-커뮤 프로필 매핑
@@ -273,7 +273,6 @@ public class UserService {
         User newUser = User.builder()
                 .email(snsUserInfo.getEmail())
                 .nickname(snsUserInfo.getNickname())
-                .profileImageUrl("default")
                 .snsProvider(snsProvider)
                 .snsId(snsUserInfo.getSnsId())
                 .ownerRequested(false)

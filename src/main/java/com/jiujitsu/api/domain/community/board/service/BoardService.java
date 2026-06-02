@@ -163,7 +163,7 @@ public class BoardService {
         BoardCategory category = boardCategoryService.findActiveCategory(request.categoryId());
 
         // content 생성
-        Content content = boardFactory.createContent(request.imageUrlListOrEmpty());
+        Content content = boardFactory.createContent(request.imageFileIdListOrEmpty());
 
         // Board 생성
         Board board = boardFactory.createBoard(category, content, request.title(), request.body());
@@ -196,8 +196,8 @@ public class BoardService {
 
         // 기존 이미지 모두 제거 후 재생성 (orphanRemoval 로 자동 삭제)
         Content content = board.getContent();
-        content.getImageUrls().clear();
-        content.addImageUrls(boardFactory.createImageUrls(request.getImageUrlList()));
+        content.getImageFiles().clear();
+        content.addImageFiles(boardFactory.createImageFiles(request.getImageFileIdList()));
 
         // 수정여부 업데이트를 위한 flush 강제호출
         boardRepository.flush();

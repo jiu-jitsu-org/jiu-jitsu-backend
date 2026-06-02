@@ -1,7 +1,7 @@
 package com.jiujitsu.api.domain.community.content.entity;
 
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
-import com.jiujitsu.api.domain.file.ImageUrl;
+import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -33,24 +33,24 @@ public class Content extends BaseEntity {
 
     @OneToMany(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<ImageUrl> imageUrls = new ArrayList<>();
+    private List<ImageFile> imageFiles = new ArrayList<>();
 
     @OneToMany(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ContentLike> likes = new ArrayList<>();   // 좋아요
 
-    public void addImageUrls(List<ImageUrl> imageUrls) {
-        if (imageUrls == null || imageUrls.isEmpty()) {
+    public void addImageFiles(List<ImageFile> imageFiles) {
+        if (imageFiles == null || imageFiles.isEmpty()) {
             return;
         }
-        imageUrls.forEach(this::addImageUrl);
+        imageFiles.forEach(this::addImageFile);
     }
 
-    public void addImageUrl(ImageUrl imageUrl) {
-        if (imageUrl == null) {
+    public void addImageFile(ImageFile imageFile) {
+        if (imageFile == null) {
             return;
         }
-        imageUrl.attachTo(this);
-        this.imageUrls.add(imageUrl);
+        imageFile.attachTo(this);
+        this.imageFiles.add(imageFile);
     }
 }
