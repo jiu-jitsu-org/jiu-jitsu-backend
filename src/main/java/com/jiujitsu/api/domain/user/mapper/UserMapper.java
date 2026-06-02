@@ -17,6 +17,7 @@ public class UserMapper {
                 user.getProfileImageUrl(),
                 user.getSnsProvider(),
                 user.getOwnerRequested(),
+                user.getOwnerRequestImageUrl(),
                 user.getRole(),
                 user.getStatus()
         );

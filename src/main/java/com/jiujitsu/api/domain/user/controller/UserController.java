@@ -93,4 +93,14 @@ public class UserController {
     public Boolean insertUserAppInfo(@RequestBody UserAppInfoRequest request) {
         return userService.insertUserAppInfo(request);
     }
+
+    @Operation(
+            summary = "관장/사범 인증 요청",
+            description = "관장/사범 인증 이미지를 업로드하고 권한 요청합니다."
+    )
+    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.REQUIRED_PROFILE, ErrorCode.PERMISSION_DENIED})
+    @PutMapping("/owner")
+    public UserProfileResponse requestOwner(@RequestParam(name = "imageUrl") String imageUrl) {
+        return userService.requestOwnerRole(imageUrl);
+    }
 }

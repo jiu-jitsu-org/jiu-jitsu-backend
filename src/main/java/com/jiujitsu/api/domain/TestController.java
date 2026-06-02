@@ -1,8 +1,6 @@
 package com.jiujitsu.api.domain;
 
 import com.jiujitsu.api.domain.community.board.service.BoardCategoryService;
-import com.jiujitsu.api.domain.community.board.service.BoardService;
-import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.service.AuthService;
 import com.jiujitsu.api.domain.user.service.UserService;
@@ -64,6 +62,16 @@ public class TestController {
     public List<UserAppInfoResponse> getUserAppInfoByNickname(@RequestParam(value = "nickname") String nickname) {
         return userService.getUserAppInfoByNickname(nickname);
     }
+
+    @Operation(
+            summary = "(관리자로 옮길거임) 관장/사범 요청 목록 조회",
+            description = "관장/사범 요청한 유저의 목록을 조회합니다."
+    )
+    @GetMapping("/grant/owner-role")
+    public List<UserProfileResponse> getRequestOwner() {
+        return userService.getRequestOwner();
+    }
+
 
     @Operation(
             summary = "(관리자로 옮길거임) 관장/사범 권한 부여",
