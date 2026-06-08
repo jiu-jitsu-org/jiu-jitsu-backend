@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.board.dto;
 
+import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,6 @@ public record BoardListResponse(
         @Schema(description = "댓글 작성 여부", example = "true") Boolean isCommented,
         @Schema(description = "좋아요 여부", example = "true") Boolean isLiked,
         @Schema(description = "저장 여부", example = "true") Boolean isSaved,
-        @Schema(description = "이미지 URL 리스트") List<String> imageUrlList
+        @Schema(description = "이미지 리스트") List<ImageInfo> imageList
 ) {
 }

@@ -17,6 +17,7 @@ public class SnsClientFactory {
             case KAKAO -> kakaoSnsClient;
             case GOOGLE -> googleSnsClient;
             case APPLE -> appleSnsClient;
+            case NONE -> throw new IllegalArgumentException("NONE provider does not support SNS login");
         };
     }
 }

@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionInfoDto;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.entity.OwnerProfile;
+import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import org.springframework.stereotype.Component;
@@ -24,7 +25,7 @@ public class CommunityProfileMapper {
 
         return new CommunityProfileResponse(
                 user.getNickname(),
-                user.getProfileImageUrl(),
+                ImageInfo.from(user.getProfileImageFile()),
                 profile.getBeltRank(),
                 profile.getBeltStripe(),
                 profile.getGender(),
@@ -51,7 +52,7 @@ public class CommunityProfileMapper {
     public CommunityProfileResponse getCommunityProfileResponseUser(User user) {
         return new CommunityProfileResponse(
                 user.getNickname(),
-                user.getProfileImageUrl(),
+                ImageInfo.from(user.getProfileImageFile()),
                 null,
                 null,
                 null,

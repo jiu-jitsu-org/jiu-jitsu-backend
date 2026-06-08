@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 
 @Configuration
 public class SwaggerConfig {
-    @Value("${springdoc.swagger.server.url}")
+    @Value("${springdoc.swagger-ui.server.url}")
     private String swaggerServerUrl;
 
     @Bean

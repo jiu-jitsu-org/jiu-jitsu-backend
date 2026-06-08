@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -26,6 +27,7 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     Page<Board> findByTitleBodyKeyword(@Param("keyword") String keyword, Pageable pageable);
 
     Page<Board> findAllByCreatedBy(User createdBy, Pageable pageable);
+
     @Query("""
     select b
     from ContentSave cs
@@ -34,4 +36,32 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     where cs.createdBy.id = :userId
     """)
     Page<Board> findSavedBoards(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("""
+    select b from Board b
+    where b.category.id = :categoryId
+    and b.createdBy.id not in :blockedUserIds
+    """)
+    Page<Board> findAllByCategoryExcludingBlockedUsers(
+            @Param("categoryId") Long categoryId,
+            @Param("blockedUserIds") List<Long> blockedUserIds,
+            Pageable pageable);
+
+    @Query("""
+    select b from Board b
+    where (b.title like %:keyword% or b.body like %:keyword%)
+    and b.createdBy.id not in :blockedUserIds
+    """)
+    Page<Board> findByTitleBodyKeywordExcludingBlockedUsers(
+            @Param("keyword") String keyword,
+            @Param("blockedUserIds") List<Long> blockedUserIds,
+            Pageable pageable);
+
+    @Query("""
+    select b from Board b
+    where b.createdBy.id not in :blockedUserIds
+    """)
+    Page<Board> findAllExcludingBlockedUsers(
+            @Param("blockedUserIds") List<Long> blockedUserIds,
+            Pageable pageable);
 }

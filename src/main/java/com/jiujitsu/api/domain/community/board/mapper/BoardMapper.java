@@ -4,7 +4,8 @@ import com.jiujitsu.api.domain.community.board.dto.BoardListResponse;
 import com.jiujitsu.api.domain.community.board.dto.BoardResponse;
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.content.entity.Content;
-import com.jiujitsu.api.domain.file.ImageUrl;
+import com.jiujitsu.api.domain.file.ImageFile;
+import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -32,7 +33,7 @@ public class BoardMapper {
                 isCommented,
                 isLiked,
                 isSaved,
-                getImageUrlStrings(content)
+                getImageInfoList(content)
         );
     }
 
@@ -55,7 +56,7 @@ public class BoardMapper {
                 isCommented,
                 isLiked,
                 isSaved,
-                getImageUrlStrings(content)
+                getImageInfoList(content)
         );
     }
 
@@ -75,13 +76,13 @@ public class BoardMapper {
                 null,
                 null,
                 null,
-                getImageUrlStrings(content)
+                getImageInfoList(content)
         );
     }
 
-    private List<String> getImageUrlStrings(Content content) {
-        return content.getImageUrls().stream()
-                .map(ImageUrl::getImageUrl)
+    private List<ImageInfo> getImageInfoList(Content content) {
+        return content.getImageFiles().stream()
+                .map(ImageInfo::from)
                 .toList();
     }
 }

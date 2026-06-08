@@ -1,5 +1,7 @@
 package com.jiujitsu.api.domain.user.entity;
 
+import com.jiujitsu.api.domain.file.ImageFile;
+import com.jiujitsu.api.domain.notice.entity.UserNoticeSetting;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -30,7 +32,12 @@ public class User {
     @Column
     private String nickname;
 
-    private String profileImageUrl;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_image_file_id")
+    private ImageFile profileImageFile;
+
+    @Column
+    private String password;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -42,8 +49,9 @@ public class User {
     @Column(nullable = false)
     private Boolean ownerRequested;
 
-    @Column
-    private String ownerRequestImageUrl;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_request_image_file_id")
+    private ImageFile ownerRequestImageFile;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -68,13 +76,24 @@ public class User {
     @Builder.Default
     private List<UserAppInfo> appInfos = new ArrayList<>();
 
-    public void updateProfile(String nickname, String profileImageUrl) {
+    @OneToOne
+    private UserNoticeSetting userNoticeSetting;
+
+    public void updateProfile(String nickname, ImageFile profileImageFile) {
         if (nickname != null && !nickname.trim().isEmpty()) {
             this.nickname = nickname;
         }
-        if (profileImageUrl != null && !profileImageUrl.trim().isEmpty()) {
-            this.profileImageUrl = profileImageUrl;
+        if (profileImageFile != null) {
+            this.profileImageFile = profileImageFile;
         }
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void updateProfileImage(ImageFile profileImageFile) {
+        this.profileImageFile = profileImageFile;
     }
 
     public void updateStatus(UserStatus status) {
@@ -98,8 +117,12 @@ public class User {
         return deletedAt != null && LocalDateTime.now().isAfter(deletedAt.plusDays(30));
     }
 
-    public void requestOwner(String ownerRequestImageUrl) {
+    public void requestOwner(ImageFile ownerRequestImageFile) {
         this.ownerRequested = true;
-        this.ownerRequestImageUrl = ownerRequestImageUrl;
+        this.ownerRequestImageFile = ownerRequestImageFile;
+    }
+
+    public void clearOwnerRequestImageFile() {
+        this.ownerRequestImageFile = null;
     }
 }
