@@ -42,8 +42,9 @@ jwt:
 springdoc:
   api-docs:
     path: /api-docs
-  swagger:
+  swagger-ui:
     path: /swagger-ui.html
+    doc-expansion: none
 
 # Apple Key 공통
 apple:

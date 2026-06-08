@@ -42,13 +42,6 @@ public class BoardController {
         return boardCategoryService.getCategory();
     }
 
-    //todo: 카테고리 생성 > 2차 오픈 시 관리자 메뉴로 이동
-    @Operation(summary = "카테고리 생성(임시)", description = "카테고리 생성(임시)")
-    @PostMapping("/category")
-    public void createCategory() {
-        boardCategoryService.createCategory();
-    }
-
 
     /**
      * 게시물

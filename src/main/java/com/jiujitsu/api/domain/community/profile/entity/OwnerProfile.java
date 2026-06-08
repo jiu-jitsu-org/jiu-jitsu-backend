@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.profile.entity;
 
+import com.jiujitsu.api.domain.file.ImageFile;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,8 +25,9 @@ public class OwnerProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String documentImageUrl;    // 인증사진 url
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "document_image_file_id")
+    private ImageFile documentImageFile;
 
     @Column
     private String teachingPhilosophy;    // 지도 철학
@@ -48,5 +50,9 @@ public class OwnerProfile {
         this.teachingPhilosophy = teachingPhilosophy;
         this.teachingStartDate = teachingStartDate;
         this.teachingDetail = teachingDetail;
+    }
+
+    public void clearDocumentImageFile() {
+        this.documentImageFile = null;
     }
 }

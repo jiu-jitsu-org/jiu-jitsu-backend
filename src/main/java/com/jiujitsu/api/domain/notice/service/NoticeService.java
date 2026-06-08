@@ -1,10 +1,14 @@
 package com.jiujitsu.api.domain.notice.service;
 
 import com.jiujitsu.api.domain.notice.dto.NoticeListResponse;
+import com.jiujitsu.api.domain.notice.dto.NoticeSettingRequest;
+import com.jiujitsu.api.domain.notice.dto.NoticeSettingResponse;
 import com.jiujitsu.api.domain.notice.entity.Notice;
+import com.jiujitsu.api.domain.notice.entity.UserNoticeSetting;
 import com.jiujitsu.api.domain.notice.factory.NoticeFactory;
 import com.jiujitsu.api.domain.notice.mapper.NoticeMapper;
 import com.jiujitsu.api.domain.notice.repository.NoticeRepository;
+import com.jiujitsu.api.domain.notice.repository.UserNoticeSettingRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -27,6 +31,7 @@ public class NoticeService {
     private final NoticeFactory noticeFactory;
     private final NoticeMapper noticeMapper;
     private final AuthenticationFacade authenticationFacade;
+    private final UserNoticeSettingRepository userNoticeSettingRepository;
 
     /**
      * 알림 목록 조회
@@ -55,6 +60,7 @@ public class NoticeService {
         notices.forEach(Notice::setRead);
         return true;
     }
+
     /**
      * 알림 개별 읽음 처리
      */
@@ -82,5 +88,19 @@ public class NoticeService {
     public void saveNotice(Long userId, FcmPushType pushType, Map<String, String> pushData) {
         Notice notice = noticeFactory.createNotice(userId, pushType, pushData);
         noticeRepository.save(notice);
+    }
+
+    /**
+     * 알림 수신동의여부 저장
+     */
+    public NoticeSettingResponse saveNoticeSetting(NoticeSettingRequest request) {
+        User user = authenticationFacade.getCurrentUser();
+
+        UserNoticeSetting userNoticeSetting = user.getUserNoticeSetting();
+        userNoticeSetting.update(request);
+
+        userNoticeSettingRepository.save(userNoticeSetting);
+
+        return NoticeMapper.toNoticeSettingResponse(userNoticeSetting);
     }
 }

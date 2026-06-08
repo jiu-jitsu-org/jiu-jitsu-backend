@@ -4,33 +4,30 @@ import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
-import com.jiujitsu.api.domain.file.ImageUrl;
+import com.jiujitsu.api.domain.file.ImageFile;
+import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 @Component
+@RequiredArgsConstructor
 public class BoardFactory {
-    // entity 생성 클래스(Factory)
 
-    /**
-     * Create Content
-     */
-    public Content createContent(List<String> imagesUrls) {
+    private final ImageFileRepository imageFileRepository;
+
+    public Content createContent(List<Long> imageFileIds) {
         Content content = Content.builder()
                 .contentType(ContentType.BOARD)
                 .build();
-
-        content.addImageUrls(createImageUrls(imagesUrls));
-
+        content.addImageFiles(createImageFiles(imageFileIds));
         return content;
     }
 
-    /**
-     * Create Board
-     */
     public Board createBoard(BoardCategory category, Content content, String title, String body) {
         return Board.builder()
                 .category(category)
@@ -40,19 +37,13 @@ public class BoardFactory {
                 .build();
     }
 
-
-    /**
-     * Create ImageUrl Entity
-     */
-    public List<ImageUrl> createImageUrls(List<String> urls) {
-        if (urls == null || urls.isEmpty()) {
+    public List<ImageFile> createImageFiles(List<Long> imageFileIds) {
+        if (imageFileIds == null || imageFileIds.isEmpty()) {
             return Collections.emptyList();
         }
-        return urls.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(s -> !s.isBlank())
-                .map(url -> ImageUrl.builder().imageUrl(url).build())
+        return imageFileIds.stream()
+                .map(id -> imageFileRepository.findById(id)
+                        .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND)))
                 .toList();
     }
 }

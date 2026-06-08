@@ -1,0 +1,42 @@
+name: 🔧 Chore
+description: 설정 / 문서 / 리팩토링 / 잡일
+labels: ["type: chore 🔧"]
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 🎯 Platform
+      options:
+        - '⚙️ Backend'
+        - '💻 Frontend'
+        - '🤖 Android'
+        - '📱 iOS'
+        - '🎯 All'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🔥 Priority
+      options:
+        - '🔥 High'
+        - '⚡ Medium'
+        - '🌱 Low'
+      default: 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 📝 작업 내용
+      description: 무엇을 / 왜 하는지 자유롭게 작성하세요.
+      value: |
+        ## 무엇을
+        -
+
+        ## 왜
+        -
+    validations:
+      required: true

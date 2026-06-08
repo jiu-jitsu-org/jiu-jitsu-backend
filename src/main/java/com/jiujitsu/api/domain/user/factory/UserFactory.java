@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.user.factory;
 
+import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import com.jiujitsu.api.domain.user.dto.SnsUserInfo;
 import com.jiujitsu.api.domain.user.dto.UserInfo;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
@@ -10,14 +11,10 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class UserFactory {
-    /**
-     * user entity 생성
-     */
     public User createNewUser(SnsProvider snsProvider, SnsUserInfo snsUserInfo) {
         return User.builder()
                 .email(snsUserInfo.getEmail())
                 .nickname(snsUserInfo.getNickname())
-                .profileImageUrl("default")
                 .snsProvider(snsProvider)
                 .snsId(snsUserInfo.getSnsId())
                 .ownerRequested(false)
@@ -26,18 +23,14 @@ public class UserFactory {
                 .build();
     }
 
-    /**
-     * userInfo 생성
-     */
     public UserInfo createUserInfo(User user, boolean deactivatedWithinGrace) {
         return new UserInfo(
                 user.getId(),
                 user.getEmail(),
                 user.getNickname(),
-                user.getProfileImageUrl(),
+                ImageInfo.from(user.getProfileImageFile()),
                 user.getSnsProvider(),
                 deactivatedWithinGrace
         );
     }
-
 }

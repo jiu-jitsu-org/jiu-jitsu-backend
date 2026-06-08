@@ -1,17 +1,17 @@
 package com.jiujitsu.api.domain.user.controller;
 
-import com.jiujitsu.api.domain.user.dto.*;
+import com.jiujitsu.api.domain.user.dto.AuthResponse;
+import com.jiujitsu.api.domain.user.dto.CreateProfileRequest;
+import com.jiujitsu.api.domain.user.dto.UserAppInfoRequest;
+import com.jiujitsu.api.domain.user.dto.UserProfileResponse;
 import com.jiujitsu.api.domain.user.service.UserService;
 import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Tag(name = "user-controller", description = "사용자 정보 API")
 @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER})
@@ -22,7 +22,6 @@ public class UserController {
 
     private final UserService userService;
 
-    // todo: 약관동의 업데이트
     @Operation(
             summary = "회원 가입",
             description = "인증정보, 닉네임, SNS 정보를 저장합니다."
@@ -44,14 +43,25 @@ public class UserController {
     }
 
     @Operation(
-            summary = "사용자 프로필 업데이트",
-            description = "현재 로그인한 사용자의 닉네임과 프로필 이미지를 업데이트합니다."
+            summary = "사용자 닉네임 업데이트",
+            description = "현재 로그인한 사용자의 닉네임을 업데이트합니다."
     )
     @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.AUTHENTICATION_FAILED})
-    @PutMapping("/profile")
-    public UserProfileResponse updateProfile(
-            @Valid @RequestBody UpdateProfileRequest request) {
-        return userService.updateProfile(request);
+    @PutMapping("/profile/nickname")
+    public UserProfileResponse updateNickname(
+            @RequestParam(value = "nickname") String nickname) {
+        return userService.updateProfileNickname(nickname);
+    }
+
+    @Operation(
+            summary = "사용자 프로필 이미지 업데이트",
+            description = "현재 로그인한 사용자의 프로필 이미지를 업데이트합니다."
+    )
+    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.AUTHENTICATION_FAILED})
+    @PutMapping("/profile/image")
+    public UserProfileResponse updateProfileImage(
+            @RequestParam(value = "imageFileId") Long imageFileId) {
+        return userService.updateProfileImage(imageFileId);
     }
 
     @Operation(
@@ -63,16 +73,6 @@ public class UserController {
     public Boolean deactivateUser() {
         userService.deactivateUser();
         return true;
-    }
-
-    @Operation(
-            summary = "(관리자로 옮길거임) 관장/사범 권한 부여",
-            description = "사용자에게 관장/사범 권한을 부여합니다."
-    )
-    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
-    @PutMapping("/grant/owner-role")
-    public UserProfileResponse grantOwnerRole() {
-        return userService.grantOwnerRole();
     }
 
     @Operation(
@@ -95,20 +95,12 @@ public class UserController {
     }
 
     @Operation(
-            summary = "(TEST) 회원 앱 정보 조회",
-            description = "로그인 회원의 앱 정보 조회합니다."
+            summary = "관장/사범 인증 요청",
+            description = "관장/사범 인증 이미지를 업로드하고 권한 요청합니다."
     )
-    @GetMapping("/appInfo")
-    public List<UserAppInfoResponse> getUserAppInfo() {
-        return userService.getUserAppInfo();
-    }
-
-    @Operation(
-            summary = "(TEST) 닉네임 기반 회원 앱 정보 조회",
-            description = "닉네임 검색으로 일치하는 회원의 앱 정보 조회합니다."
-    )
-    @GetMapping("/appInfo/nickname")
-    public List<UserAppInfoResponse> getUserAppInfoByNickname(@RequestParam(value = "nickname") String nickname) {
-        return userService.getUserAppInfoByNickname(nickname);
+    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.PERMISSION_DENIED})
+    @PutMapping("/owner")
+    public UserProfileResponse requestOwner(@RequestParam(name = "imageFileId") Long imageFileId) {
+        return userService.requestOwnerRole(imageFileId);
     }
 }

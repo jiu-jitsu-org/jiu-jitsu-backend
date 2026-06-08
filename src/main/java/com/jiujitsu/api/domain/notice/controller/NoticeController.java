@@ -1,6 +1,8 @@
 package com.jiujitsu.api.domain.notice.controller;
 
 import com.jiujitsu.api.domain.notice.dto.NoticeListResponse;
+import com.jiujitsu.api.domain.notice.dto.NoticeSettingRequest;
+import com.jiujitsu.api.domain.notice.dto.NoticeSettingResponse;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
@@ -39,5 +41,11 @@ public class NoticeController {
             @Parameter(name = "id", description = "알림 ID", required = true) @PathVariable(name = "id") Long id
     ) {
         return noticeService.readNotice(id);
+    }
+
+    @Operation(summary = "알림 수신 설정", description = "알림 타입별로 수신여부 설정합니다.")
+    @PostMapping("/setting")
+    public NoticeSettingResponse settingNotice(@RequestBody NoticeSettingRequest request) {
+        return noticeService.saveNoticeSetting(request);
     }
 }

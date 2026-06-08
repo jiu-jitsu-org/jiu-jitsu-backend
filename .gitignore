@@ -41,3 +41,5 @@ out/
 deploy/.env
 deploy/webhook/*.secret
 deploy/docker-compose.local.yml
+
+deploy/secrets/*.json

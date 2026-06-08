@@ -16,11 +16,11 @@ public class UpdateProfileRequest {
     @Schema(description = "사용자 닉네임", example = "홍길동")
     private String nickname;
 
-    @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.jpg")
-    private String profileImageUrl;
+    @Schema(description = "프로필 이미지 파일 ID")
+    private Long profileImageFileId;
 
-    public UpdateProfileRequest(String nickname, String profileImageUrl) {
+    public UpdateProfileRequest(String nickname, Long profileImageFileId) {
         this.nickname = nickname;
-        this.profileImageUrl = profileImageUrl;
+        this.profileImageFileId = profileImageFileId;
     }
 }
