@@ -49,6 +49,7 @@ public class SecurityConfig {
                                 .requestMatchers(mvc.pattern("/admin/auth/login")).permitAll()
                                 .requestMatchers(mvc.pattern("/admin/auth/signup")).permitAll()
                                 .requestMatchers(mvc.pattern("/admin/**")).hasRole("ADMIN")
+                                //.requestMatchers(mvc.pattern("/log/**")).hasRole("ADMIN")
                                 .requestMatchers(mvc.pattern("/swagger-ui/**")).permitAll()
                                 .requestMatchers(mvc.pattern("/v3/api-docs/**")).permitAll()
                                 .requestMatchers(mvc.pattern("/actuator/health/**")).permitAll()
