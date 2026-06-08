@@ -35,8 +35,7 @@ public class Board extends BaseEntity {
     @Column(nullable = false, length = 45)
     private String title;   // 제목
 
-    @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String body;    // 내용
 
     // todo : 투표, 태그
