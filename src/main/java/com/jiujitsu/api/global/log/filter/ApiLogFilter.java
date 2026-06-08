@@ -97,9 +97,8 @@ public class ApiLogFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
         return uri.startsWith("/api/log")
-                || uri.startsWith("/swagger-ui")
-                || uri.startsWith("/v3/api-docs")
-                || uri.startsWith("/h2-console")
-                || uri.startsWith("/actuator");
+                || uri.startsWith("/api/swagger-ui")
+                || uri.startsWith("/api/v3/api-docs")
+                || uri.startsWith("/api/actuator");
     }
 }
