@@ -4,6 +4,7 @@ package com.jiujitsu.api.global.security;
 import com.auth0.jwt.interfaces.Claim;
 import com.jiujitsu.api.domain.user.dto.TempUserInfo;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
+import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import io.jsonwebtoken.Claims;
@@ -35,12 +36,13 @@ public class JwtTokenProvider {
         this.refreshTokenValidityInMilliseconds = refreshTokenValidityInMilliseconds;
     }
 
-    public String createAccessToken(Long userId, String email) {
+    public String createAccessToken(Long userId, String email, UserRole role) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + accessTokenValidityInMilliseconds);
 
         return Jwts.builder().subject(userId.toString())
                 .claim("email", email)
+                .claim("role", role != null ? role.name() : null)
                 .claim("type", "access").issuedAt(now).expiration(validity)
                 .signWith(secretKey)
                 .compact();
@@ -122,8 +124,18 @@ public class JwtTokenProvider {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        
+
         return claims.get("type", String.class);
+    }
+
+    public String getRoleFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.get("role", String.class);
     }
 
     //todo: access, refresh 파싱도 추가 작업 진행 필요

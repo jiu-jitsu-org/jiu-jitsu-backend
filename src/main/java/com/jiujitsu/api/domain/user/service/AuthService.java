@@ -42,7 +42,7 @@ public class AuthService {
                 .orElseThrow();
 
         // 토큰 생성
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
         // 응답 세팅
@@ -85,7 +85,7 @@ public class AuthService {
         updateUserInfo(user, snsUserInfo);
 
         // 토큰 생성
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
         // 응답 세팅
@@ -160,7 +160,7 @@ public class AuthService {
                 .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         // 새로운 토큰 생성
-        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole());
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
         // 응답 생성

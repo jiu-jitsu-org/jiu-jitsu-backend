@@ -16,6 +16,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @Slf4j
 @Component
@@ -34,12 +37,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             
             if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token) && !tokenBlacklistService.isBlacklisted(token)) {
                 Long userId = jwtTokenProvider.getUserIdFromToken(token);
-                
+                String role = jwtTokenProvider.getRoleFromToken(token);
+
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                if (role != null) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+                }
+
                 // 인증 객체 생성
-                UsernamePasswordAuthenticationToken authentication = 
-                    new UsernamePasswordAuthenticationToken(userId, null, new ArrayList<>());
+                UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userId, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                
+
                 // SecurityContext에 인증 정보 설정
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }

@@ -36,6 +36,9 @@ public class User {
     @JoinColumn(name = "profile_image_file_id")
     private ImageFile profileImageFile;
 
+    @Column
+    private String password;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SnsProvider snsProvider;

@@ -94,7 +94,7 @@ public class UserService {
      * 회원가입 - 로그인 토큰 / AuthResponse 생성
      */
     private AuthResponse generateAuthResponse(User user) {
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
         UserInfo userInfo = userFactory.createUserInfo(user, false);
