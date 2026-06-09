@@ -2,12 +2,9 @@ package com.jiujitsu.api.domain.user.controller;
 
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
+import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,7 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Tag(name = "[SYS] CI/CD-test-controller", description = "Test CI/CD")
-@ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
+@CommonApiResponses
 @RestController
 @RequestMapping("/test")
 public class DeployTestController {
@@ -28,13 +25,7 @@ public class DeployTestController {
             summary = "Get a greeting message",
             description = "Returns a personalized greeting message"
     )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved greeting",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Map.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid name parameter",
-                    content = @Content)
-    })
+    @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER})
     @GetMapping("/greeting")
     public ResponseEntity<Map<String, String>> getGreeting(
             @Parameter(description = "Name of the person to greet", example = "John")

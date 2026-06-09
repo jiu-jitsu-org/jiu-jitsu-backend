@@ -2,7 +2,6 @@ package com.jiujitsu.api.global.config;
 
 import com.jiujitsu.api.global.exception.ApiResponse;
 import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -19,12 +18,10 @@ import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.method.HandlerMethod;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Configuration
@@ -58,36 +55,104 @@ public class SwaggerConfig {
 
     @Bean
     public OperationCustomizer customize() {
-        return (Operation operation, HandlerMethod handlerMethod) -> {
-            List<ErrorCode> allErrorCodes = new ArrayList<>();
+        return (operation, handlerMethod) -> {
 
-            // 메서드 annotation
-            ApiErrorCodeExamples methodExamples = handlerMethod.getMethodAnnotation(ApiErrorCodeExamples.class);
-            ApiErrorCodeExample methodExample = handlerMethod.getMethodAnnotation(ApiErrorCodeExample.class);
+            Set<ErrorCode> allErrorCodes = new LinkedHashSet<>();
 
-            if (methodExamples != null) {
-                allErrorCodes.addAll(Arrays.asList(methodExamples.value()));
-            } else if (methodExample != null) {
-                allErrorCodes.add(methodExample.value());
-            }
-
-            // 클래스 annotation
-            ApiErrorCodeExamples classExamples = handlerMethod.getBeanType().getAnnotation(ApiErrorCodeExamples.class);
-            ApiErrorCodeExample classExample = handlerMethod.getBeanType().getAnnotation(ApiErrorCodeExample.class);
-
-            if (classExamples != null) {
-                allErrorCodes.addAll(Arrays.asList(classExamples.value()));
-            } else if (classExample != null) {
-                allErrorCodes.add(classExample.value());
-            }
+            collectErrorCodes(handlerMethod.getBeanType(), allErrorCodes);
+            collectErrorCodes(handlerMethod.getMethod(), allErrorCodes);
 
             if (!allErrorCodes.isEmpty()) {
-                generateErrorCodeResponseExample(operation, allErrorCodes.toArray(new ErrorCode[0]));
+                generateErrorCodeResponseExample(
+                        operation,
+                        allErrorCodes.toArray(new ErrorCode[0])
+                );
             }
 
             return operation;
         };
     }
+
+    private void collectErrorCodes(
+            AnnotatedElement element,
+            Set<ErrorCode> allErrorCodes
+    ) {
+
+        // 직접 붙은 @ApiErrorCodeExamples
+        ApiErrorCodeExamples direct =
+                element.getAnnotation(ApiErrorCodeExamples.class);
+
+        if (direct != null) {
+            allErrorCodes.addAll(Arrays.asList(direct.value()));
+        }
+
+        // 커스텀 어노테이션들 검사
+        for (Annotation annotation : element.getAnnotations()) {
+
+            ApiErrorCodeExamples meta =
+                    annotation.annotationType()
+                            .getAnnotation(ApiErrorCodeExamples.class);
+
+            if (meta != null) {
+                allErrorCodes.addAll(Arrays.asList(meta.value()));
+            }
+        }
+    }
+
+//    @Bean
+//    public OperationCustomizer customize() {
+//        return (operation, handlerMethod) -> {
+//
+//            Set<ErrorCode> allErrorCodes = new LinkedHashSet<>();
+//
+//            // 메서드 어노테이션
+//            collectErrorCodes(
+//                    handlerMethod.getMethod(),
+//                    allErrorCodes
+//            );
+//
+//            // 클래스 어노테이션
+//            collectErrorCodes(
+//                    handlerMethod.getBeanType(),
+//                    allErrorCodes
+//            );
+//
+//            if (!allErrorCodes.isEmpty()) {
+//                generateErrorCodeResponseExample(
+//                        operation,
+//                        allErrorCodes.toArray(new ErrorCode[0])
+//                );
+//            }
+//
+//            return operation;
+//        };
+//    }
+//
+//    private void collectErrorCodes(
+//            AnnotatedElement element,
+//            Set<ErrorCode> allErrorCodes
+//    ) {
+//
+//        ApiErrorCodeExamples examples =
+//                AnnotatedElementUtils.findMergedAnnotation(
+//                        element,
+//                        ApiErrorCodeExamples.class
+//                );
+//
+//        if (examples != null) {
+//            allErrorCodes.addAll(Arrays.asList(examples.value()));
+//        }
+//
+//        ApiErrorCodeExample example =
+//                AnnotatedElementUtils.findMergedAnnotation(
+//                        element,
+//                        ApiErrorCodeExample.class
+//                );
+//
+//        if (example != null) {
+//            allErrorCodes.add(example.value());
+//        }
+//    }
 
     // ErrorCode 여러 개 응답값
     private void generateErrorCodeResponseExample(Operation operation, ErrorCode[] errorCodes) {

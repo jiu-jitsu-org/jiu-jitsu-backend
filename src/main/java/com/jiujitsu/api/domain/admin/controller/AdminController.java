@@ -6,6 +6,7 @@ import com.jiujitsu.api.domain.admin.dto.AdminSignupRequest;
 import com.jiujitsu.api.domain.admin.service.AdminAuthService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
+import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "admin-controller", description = "관리자 API")
+@CommonApiResponses
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
@@ -24,7 +26,7 @@ public class AdminController {
     private final AdminAuthService adminAuthService;
 
     @Operation(summary = "관리자 회원가입", description = "이메일/비밀번호로 관리자 계정을 생성하고 JWT 토큰을 발급합니다.")
-    @ApiErrorCodeExamples({ErrorCode.NICKNAME_DUPLICATED, ErrorCode.WRONG_PARAMETER})
+    @ApiErrorCodeExamples({ErrorCode.EMAIL_DUPLICATED})
     @PostMapping("/auth/signup")
     public AdminLoginResponse signup(@Valid @RequestBody AdminSignupRequest request) {
         return adminAuthService.signup(request);

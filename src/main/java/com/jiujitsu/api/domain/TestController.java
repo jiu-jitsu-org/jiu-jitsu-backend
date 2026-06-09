@@ -5,7 +5,6 @@ import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.service.AuthService;
 import com.jiujitsu.api.domain.user.service.UserService;
 import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -77,7 +76,7 @@ public class TestController {
             summary = "(관리자로 옮길거임) 관장/사범 권한 부여",
             description = "사용자에게 관장/사범 권한을 부여합니다."
     )
-    @ApiErrorCodeExample(ErrorCode.USER_NOT_FOUND)
+    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND})
     @PutMapping("/grant/owner-role")
     public UserProfileResponse grantOwnerRole() {
         return userService.grantOwnerRole();
