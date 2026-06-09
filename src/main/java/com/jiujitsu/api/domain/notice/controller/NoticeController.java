@@ -1,10 +1,12 @@
 package com.jiujitsu.api.domain.notice.controller;
 
+import com.jiujitsu.api.domain.notice.dto.BoardNoticeSettingResponse;
 import com.jiujitsu.api.domain.notice.dto.NoticeListResponse;
 import com.jiujitsu.api.domain.notice.dto.NoticeSettingRequest;
 import com.jiujitsu.api.domain.notice.dto.NoticeSettingResponse;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -47,5 +49,23 @@ public class NoticeController {
     @PostMapping("/setting")
     public NoticeSettingResponse settingNotice(@RequestBody NoticeSettingRequest request) {
         return noticeService.saveNoticeSetting(request);
+    }
+
+    @Operation(summary = "게시물 알림 설정 조회", description = "특정 게시물의 댓글/좋아요 알림 설정을 조회합니다.")
+    @ApiErrorCodeExample(ErrorCode.BOARD_NOT_FOUND)
+    @GetMapping("/setting/board/{boardId}")
+    public BoardNoticeSettingResponse getBoardNoticeSetting(
+            @Parameter(name = "boardId", description = "게시글 ID", required = true) @PathVariable Long boardId
+    ) {
+        return noticeService.getBoardNoticeSetting(boardId);
+    }
+
+    @Operation(summary = "게시물 알림 설정 토글", description = "특정 게시물의 알림(댓글/좋아요/게시물 전체)을 켜거나 끕니다.")
+    @ApiErrorCodeExample(ErrorCode.BOARD_NOT_FOUND)
+    @PutMapping("/setting/board/{boardId}")
+    public BoardNoticeSettingResponse toggleBoardNoticeSetting(
+            @Parameter(name = "boardId", description = "게시글 ID", required = true) @PathVariable Long boardId
+    ) {
+        return noticeService.toggleBoardNoticeSetting(boardId);
     }
 }
