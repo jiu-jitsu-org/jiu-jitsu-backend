@@ -21,7 +21,8 @@ public record BoardResponse(
         @Schema(description = "댓글 작성 여부", example = "true") Boolean isCommented,
         @Schema(description = "좋아요 여부", example = "true") Boolean isLiked,
         @Schema(description = "저장 여부", example = "true") Boolean isSaved,
-        @Schema(description = "이미지 리스트") List<ImageInfo> imageList
+        @Schema(description = "이미지 리스트") List<ImageInfo> imageList,
+        @Schema(description = "게시물 알림 활성화 여부", example = "true") Boolean noticeEnabled
 ) {
 
 }

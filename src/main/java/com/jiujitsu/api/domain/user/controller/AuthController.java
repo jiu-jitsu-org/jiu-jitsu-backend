@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.service.AuthService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
+import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "authentication-controller", description = "인증 API")
-@ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
+@CommonApiResponses
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -32,8 +33,7 @@ public class AuthController {
     }
 
     @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.")
-    @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY,
-            ErrorCode.USER_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.INVALID_REFRESH_TOKEN, ErrorCode.NOT_MATCH_CATEGORY, ErrorCode.USER_NOT_FOUND})
     @PostMapping("/refresh")
     public AuthResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         return authService.refreshToken(request.getRefreshToken());

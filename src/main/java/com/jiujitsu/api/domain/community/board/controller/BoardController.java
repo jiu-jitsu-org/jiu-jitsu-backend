@@ -7,8 +7,9 @@ import com.jiujitsu.api.domain.community.content.dto.ContentLikeResponse;
 import com.jiujitsu.api.domain.community.content.dto.ContentSaveResponse;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExample;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
+import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
+import com.jiujitsu.api.global.exception.annotation.LoginErrorExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Tag(name = "board-controller", description = "커뮤니티 게시글 API")
-@ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
+@CommonApiResponses
 @RestController
 @RequestMapping("/board")
 @RequiredArgsConstructor
@@ -56,7 +57,7 @@ public class BoardController {
     }
 
     @Operation(summary = "게시글 단건 조회", description = "ID로 게시글을 조회합니다.")
-    @ApiErrorCodeExample(ErrorCode.BOARD_NOT_FOUND)
+    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND})
     @GetMapping("/{id}")
     public BoardResponse getById(
             @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
@@ -65,6 +66,7 @@ public class BoardController {
     }
 
     @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다.")
+    @LoginErrorExamples
     @ApiErrorCodeExamples({ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER})
     @PostMapping
     public BoardResponse create(@Valid @RequestBody BoardCreateRequest request) {
@@ -72,6 +74,7 @@ public class BoardController {
     }
 
     @Operation(summary = "게시글 수정", description = "게시글을 수정합니다.")
+    @LoginErrorExamples
     @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND, ErrorCode.BOARD_CATEGORY_NOT_FOUND})
     @PutMapping("/{id}")
     public BoardResponse update(
@@ -82,7 +85,8 @@ public class BoardController {
     }
 
     @Operation(summary = "게시글 삭제", description = "게시글을 삭제합니다.")
-    @ApiErrorCodeExample(ErrorCode.BOARD_NOT_FOUND)
+    @LoginErrorExamples
+    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND})
     @DeleteMapping("/{id}")
     public void delete(
             @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
@@ -91,7 +95,8 @@ public class BoardController {
     }
 
     @Operation(summary = "게시물 좋아요 등록/취소", description = "게시물 좋아요를 등록/취소합니다.")
-    @ApiErrorCodeExample(ErrorCode.CONTENT_NOT_FOUND)
+    @LoginErrorExamples
+    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
     @PutMapping("/like/{id}")
     public ContentLikeResponse like(
             @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
@@ -100,7 +105,8 @@ public class BoardController {
     }
 
     @Operation(summary = "게시물 저장/취소", description = "게시물을 저장/취소합니다.")
-    @ApiErrorCodeExample(ErrorCode.CONTENT_NOT_FOUND)
+    @LoginErrorExamples
+    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
     @PutMapping("/save/{id}")
     public ContentSaveResponse save(
             @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
@@ -109,12 +115,14 @@ public class BoardController {
     }
 
     @Operation(summary = "내가 작성한 글 조회", description = "내가 작성한 글 목록을 조회합니다.")
+    @LoginErrorExamples
     @GetMapping("/write")
     public Page<BoardListResponse> writeList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return boardService.getWriteList(pageable);
     }
 
     @Operation(summary = "내가 저장한 글 조회", description = "내가 저장한 글 목록을 조회합니다.")
+    @LoginErrorExamples
     @GetMapping("/save")
     public Page<BoardListResponse> saveList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return boardService.getSaveList(pageable);

@@ -14,7 +14,7 @@ public class CommentFactory {
     public CommunityComments createComments(Content content, Long parentId, String body) {
         return CommunityComments.builder()
                 .content(content)
-                .parentId(parentId)
+                .parentId(parentId == 0L ? null : parentId)
                 .body(body)
                 .build();
     }

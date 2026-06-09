@@ -4,8 +4,7 @@ import com.jiujitsu.api.domain.boot_strap.dto.AppVersionResponse;
 import com.jiujitsu.api.domain.boot_strap.dto.BootStrapRequest;
 import com.jiujitsu.api.domain.boot_strap.dto.BootStrapResponse;
 import com.jiujitsu.api.domain.boot_strap.service.AppVersionService;
-import com.jiujitsu.api.global.exception.ErrorCode;
-import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
+import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @Tag(name = "[SYS] AppVersion", description = "강제업데이트, 선택업데이트 >> 26.05.17 GitHubWebhooks > my webhook container Test!!!!!!!!!!!")
-@ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.AUTHENTICATION_FAILED})
+@CommonApiResponses
 @RestController
 @RequestMapping("/bootstrap")
 @RequiredArgsConstructor

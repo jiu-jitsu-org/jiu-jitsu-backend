@@ -73,8 +73,11 @@ public class ContentService {
                 pushData.put("type", pushType.getActionType().toString());
                 pushData.put("data", content.getId().toString());
 
-                fcmPushEventPublisher.publish(content.getCreatedBy().getId(), pushType, pushData);
-                noticeService.saveNotice(content.getCreatedBy().getId(), pushType, pushData);
+                Long contentOwnerId = content.getCreatedBy().getId();
+                if (noticeService.isContentNoticeEnabled(contentOwnerId, content.getId())) {
+                    fcmPushEventPublisher.publish(contentOwnerId, pushType, pushData);
+                    noticeService.saveNotice(contentOwnerId, pushType, pushData);
+                }
             }
         }
 
