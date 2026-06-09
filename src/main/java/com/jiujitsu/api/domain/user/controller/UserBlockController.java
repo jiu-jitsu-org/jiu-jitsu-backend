@@ -22,10 +22,10 @@ public class UserBlockController {
             description = "특정 유저를 차단하거나 차단 해제합니다. 이미 차단된 유저를 다시 요청하면 차단이 해제됩니다. (true = 차단, false = 차단 해제)"
     )
     @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND, ErrorCode.SELF_BLOCK_NOT_ALLOWED, ErrorCode.AUTHENTICATION_FAILED})
-    @PostMapping("/block/{userId}")
+    @PostMapping("/block/{id}")
     public Boolean toggleBlock(
-            @Parameter(name = "userId", description = "차단할 유저 ID", required = true) @PathVariable Long userId
+            @Parameter(name = "id", description = "차단할 유저 ID", required = true) @PathVariable Long id
     ) {
-        return userBlockService.toggleBlock(userId);
+        return userBlockService.toggleBlock(id);
     }
 }
