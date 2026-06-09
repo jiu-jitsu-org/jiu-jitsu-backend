@@ -10,6 +10,7 @@ import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
+import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
@@ -39,6 +40,7 @@ public class BoardService {
     private final CommunityCommentsService communityCommentsService;
     private final ContentService contentService;
     private final UserBlockService userBlockService;
+    private final NoticeService noticeService;
 
     /**
      * 게시물 목록 조회
@@ -135,11 +137,13 @@ public class BoardService {
         Set<Long> likedContentIds = new HashSet<>();
         Set<Long> savedContentIds = new HashSet<>();
 
+        Boolean noticeEnabled = null;
         Optional<User> user = authenticationFacade.getCurrentUserOptional();
         if (user.isPresent()) {
             commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), Collections.singletonList(contentId));
             likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), Collections.singletonList(contentId));
             savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), Collections.singletonList(contentId));
+            noticeEnabled = noticeService.isContentNoticeEnabled(user.get().getId(), contentId);
         }
 
         // dto 생성
@@ -149,7 +153,8 @@ public class BoardService {
                 likeCount,
                 commentedContentIds.contains(contentId),
                 likedContentIds.contains(contentId),
-                savedContentIds.contains(contentId));
+                savedContentIds.contains(contentId),
+                noticeEnabled);
     }
 
     /**

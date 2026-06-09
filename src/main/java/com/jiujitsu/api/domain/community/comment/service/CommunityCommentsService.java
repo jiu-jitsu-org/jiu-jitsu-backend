@@ -156,8 +156,10 @@ public class CommunityCommentsService {
             pushData.put("type", pushType.getActionType().toString());
             pushData.put("data", content.getId().toString());
 
-            fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
-            noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
+            if (noticeService.isContentNoticeEnabled(boardWriter.getId(), content.getId())) {
+                fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
+                noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
+            }
         }
 
         // 알림2 - 댓글에 대댓글 달렸을 때 댓글 작성자에게
@@ -169,8 +171,10 @@ public class CommunityCommentsService {
                 pushData.put("type", pushType.getActionType().toString());
                 pushData.put("data", content.getId().toString());
 
-                fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
-                noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
+                if (noticeService.isContentNoticeEnabled(boardWriter.getId(), content.getId())) {
+                    fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
+                    noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
+                }
             }
         }
 
@@ -207,8 +211,12 @@ public class CommunityCommentsService {
                 pushData.put("type", pushType.getActionType().toString());
                 pushData.put("data", comment.getId().toString());
 
-                fcmPushEventPublisher.publish(comment.getCreatedBy().getId(), pushType, pushData);
-                noticeService.saveNotice(comment.getCreatedBy().getId(), pushType, pushData);
+                Long commentWriterId = comment.getCreatedBy().getId();
+                Long contentId = comment.getContent().getId();
+                if (noticeService.isContentNoticeEnabled(commentWriterId, contentId)) {
+                    fcmPushEventPublisher.publish(commentWriterId, pushType, pushData);
+                    noticeService.saveNotice(commentWriterId, pushType, pushData);
+                }
             }
         }
 

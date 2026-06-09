@@ -21,6 +21,7 @@ public enum ErrorCode {
     BOARD_CATEGORY_NOT_FOUND(404, "C0003", "존재하지 않는 카테고리입니다."),
     COMMENT_NOT_FOUND(404, "C0004", "존재하지 않는 댓글입니다."),
     NOTICE_NOT_FOUND(404, "C0004", "존재하지 않는 게시물입니다."),
+    EMAIL_DUPLICATED(400, "R0006", "이미 사용중인 이메일입니다."),
 
 
     /**

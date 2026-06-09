@@ -40,7 +40,7 @@ public class BoardMapper {
     /**
      * 상세 response
      */
-    public BoardResponse toResponse(Board board, Long commentCount, Long likeCount, boolean isCommented, boolean isLiked, boolean isSaved) {
+    public BoardResponse toResponse(Board board, Long commentCount, Long likeCount, boolean isCommented, boolean isLiked, boolean isSaved, Boolean noticeEnabled) {
         Content content = board.getContent();
         return new BoardResponse(
                 content.getId(),
@@ -56,7 +56,8 @@ public class BoardMapper {
                 isCommented,
                 isLiked,
                 isSaved,
-                getImageInfoList(content)
+                getImageInfoList(content),
+                noticeEnabled
         );
     }
 
@@ -76,7 +77,8 @@ public class BoardMapper {
                 null,
                 null,
                 null,
-                getImageInfoList(content)
+                getImageInfoList(content),
+                null
         );
     }
 

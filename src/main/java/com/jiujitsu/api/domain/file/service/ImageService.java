@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.file.service;
 
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
+import com.jiujitsu.api.domain.community.profile.entity.OwnerProfile;
 import com.jiujitsu.api.domain.community.profile.repository.OwnerProfileRepository;
 import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.file.ImageFileStatus;
@@ -8,6 +9,7 @@ import com.jiujitsu.api.domain.file.dto.CdnSignatureResponse;
 import com.jiujitsu.api.domain.file.dto.ImageFileRegisterRequest;
 import com.jiujitsu.api.domain.file.dto.ImageFileResponse;
 import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
+import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -55,11 +57,11 @@ public class ImageService {
 
         // User 관장 신청 이미지 참조 제거
         userRepository.findByOwnerRequestImageFile(imageFile)
-                .ifPresent(user -> user.clearOwnerRequestImageFile());
+                .ifPresent(User::clearOwnerRequestImageFile);
 
         // OwnerProfile 서류 이미지 참조 제거
         ownerProfileRepository.findByDocumentImageFile(imageFile)
-                .ifPresent(ownerProfile -> ownerProfile.clearDocumentImageFile());
+                .ifPresent(OwnerProfile::clearDocumentImageFile);
 
         imageFileRepository.delete(imageFile);
     }
