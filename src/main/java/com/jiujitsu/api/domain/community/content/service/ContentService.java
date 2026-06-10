@@ -113,7 +113,7 @@ public class ContentService {
             contentSaveRepository.delete(existSave.get());
         } else {
             // 좋아요 등록
-            newSave = contentSaveFactory.createCommentLike(content);
+            newSave = contentSaveFactory.createCommentSave(content);
             contentSaveRepository.save(newSave);
         }
 
