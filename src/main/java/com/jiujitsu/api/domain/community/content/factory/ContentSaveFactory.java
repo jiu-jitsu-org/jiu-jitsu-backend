@@ -11,7 +11,7 @@ public class ContentSaveFactory {
     /**
      * Create ContentSave
      */
-    public ContentSave createCommentLike(Content content) {
+    public ContentSave createCommentSave(Content content) {
         return ContentSave.builder()
                 .content(content)
                 .build();
