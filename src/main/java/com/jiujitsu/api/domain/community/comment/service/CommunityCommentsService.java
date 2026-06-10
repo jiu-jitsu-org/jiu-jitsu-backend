@@ -87,7 +87,7 @@ public class CommunityCommentsService {
                 .orElse(new HashSet<>());
 
         // 작성자 여부
-        User userOptional = authenticationFacade.getCurrentUserOptional().orElse(null);
+        User user = authenticationFacade.getCurrentUserOptional().orElse(null);
 
         // 전체 댓글 Response 로 mapping
         Map<Long, CommunityCommentsResponse> commentsMap = comments.stream()
@@ -98,7 +98,7 @@ public class CommunityCommentsService {
                                 new ArrayList<>(),    // 대댓글 하단에서 추가하기 위해 mutable list 사용
                                 likeCountMap.getOrDefault(c.getId(), 0L),
                                 likedCommentIds.contains(c.getId()),
-                                Objects.equals(c.getCreatedBy(), userOptional))
+                                Objects.equals(c.getCreatedBy(), user))
                         ));
 
         // 결과에 댓글/대댓글 나눠 넣기
@@ -138,10 +138,12 @@ public class CommunityCommentsService {
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
         // 대댓글일 경우 부모댓글 조회
-        Optional<CommunityComments> parentComments = communityCommentsRepository.findById(request.parentId());
+        Long parentID = request.parentId() == null ? 0L : request.parentId();
+        Optional<CommunityComments> parentComments = communityCommentsRepository.findById(parentID);
+
 
         // 댓글 entity 생성
-        CommunityComments communityComments = commentFactory.createComments(content, request.parentId(), request.body());
+        CommunityComments communityComments = commentFactory.createComments(content, parentID, request.body());
         communityCommentsRepository.save(communityComments);
 
         // 알림 설정 (커밋 후 FCM 발송 + 알림 저장)
@@ -162,7 +164,7 @@ public class CommunityCommentsService {
         if (parentComments.isPresent()) {
             if (!Objects.equals(user.getId(), parentComments.get().getCreatedBy().getId())) {
                 eventPublisher.publishEvent(new CommentNoticeEvent(
-                        boardWriter.getId(),
+                        parentComments.get().getCreatedBy().getId(),
                         content.getId(),
                         FcmPushType.NEW_CHILD_COMMENTS,
                         Map.of("type", FcmPushType.NEW_CHILD_COMMENTS.getActionType().toString(),
@@ -227,6 +229,7 @@ public class CommunityCommentsService {
     /**
      * 게시글 단건 > 댓글 카운트 조회
      */
+    @Transactional(readOnly = true)
     public long getCountComments(Long contentId) {
         return communityCommentsRepository
                 .countByContent_IdAndParentIdIsNull(contentId);
@@ -235,6 +238,7 @@ public class CommunityCommentsService {
     /**
      * 게시글 목록 > 댓글 카운트 조회
      */
+    @Transactional(readOnly = true)
     public Map<Long, Long> getContentsComments(List<Long> contentIds) {
         return communityCommentsRepository.countTopLevelCommentsByContentIds(contentIds).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
@@ -243,6 +247,7 @@ public class CommunityCommentsService {
     /**
      * 게시글 - 댓글id 조회
      */
+    @Transactional(readOnly = true)
     public Set<Long> getUserCommentedContentIds(Long userId, List<Long> contentIds) {
         return communityCommentsRepository.findUserCommentedContentIds(userId, contentIds);
     }
