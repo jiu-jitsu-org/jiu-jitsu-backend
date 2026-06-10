@@ -16,17 +16,17 @@ import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepositor
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
-import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.domain.community.comment.event.CommentNoticeEvent;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
-import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,12 +44,11 @@ public class CommunityCommentsService {
     private final ContentRepository contentRepository;
     private final AuthenticationFacade authenticationFacade;
     private final UserBlockService userBlockService;
-    private final FcmPushEventPublisher fcmPushEventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
     private final CommentFactory commentFactory;
     private final CommentMapper commentMapper;
     private final CommentLikeFactory commentLikeFactory;
     private final CommentLikeMapper commentLikeMapper;
-    private final NoticeService noticeService;
 
 
     /**
@@ -64,7 +63,7 @@ public class CommunityCommentsService {
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
-        // 댓글 전체 리스트 조회(댓글+대댓글) > n+1 조회 이슈로 전체 조회 후 여기서 세팅...
+        // 댓글 전체 리스트 조회(댓글+대댓글) - createdBy, content fetch join으로 N+1 방지
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
         List<CommunityComments> comments = blockedUserIds.isEmpty()
                 ? communityCommentsRepository.findByContentIdOrderByCreatedAtDesc(contentId)
@@ -145,36 +144,30 @@ public class CommunityCommentsService {
         CommunityComments communityComments = commentFactory.createComments(content, request.parentId(), request.body());
         communityCommentsRepository.save(communityComments);
 
-        // 알림 설정 (커밋 후 FCM 발송)
+        // 알림 설정 (커밋 후 FCM 발송 + 알림 저장)
         User boardWriter = content.getCreatedBy();
 
         // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
         if (!Objects.equals(user.getId(), boardWriter.getId())) {
-            FcmPushType pushType = FcmPushType.NEW_COMMENTS;
-
-            Map<String, String> pushData = new HashMap<>();
-            pushData.put("type", pushType.getActionType().toString());
-            pushData.put("data", content.getId().toString());
-
-            if (noticeService.isContentNoticeEnabled(boardWriter.getId(), content.getId())) {
-                fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
-                noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
-            }
+            eventPublisher.publishEvent(new CommentNoticeEvent(
+                    boardWriter.getId(),
+                    content.getId(),
+                    FcmPushType.NEW_COMMENTS,
+                    Map.of("type", FcmPushType.NEW_COMMENTS.getActionType().toString(),
+                           "data", content.getId().toString())
+            ));
         }
 
         // 알림2 - 댓글에 대댓글 달렸을 때 댓글 작성자에게
         if (parentComments.isPresent()) {
             if (!Objects.equals(user.getId(), parentComments.get().getCreatedBy().getId())) {
-                FcmPushType pushType = FcmPushType.NEW_CHILD_COMMENTS;
-
-                Map<String, String> pushData = new HashMap<>();
-                pushData.put("type", pushType.getActionType().toString());
-                pushData.put("data", content.getId().toString());
-
-                if (noticeService.isContentNoticeEnabled(boardWriter.getId(), content.getId())) {
-                    fcmPushEventPublisher.publish(boardWriter.getId(), pushType, pushData);
-                    noticeService.saveNotice(boardWriter.getId(), pushType, pushData);
-                }
+                eventPublisher.publishEvent(new CommentNoticeEvent(
+                        boardWriter.getId(),
+                        content.getId(),
+                        FcmPushType.NEW_CHILD_COMMENTS,
+                        Map.of("type", FcmPushType.NEW_CHILD_COMMENTS.getActionType().toString(),
+                               "data", content.getId().toString())
+                ));
             }
         }
 
@@ -205,18 +198,13 @@ public class CommunityCommentsService {
             commentLikeRepository.save(newLike);
 
             if (!Objects.equals(user.getId(), comment.getCreatedBy().getId())) {
-                FcmPushType pushType = FcmPushType.COMMENTS_LIKE;
-
-                Map<String, String> pushData = new HashMap<>();
-                pushData.put("type", pushType.getActionType().toString());
-                pushData.put("data", comment.getId().toString());
-
-                Long commentWriterId = comment.getCreatedBy().getId();
-                Long contentId = comment.getContent().getId();
-                if (noticeService.isContentNoticeEnabled(commentWriterId, contentId)) {
-                    fcmPushEventPublisher.publish(commentWriterId, pushType, pushData);
-                    noticeService.saveNotice(commentWriterId, pushType, pushData);
-                }
+                eventPublisher.publishEvent(new CommentNoticeEvent(
+                        comment.getCreatedBy().getId(),
+                        comment.getContent().getId(),
+                        FcmPushType.COMMENTS_LIKE,
+                        Map.of("type", FcmPushType.COMMENTS_LIKE.getActionType().toString(),
+                               "data", comment.getId().toString())
+                ));
             }
         }
 

@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.board.dto;
 
+import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileInfo;
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -22,7 +23,9 @@ public record BoardResponse(
         @Schema(description = "좋아요 여부", example = "true") Boolean isLiked,
         @Schema(description = "저장 여부", example = "true") Boolean isSaved,
         @Schema(description = "이미지 리스트") List<ImageInfo> imageList,
-        @Schema(description = "게시물 알림 활성화 여부", example = "true") Boolean noticeEnabled
+        @Schema(description = "게시물 알림 활성화 여부", example = "true") Boolean noticeEnabled,
+        @Schema(description = "작성자 프로필") CommunityProfileInfo author,
+        @Schema(description = "작성여부") Boolean isAuthor
 ) {
 
 }

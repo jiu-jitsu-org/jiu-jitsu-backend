@@ -35,7 +35,14 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
     /**
      * contents의 전체 댓글 조회(댓글 + 대댓글)
      */
-    List<CommunityComments> findByContentIdOrderByCreatedAtDesc(Long contentId);
+    @Query("""
+    select c from CommunityComments c
+    left join fetch c.createdBy
+    left join fetch c.content
+    where c.content.id = :contentId
+    order by c.createdAt desc
+    """)
+    List<CommunityComments> findByContentIdOrderByCreatedAtDesc(@Param("contentId") Long contentId);
 
     @Query("""
     select distinct c.content.id
@@ -47,6 +54,8 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
 
     @Query("""
     select c from CommunityComments c
+    left join fetch c.createdBy
+    left join fetch c.content
     where c.content.id = :contentId
     and c.createdBy.id not in :blockedUserIds
     order by c.createdAt desc

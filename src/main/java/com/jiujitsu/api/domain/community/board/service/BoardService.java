@@ -69,50 +69,7 @@ public class BoardService {
                     : boardRepository.findAllExcludingBlockedUsers(blockedUserIds, pageable);
         };
 
-        // 컨텐츠(공통) 조회
-        List<Long> contentIds = page.getContent().stream()
-                .map(b -> b.getContent().getId())
-                .toList();
-
-        // 댓글 조회
-        Map<Long, Long> commentCountMap = contentIds.isEmpty()
-                ? Map.of()
-                : communityCommentsService.getContentsComments(contentIds);
-
-        // 좋아요 조회
-        Map<Long, Long> contentLikeMap = contentIds.isEmpty()
-                ? Map.of()
-                : contentService.getContentLikeCount(contentIds);
-
-        // 설정 여부 전화
-        Set<Long> commentedContentIds = new HashSet<>();
-        Set<Long> likedContentIds = new HashSet<>();
-        Set<Long> savedContentIds = new HashSet<>();
-
-        // 좋아요/댓글/저장 여부
-        Optional<User> user = authenticationFacade.getCurrentUserOptional();
-        if (user.isPresent()) {
-            commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), contentIds);
-            likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), contentIds);
-            savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), contentIds);
-        }
-
-        Set<Long> finalCommentedContentIds = commentedContentIds;
-        Set<Long> finalLikedContentIds = likedContentIds;
-        Set<Long> finalSavedContentIds = savedContentIds;
-        return page.map(board -> {
-                    Long contentId = board.getContent().getId();
-
-                    return boardMapper.toBoardListResponse(
-                            board,
-                            commentCountMap.getOrDefault(contentId, 0L),
-                            contentLikeMap.getOrDefault(contentId, 0L),
-                            finalCommentedContentIds.contains(contentId),
-                            finalLikedContentIds.contains(contentId),
-                            finalSavedContentIds.contains(contentId)
-                    );
-                }
-        );
+        return mapBoardsToResponse(page);
     }
 
     /**
@@ -154,7 +111,9 @@ public class BoardService {
                 commentedContentIds.contains(contentId),
                 likedContentIds.contains(contentId),
                 savedContentIds.contains(contentId),
-                noticeEnabled);
+                noticeEnabled,
+                Objects.equals(board.getCreatedBy(), user.orElse(null))
+                );
     }
 
     /**
@@ -232,38 +191,7 @@ public class BoardService {
         User user = authenticationFacade.getCurrentUser();
         Page<Board> page = boardRepository.findAllByCreatedBy(user, pageable);
 
-        // 컨텐츠(공통) 조회
-        List<Long> contentIds = page.getContent().stream()
-                .map(b -> b.getContent().getId())
-                .toList();
-
-        // 댓글 조회
-        Map<Long, Long> commentCountMap = contentIds.isEmpty()
-                ? Map.of()
-                : communityCommentsService.getContentsComments(contentIds);
-
-        // 좋아요 조회
-        Map<Long, Long> contentLikeMap = contentIds.isEmpty()
-                ? Map.of()
-                : contentService.getContentLikeCount(contentIds);
-
-        // 설정 여부 전화
-        Set<Long> commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.getId(), contentIds);
-        Set<Long> likedContentIds = contentService.getUserLikedContentIds(user.getId(), contentIds);
-        Set<Long> savedContentIds = contentService.getUserSavedContentIds(user.getId(), contentIds);
-        return page.map(board -> {
-                    Long contentId = board.getContent().getId();
-
-                    return boardMapper.toBoardListResponse(
-                            board,
-                            commentCountMap.getOrDefault(contentId, 0L),
-                            contentLikeMap.getOrDefault(contentId, 0L),
-                            commentedContentIds.contains(contentId),
-                            likedContentIds.contains(contentId),
-                            savedContentIds.contains(contentId)
-                    );
-                }
-        );
+        return mapBoardsToResponse(page);
     }
 
     /**
@@ -274,8 +202,12 @@ public class BoardService {
         User user = authenticationFacade.getCurrentUser();
         Page<Board> page = boardRepository.findSavedBoards(user.getId(), pageable);
 
+        return mapBoardsToResponse(page);
+    }
+
+    private Page<BoardListResponse> mapBoardsToResponse(Page<Board> boardPage) {
         // 컨텐츠(공통) 조회
-        List<Long> contentIds = page.getContent().stream()
+        List<Long> contentIds = boardPage.getContent().stream()
                 .map(b -> b.getContent().getId())
                 .toList();
 
@@ -290,23 +222,35 @@ public class BoardService {
                 : contentService.getContentLikeCount(contentIds);
 
         // 설정 여부 전화
-        Set<Long> commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.getId(), contentIds);
-        Set<Long> likedContentIds = contentService.getUserLikedContentIds(user.getId(), contentIds);
-        Set<Long> savedContentIds = contentService.getUserSavedContentIds(user.getId(), contentIds);
-        return page.map(board -> {
+        Set<Long> commentedContentIds = new HashSet<>();
+        Set<Long> likedContentIds = new HashSet<>();
+        Set<Long> savedContentIds = new HashSet<>();
+
+        // 좋아요/댓글/저장 여부
+        Optional<User> user = authenticationFacade.getCurrentUserOptional();
+        if (user.isPresent()) {
+            commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), contentIds);
+            likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), contentIds);
+            savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), contentIds);
+        }
+
+        Set<Long> finalCommentedContentIds = commentedContentIds;
+        Set<Long> finalLikedContentIds = likedContentIds;
+        Set<Long> finalSavedContentIds = savedContentIds;
+        return boardPage.map(board -> {
                     Long contentId = board.getContent().getId();
 
                     return boardMapper.toBoardListResponse(
                             board,
                             commentCountMap.getOrDefault(contentId, 0L),
                             contentLikeMap.getOrDefault(contentId, 0L),
-                            commentedContentIds.contains(contentId),
-                            likedContentIds.contains(contentId),
-                            savedContentIds.contains(contentId)
+                            finalCommentedContentIds.contains(contentId),
+                            finalLikedContentIds.contains(contentId),
+                            finalSavedContentIds.contains(contentId),
+                            Objects.equals(board.getCreatedBy(), user.orElse(null))
                     );
                 }
         );
     }
-
 
 }
