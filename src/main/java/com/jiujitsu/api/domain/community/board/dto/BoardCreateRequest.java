@@ -18,9 +18,15 @@ public record BoardCreateRequest(
         @Schema(description = "내용", example = "게시글 내용", requiredMode = Schema.RequiredMode.REQUIRED)
             String body,
         @Schema(description = "이미지 파일 ID 리스트")
-            List<Long> imageFileIdList
+            List<Long> imageFileIdList,
+        @Schema(description = "태그 목록", example = "[\"BJJ\", \"운동\"]")
+            List<String> tags
 ) {
     public List<Long> imageFileIdListOrEmpty() {
         return imageFileIdList == null ? List.of() : imageFileIdList;
+    }
+
+    public List<String> tagsOrEmpty() {
+        return tags == null ? List.of() : tags;
     }
 }

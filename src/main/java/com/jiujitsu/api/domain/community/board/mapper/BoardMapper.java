@@ -3,9 +3,9 @@ package com.jiujitsu.api.domain.community.board.mapper;
 import com.jiujitsu.api.domain.community.board.dto.BoardListResponse;
 import com.jiujitsu.api.domain.community.board.dto.BoardResponse;
 import com.jiujitsu.api.domain.community.board.entity.Board;
+import com.jiujitsu.api.domain.community.board.entity.BoardTag;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileInfo;
-import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +35,7 @@ public class BoardMapper {
                 isLiked,
                 isSaved,
                 getImageInfoList(content),
+                getTagNames(board),
                 CommunityProfileInfo.from(board.getCreatedBy()),
                 isAuthor
         );
@@ -60,6 +61,7 @@ public class BoardMapper {
                 isLiked,
                 isSaved,
                 getImageInfoList(content),
+                getTagNames(board),
                 noticeEnabled,
                 CommunityProfileInfo.from(board.getCreatedBy()),
                 isAuthor
@@ -83,6 +85,7 @@ public class BoardMapper {
                 null,
                 null,
                 getImageInfoList(content),
+                getTagNames(board),
                 null,
                 CommunityProfileInfo.from(board.getCreatedBy()),
                 true
@@ -92,6 +95,12 @@ public class BoardMapper {
     private List<ImageInfo> getImageInfoList(Content content) {
         return content.getImageFiles().stream()
                 .map(ImageInfo::from)
+                .toList();
+    }
+
+    private List<String> getTagNames(Board board) {
+        return board.getTags().stream()
+                .map(BoardTag::getName)
                 .toList();
     }
 }
