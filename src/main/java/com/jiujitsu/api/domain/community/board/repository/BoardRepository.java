@@ -21,8 +21,8 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     @Query("""
             select b
             from Board b
-            where b.title like %:keyword%
-            or b.body like %:keyword%
+            where b.title like CONCAT('%', :keyword, '%')
+            or b.body like CONCAT('%', :keyword, '%')
             """)
     Page<Board> findByTitleBodyKeyword(@Param("keyword") String keyword, Pageable pageable);
 
@@ -49,7 +49,7 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
 
     @Query("""
     select b from Board b
-    where (b.title like %:keyword% or b.body like %:keyword%)
+    where (b.title like CONCAT('%', :keyword, '%') or b.body like CONCAT('%', :keyword, '%'))
     and b.createdBy.id not in :blockedUserIds
     """)
     Page<Board> findByTitleBodyKeywordExcludingBlockedUsers(

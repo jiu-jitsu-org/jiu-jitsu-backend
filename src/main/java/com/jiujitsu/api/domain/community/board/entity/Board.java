@@ -58,4 +58,9 @@ public class Board extends BaseEntity {
             throw new ErrorException(ErrorCode.PERMISSION_DENIED);
         }
     }
+
+    // 수정 여부 체크
+    public boolean isUpdated() {
+        return !Objects.equals(getCreatedAt(), getUpdatedAt());
+    }
 }

@@ -86,10 +86,10 @@ public class BoardService {
         long commentCount = communityCommentsService.getCountComments(contentId);
 
         // 좋아요 수 조회
-        long likeCount = contentService.getContentLikeCount(Collections.singletonList(contentId))
+        long likeCount = contentService.getContentLikeCount(List.of(contentId))
                 .getOrDefault(contentId, 0L);
 
-        // 설정 여부 전화
+        // 설정 여부 확인
         Set<Long> commentedContentIds = new HashSet<>();
         Set<Long> likedContentIds = new HashSet<>();
         Set<Long> savedContentIds = new HashSet<>();
@@ -97,9 +97,9 @@ public class BoardService {
         Boolean noticeEnabled = null;
         Optional<User> user = authenticationFacade.getCurrentUserOptional();
         if (user.isPresent()) {
-            commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), Collections.singletonList(contentId));
-            likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), Collections.singletonList(contentId));
-            savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), Collections.singletonList(contentId));
+            commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), List.of(contentId));
+            likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), List.of(contentId));
+            savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), List.of(contentId));
             noticeEnabled = noticeService.isContentNoticeEnabled(user.get().getId(), contentId);
         }
 
@@ -221,7 +221,7 @@ public class BoardService {
                 ? Map.of()
                 : contentService.getContentLikeCount(contentIds);
 
-        // 설정 여부 전화
+        // 설정 여부 확인
         Set<Long> commentedContentIds = new HashSet<>();
         Set<Long> likedContentIds = new HashSet<>();
         Set<Long> savedContentIds = new HashSet<>();
