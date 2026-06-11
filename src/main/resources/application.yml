@@ -36,6 +36,7 @@ jwt:
   secret: jiujitsu-secret-key-for-development-only-change-in-production-environment
   access-token-validity: 3600000
   refresh-token-validity: 604800000
+  temporary-token-validity: 300000
 
 # Swagger/OpenAPI 공통
 springdoc:

@@ -27,12 +27,6 @@ public class AuditorAwareImpl implements AuditorAware<User> {
 
         Object principal = authentication.getPrincipal();
 
-        if (principal instanceof CustomUserPrincipal customUser) {
-            User user = new User();
-            user.setId(customUser.getUserId());
-            return Optional.of(user);
-        }
-
         if (principal instanceof Long userId) {
             User user = new User();
             user.setId(userId);

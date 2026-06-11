@@ -1,6 +1,5 @@
 package com.jiujitsu.api.global.util;
 
-import com.jiujitsu.api.global.security.CustomUserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -30,10 +29,6 @@ public class AuthenticationUtil {
 
 
         Object principal = authentication.getPrincipal();
-
-        if (principal instanceof CustomUserPrincipal customUser) {
-            return Optional.of(customUser.getUserId());
-        }
 
         if (principal instanceof Long userId) {
             return Optional.of(userId);
