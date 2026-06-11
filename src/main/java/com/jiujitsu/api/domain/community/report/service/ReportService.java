@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.report.service;
 
+import com.jiujitsu.api.domain.community.Hideable;
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
@@ -9,6 +10,7 @@ import com.jiujitsu.api.domain.community.report.dto.ReportCreateRequest;
 import com.jiujitsu.api.domain.community.report.entity.Report;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.mapper.ReportMapper;
+import com.jiujitsu.api.domain.community.report.repository.ReportCountProjection;
 import com.jiujitsu.api.domain.community.report.repository.ReportRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -45,7 +47,8 @@ public class ReportService {
     public void createReport(ReportCreateRequest request) {
         User reporter = authenticationFacade.getCurrentUser();
 
-        validateTargetAndNotSelfReport(request, reporter);
+        // 대상 검증 + 자기 신고 방지 (조회한 엔티티 재사용)
+        Hideable target = validateTargetAndNotSelfReport(request, reporter);
 
         if (reportRepository.existsByCreatedByAndReportTypeAndTargetId(reporter, request.reportType(), request.targetId())) {
             throw new ErrorException(ErrorCode.ALREADY_REPORTED);
@@ -57,7 +60,7 @@ public class ReportService {
                 .reason(request.reason())
                 .build());
 
-        autoHideIfThresholdReached(request.reportType(), request.targetId());
+        autoHideIfThresholdReached(request.reportType(), request.targetId(), target);
     }
 
     /**
@@ -85,12 +88,17 @@ public class ReportService {
     public Page<AdminReportListResponse> getAdminReports(Pageable pageable) {
         Page<Report> reports = reportRepository.findAllWithReporter(pageable);
 
-        List<Long> boardTargetIds = reports.stream()
-                .filter(r -> r.getReportType() == ReportType.BOARD)
-                .map(Report::getTargetId).distinct().toList();
-        List<Long> commentTargetIds = reports.stream()
-                .filter(r -> r.getReportType() == ReportType.COMMENT)
-                .map(Report::getTargetId).distinct().toList();
+        // 타입별 targetId 한 번에 분리
+        Map<ReportType, List<Long>> targetIdsByType = reports.stream()
+                .collect(Collectors.groupingBy(
+                        Report::getReportType,
+                        Collectors.mapping(Report::getTargetId, Collectors.toList())
+                ));
+
+        List<Long> boardTargetIds = targetIdsByType.getOrDefault(ReportType.BOARD, List.of())
+                .stream().distinct().toList();
+        List<Long> commentTargetIds = targetIdsByType.getOrDefault(ReportType.COMMENT, List.of())
+                .stream().distinct().toList();
 
         Map<Long, Board> boardMap = boardTargetIds.isEmpty()
                 ? Map.of()
@@ -102,12 +110,10 @@ public class ReportService {
                 : communityCommentsRepository.findAllById(commentTargetIds).stream()
                         .collect(Collectors.toMap(CommunityComments::getId, c -> c));
 
-        Map<Long, Long> boardReportCounts = boardTargetIds.isEmpty()
-                ? Map.of()
-                : toCountMap(reportRepository.countByReportTypeAndTargetIds(ReportType.BOARD, boardTargetIds));
-        Map<Long, Long> commentReportCounts = commentTargetIds.isEmpty()
-                ? Map.of()
-                : toCountMap(reportRepository.countByReportTypeAndTargetIds(ReportType.COMMENT, commentTargetIds));
+        Map<Long, Long> boardReportCounts = toCountMap(
+                reportRepository.countByReportTypeAndTargetIds(ReportType.BOARD, boardTargetIds));
+        Map<Long, Long> commentReportCounts = toCountMap(
+                reportRepository.countByReportTypeAndTargetIds(ReportType.COMMENT, commentTargetIds));
 
         return reports.map(report -> {
             if (report.getReportType() == ReportType.BOARD) {
@@ -144,41 +150,35 @@ public class ReportService {
         comment.unhide();
     }
 
-    private void validateTargetAndNotSelfReport(ReportCreateRequest request, User reporter) {
+    // 대상 존재 확인 + 자기 신고 방지, 조회한 엔티티 반환
+    private Hideable validateTargetAndNotSelfReport(ReportCreateRequest request, User reporter) {
         if (request.reportType() == ReportType.BOARD) {
             Board board = boardRepository.findByContent_Id(request.targetId())
                     .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
             if (reporter.equals(board.getCreatedBy())) {
                 throw new ErrorException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
             }
+            return board;
         } else {
             CommunityComments comment = communityCommentsRepository.findById(request.targetId())
                     .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
             if (reporter.equals(comment.getCreatedBy())) {
                 throw new ErrorException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
             }
+            return comment;
         }
     }
 
-    private void autoHideIfThresholdReached(ReportType reportType, Long targetId) {
+    // 신고 수 임계값 도달 시 자동 숨김 (validate에서 조회한 엔티티 재사용)
+    private void autoHideIfThresholdReached(ReportType reportType, Long targetId, Hideable target) {
         long count = reportRepository.countByReportTypeAndTargetId(reportType, targetId);
-        if (count < AUTO_HIDE_THRESHOLD) return;
-
-        if (reportType == ReportType.BOARD) {
-            boardRepository.findByContent_Id(targetId).ifPresent(board -> {
-                if (!board.isHidden()) board.hide();
-            });
-        } else {
-            communityCommentsRepository.findById(targetId).ifPresent(comment -> {
-                if (!comment.isHidden()) comment.hide();
-            });
+        if (count >= AUTO_HIDE_THRESHOLD && !target.isHidden()) {
+            target.hide();
         }
     }
 
-    private Map<Long, Long> toCountMap(List<Object[]> rows) {
-        return rows.stream().collect(Collectors.toMap(
-                row -> (Long) row[0],
-                row -> (Long) row[1]
-        ));
+    private Map<Long, Long> toCountMap(List<ReportCountProjection> projections) {
+        return projections.stream()
+                .collect(Collectors.toMap(ReportCountProjection::getTargetId, ReportCountProjection::getCount));
     }
 }

@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.comment.entity;
 
+import com.jiujitsu.api.domain.community.Hideable;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.global.entity.BaseEntity;
@@ -26,7 +27,7 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class CommunityComments extends BaseEntity {
+public class CommunityComments extends BaseEntity implements Hideable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

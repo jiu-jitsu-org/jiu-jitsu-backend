@@ -36,12 +36,12 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     Page<Report> findAllWithReporter(Pageable pageable);
 
     @Query("""
-            SELECT r.targetId, COUNT(r)
+            SELECT r.targetId AS targetId, COUNT(r) AS count
             FROM Report r
             WHERE r.reportType = :reportType
               AND r.targetId IN :targetIds
             GROUP BY r.targetId
             """)
-    List<Object[]> countByReportTypeAndTargetIds(@Param("reportType") ReportType reportType,
-                                                 @Param("targetIds") List<Long> targetIds);
+    List<ReportCountProjection> countByReportTypeAndTargetIds(@Param("reportType") ReportType reportType,
+                                                              @Param("targetIds") List<Long> targetIds);
 }
