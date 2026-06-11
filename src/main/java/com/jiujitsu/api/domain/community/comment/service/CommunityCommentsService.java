@@ -17,6 +17,8 @@ import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRep
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.community.comment.event.CommentNoticeEvent;
+import com.jiujitsu.api.domain.community.report.entity.ReportType;
+import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
@@ -44,6 +46,7 @@ public class CommunityCommentsService {
     private final ContentRepository contentRepository;
     private final AuthenticationFacade authenticationFacade;
     private final UserBlockService userBlockService;
+    private final ReportService reportService;
     private final ApplicationEventPublisher eventPublisher;
     private final CommentFactory commentFactory;
     private final CommentMapper commentMapper;
@@ -65,9 +68,13 @@ public class CommunityCommentsService {
 
         // 댓글 전체 리스트 조회(댓글+대댓글) - createdBy, content fetch join으로 N+1 방지
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
-        List<CommunityComments> comments = blockedUserIds.isEmpty()
-                ? communityCommentsRepository.findByContentIdOrderByCreatedAtDesc(contentId)
-                : communityCommentsRepository.findByContentIdExcludingBlockedUsersOrderByCreatedAtDesc(contentId, blockedUserIds);
+        List<Long> reportedCommentIds = reportService.getReportedTargetIds(ReportType.COMMENT);
+
+        List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
+        List<Long> excludedCommentIds = reportedCommentIds.isEmpty() ? List.of(-1L) : reportedCommentIds;
+
+        List<CommunityComments> comments = communityCommentsRepository
+                .findByContentIdFiltered(contentId, excludedAuthorIds, excludedCommentIds);
 
 
         // 좋아요 조회(n+1 방지 > 전체 조회 후 mapping)
@@ -232,7 +239,7 @@ public class CommunityCommentsService {
     @Transactional(readOnly = true)
     public long getCountComments(Long contentId) {
         return communityCommentsRepository
-                .countByContent_IdAndParentIdIsNull(contentId);
+                .countByContent_IdAndParentIdIsNullAndHiddenAtIsNull(contentId);
     }
 
     /**

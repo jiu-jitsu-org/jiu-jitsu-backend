@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -38,6 +39,9 @@ public class Board extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String body;    // 내용
 
+    @Column
+    private LocalDateTime hiddenAt; // 숨김일시
+
     // todo : 투표, 태그
 
     public void changeTitle(String title) {
@@ -57,6 +61,18 @@ public class Board extends BaseEntity {
         if (!Objects.equals(this.getCreatedBy(), user)) {
             throw new ErrorException(ErrorCode.PERMISSION_DENIED);
         }
+    }
+
+    public void hide() {
+        this.hiddenAt = LocalDateTime.now();
+    }
+
+    public void unhide() {
+        this.hiddenAt = null;
+    }
+
+    public boolean isHidden() {
+        return this.hiddenAt != null;
     }
 
     // 수정 여부 체크

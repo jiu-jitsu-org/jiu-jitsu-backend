@@ -14,6 +14,7 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -46,10 +47,25 @@ public class CommunityComments extends BaseEntity {
     @Builder.Default
     private List<CommentLike> likes = new ArrayList<>();   // 좋아요
 
+    @Column
+    private LocalDateTime hiddenAt;
+
     // 수정권한 체크
     public void validateOwner(User user) {
         if (!Objects.equals(this.getCreatedBy(), user)) {
             throw new ErrorException(ErrorCode.PERMISSION_DENIED);
         }
+    }
+
+    public void hide() {
+        this.hiddenAt = LocalDateTime.now();
+    }
+
+    public void unhide() {
+        this.hiddenAt = null;
+    }
+
+    public boolean isHidden() {
+        return this.hiddenAt != null;
     }
 }
