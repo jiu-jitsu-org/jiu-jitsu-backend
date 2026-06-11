@@ -84,7 +84,8 @@ public class UserController {
     @ApiErrorCodeExamples({ErrorCode.NICKNAME_DUPLICATED, ErrorCode.NICKNAME_VALIDATION})
     @GetMapping("/check/nickname")
     public Boolean duplicateNickname(@RequestParam(value = "nickname") String nickname) {
-        return userService.validateNickname(nickname);
+        userService.validateNickname(nickname);
+        return true;
     }
 
     @Operation(
@@ -94,7 +95,8 @@ public class UserController {
     @LoginErrorExamples
     @PostMapping("/appInfo")
     public Boolean insertUserAppInfo(@RequestBody UserAppInfoRequest request) {
-        return userService.insertUserAppInfo(request);
+        userService.insertUserAppInfo(request);
+        return true;
     }
 
     @Operation(
