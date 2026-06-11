@@ -3,6 +3,8 @@ package com.jiujitsu.api.domain.community.profile.controller;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileRequest;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
 import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
 import com.jiujitsu.api.global.exception.annotation.LoginErrorExamples;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +37,7 @@ public class CommunityProfileController {
             description = "현재 로그인한 사용자의 커뮤니티 프로필을 생성하거나 수정합니다."
     )
     @LoginErrorExamples
+    @ApiErrorCodeExamples({ErrorCode.PERMISSION_DENIED})
     @PostMapping
     public CommunityProfileResponse upsertMyProfile(
             @Valid @RequestBody CommunityProfileRequest request

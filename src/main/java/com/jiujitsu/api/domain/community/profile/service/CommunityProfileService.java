@@ -8,6 +8,8 @@ import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepo
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -76,9 +78,10 @@ public class CommunityProfileService {
             case TECHNIQUE -> profile.upsertTechnique(request.bestTechnique(), request.favoriteTechnique());
             case COMPETITION -> profile.upsertCompetitions(request.competitionInfoListOrEmpty());
             case OWNER_INFO -> {
-                if (Objects.equals(user.getRole(), UserRole.OWNER)) {
-                    profile.upsertOwnerInfo(request.teachingPhilosophy(), request.teachingStartDate(), request.teachingDetail());
+                if (!Objects.equals(user.getRole(), UserRole.OWNER)) {
+                    throw new ErrorException(ErrorCode.PERMISSION_DENIED);
                 }
+                profile.upsertOwnerInfo(request.teachingPhilosophy(), request.teachingStartDate(), request.teachingDetail());
             }
         }
     }
