@@ -48,11 +48,11 @@ public class ReportService {
         User reporter = authenticationFacade.getCurrentUser();
 
         // 대상 검증 + 자기 신고 방지 (조회한 엔티티 재사용)
-        Hideable target = validateTargetAndNotSelfReport(request, reporter);
-
         if (reportRepository.existsByCreatedByAndReportTypeAndTargetId(reporter, request.reportType(), request.targetId())) {
             throw new ErrorException(ErrorCode.ALREADY_REPORTED);
         }
+
+        Hideable target = validateTargetAndNotSelfReport(request, reporter);
 
         reportRepository.save(Report.builder()
                 .reportType(request.reportType())
