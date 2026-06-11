@@ -92,7 +92,7 @@ public class ReportService {
         Map<ReportType, List<Long>> targetIdsByType = reports.stream()
                 .collect(Collectors.groupingBy(
                         Report::getReportType,
-                        Collectors.mapping(Report::getTargetId, Collectors.toList())
+                        Collectors.mapping(Report::getTargetId, Collectors.toUnmodifiableList())
                 ));
 
         List<Long> boardTargetIds = targetIdsByType.getOrDefault(ReportType.BOARD, List.of())
