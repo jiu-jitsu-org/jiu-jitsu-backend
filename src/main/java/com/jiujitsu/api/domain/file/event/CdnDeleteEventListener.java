@@ -1,6 +1,6 @@
 package com.jiujitsu.api.domain.file.event;
 
-import com.jiujitsu.api.domain.file.properties.ImageKitProperties;
+import com.jiujitsu.api.global.properties.ImageKitProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;

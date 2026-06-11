@@ -9,7 +9,7 @@ import com.jiujitsu.api.domain.file.dto.CdnSignatureResponse;
 import com.jiujitsu.api.domain.file.dto.ImageFileRegisterRequest;
 import com.jiujitsu.api.domain.file.dto.ImageFileResponse;
 import com.jiujitsu.api.domain.file.event.ImageFileDeletedEvent;
-import com.jiujitsu.api.domain.file.properties.ImageKitProperties;
+import com.jiujitsu.api.global.properties.ImageKitProperties;
 import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.UserRepository;

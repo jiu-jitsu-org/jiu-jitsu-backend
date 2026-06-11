@@ -1,4 +1,4 @@
-package com.jiujitsu.api.domain.file.properties;
+package com.jiujitsu.api.global.properties;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
