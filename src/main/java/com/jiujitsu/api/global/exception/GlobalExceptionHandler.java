@@ -20,7 +20,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ErrorException.class)
     public ResponseEntity<ApiResponse<Object>> handleCustomException(ErrorException e, HttpServletRequest request) {
         ErrorCode errorCode = e.getErrorCode();
-        log.error("예외 발생: {}", e.getMessage(), e);
+
+        if (errorCode.getStatus() >= 500) {
+            log.error("서버 오류: {}", e.getMessage(), e);
+        } else {
+            log.warn("클라이언트 오류: {}", e.getMessage());
+        }
+
         request.setAttribute("api.error.type", e.getClass().getSimpleName());
         request.setAttribute("api.error.message", errorCode.getMessage());
 
@@ -59,7 +65,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = resolveValidationErrorCode(fieldError);
         String message = fieldError.getDefaultMessage();
 
-        log.error("Validation exception - field: {}, message: {}", fieldError.getField(), message);
+        log.warn("Validation exception - field: {}, message: {}", fieldError.getField(), message);
         request.setAttribute("api.error.type", e.getClass().getSimpleName());
         request.setAttribute("api.error.message", fieldError.getField() + ": " + message);
 

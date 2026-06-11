@@ -2,7 +2,6 @@ package com.jiujitsu.api.global.util;
 
 import com.jiujitsu.api.global.security.CustomUserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -12,7 +11,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Optional;
 
-@Slf4j
 public class AuthenticationUtil {
 
     /**

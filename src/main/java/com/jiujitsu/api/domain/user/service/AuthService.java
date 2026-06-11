@@ -16,13 +16,11 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.security.JwtTokenProvider;
 import com.jiujitsu.api.global.security.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
