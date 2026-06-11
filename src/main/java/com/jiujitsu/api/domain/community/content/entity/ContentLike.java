@@ -15,7 +15,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
         name = "content_like",
         indexes = {
                 @Index(name = "idx_content_like", columnList = "content_id")
-        }
+        },
+        uniqueConstraints = @UniqueConstraint(columnNames = {"content_id", "created_by"})
 )
 @Getter
 @Builder
