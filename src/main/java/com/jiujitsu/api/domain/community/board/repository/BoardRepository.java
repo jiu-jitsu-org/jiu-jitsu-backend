@@ -15,53 +15,62 @@ import java.util.Optional;
 @Repository
 public interface BoardRepository extends JpaRepository<Board, Long> {
 
-    Page<Board> findAllByCategory_Id(Long categoryId, Pageable pageable);
     Optional<Board> findByContent_Id(Long contentId);
 
-    @Query("""
-            select b
-            from Board b
-            where b.title like %:keyword%
-            or b.body like %:keyword%
-            """)
-    Page<Board> findByTitleBodyKeyword(@Param("keyword") String keyword, Pageable pageable);
-
-    Page<Board> findAllByCreatedBy(User createdBy, Pageable pageable);
+    @Query("SELECT b FROM Board b WHERE b.content.id IN :contentIds")
+    List<Board> findAllByContentIdIn(@Param("contentIds") List<Long> contentIds);
 
     @Query("""
-    select b
-    from ContentSave cs
-    join cs.content c
-    join Board b on b.content = c
-    where cs.createdBy.id = :userId
+    SELECT b FROM Board b
+    WHERE b.category.id = :categoryId
+      AND b.hiddenAt IS NULL
+      AND b.createdBy.id NOT IN :excludedAuthorIds
+      AND b.content.id NOT IN :excludedBoardContentIds
     """)
-    Page<Board> findSavedBoards(@Param("userId") Long userId, Pageable pageable);
-
-    @Query("""
-    select b from Board b
-    where b.category.id = :categoryId
-    and b.createdBy.id not in :blockedUserIds
-    """)
-    Page<Board> findAllByCategoryExcludingBlockedUsers(
+    Page<Board> findAllByCategoryFiltered(
             @Param("categoryId") Long categoryId,
-            @Param("blockedUserIds") List<Long> blockedUserIds,
+            @Param("excludedAuthorIds") List<Long> excludedAuthorIds,
+            @Param("excludedBoardContentIds") List<Long> excludedBoardContentIds,
             Pageable pageable);
 
     @Query("""
-    select b from Board b
-    where (b.title like %:keyword% or b.body like %:keyword%)
-    and b.createdBy.id not in :blockedUserIds
+    SELECT b FROM Board b
+    WHERE (b.title LIKE CONCAT('%', :keyword, '%') OR b.body LIKE CONCAT('%', :keyword, '%'))
+      AND b.hiddenAt IS NULL
+      AND b.createdBy.id NOT IN :excludedAuthorIds
+      AND b.content.id NOT IN :excludedBoardContentIds
     """)
-    Page<Board> findByTitleBodyKeywordExcludingBlockedUsers(
+    Page<Board> findByTitleBodyKeywordFiltered(
             @Param("keyword") String keyword,
-            @Param("blockedUserIds") List<Long> blockedUserIds,
+            @Param("excludedAuthorIds") List<Long> excludedAuthorIds,
+            @Param("excludedBoardContentIds") List<Long> excludedBoardContentIds,
             Pageable pageable);
 
     @Query("""
-    select b from Board b
-    where b.createdBy.id not in :blockedUserIds
+    SELECT b FROM Board b
+    WHERE b.hiddenAt IS NULL
+      AND b.createdBy.id NOT IN :excludedAuthorIds
+      AND b.content.id NOT IN :excludedBoardContentIds
     """)
-    Page<Board> findAllExcludingBlockedUsers(
-            @Param("blockedUserIds") List<Long> blockedUserIds,
+    Page<Board> findAllFiltered(
+            @Param("excludedAuthorIds") List<Long> excludedAuthorIds,
+            @Param("excludedBoardContentIds") List<Long> excludedBoardContentIds,
             Pageable pageable);
+
+    @Query("""
+    SELECT b FROM Board b
+    WHERE b.createdBy = :createdBy
+      AND b.hiddenAt IS NULL
+    """)
+    Page<Board> findAllByCreatedByAndNotHidden(@Param("createdBy") User createdBy, Pageable pageable);
+
+    @Query("""
+    SELECT b
+    FROM ContentSave cs
+    JOIN cs.content c
+    JOIN Board b ON b.content = c
+    WHERE cs.createdBy.id = :userId
+      AND b.hiddenAt IS NULL
+    """)
+    Page<Board> findSavedBoardsNotHidden(@Param("userId") Long userId, Pageable pageable);
 }

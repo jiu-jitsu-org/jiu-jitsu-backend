@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.profile.dto;
 
 import com.jiujitsu.api.domain.community.profile.entity.*;
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
+import com.jiujitsu.api.domain.user.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
@@ -29,4 +30,13 @@ public record CommunityProfileResponse(
         @Schema(description = "(관장/사범) 경력 상세") String teachingDetail,
         @Schema(description = "대회 정보") List<CompetitionInfoDto> competitions
 ) {
+    public static CommunityProfileResponse ofUserOnly(User user) {
+        return new CommunityProfileResponse(
+                user.getNickname(),
+                ImageInfo.from(user.getProfileImageFile()),
+                null, null, null, null, null,
+                null, null, null, null, null,
+                null, null, null, null, null, null, null
+        );
+    }
 }

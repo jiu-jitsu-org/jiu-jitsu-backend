@@ -23,8 +23,6 @@ public interface ContentLikeRepository extends JpaRepository<ContentLike, Long> 
    \s""")
     List<Object[]> countContentLikeByContentIds(@Param("contentIds") List<Long> contentIds);
 
-    long countByContent_Id(Long content_Id);
-
     @Query("""
     select distinct c.content.id
     from ContentLike c

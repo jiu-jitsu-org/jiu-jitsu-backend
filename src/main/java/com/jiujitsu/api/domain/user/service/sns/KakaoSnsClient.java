@@ -23,6 +23,9 @@ public class KakaoSnsClient implements SnsClient {
         if (StringUtils.equals(accessToken, "kakaoTest")) {
             return new SnsUserInfo("testid", "test@jujitsu.com");
         }
+        if (StringUtils.equals(accessToken, "kakaoTest2")) {
+            return new SnsUserInfo("testid2", "test2@jujitsu.com");
+        }
         try {
             JsonNode response = webClient.get()
                     .uri(KAKAO_USER_INFO_URL)

@@ -209,7 +209,7 @@ public class UserService {
         ownerProfileRepository.save(ownerProfile);
 
         // 관장-커뮤 프로필 매핑
-        CommunityProfile communityProfile = communityProfileRepository.findByUserId(user.getId())
+        CommunityProfile communityProfile = communityProfileRepository.findByUser(user)
                 .orElseThrow(() -> new ErrorException(ErrorCode.REQUIRED_PROFILE));
         communityProfile.insertOwnerProfile(ownerProfile);
 
