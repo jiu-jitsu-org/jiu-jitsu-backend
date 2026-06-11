@@ -56,3 +56,8 @@ fcm:
   url: https://fcm.googleapis.com/v1/projects/jiu-jitsu-lab/messages:send
   google_api: https://www.googleapis.com/auth/cloud-platform
   project_id: jiu-jitsu-lab
+
+# imageKit
+imagekit:
+  private-key: ${IMAGEKIT_PRIVATE_KEY}
+  api-url: https://api.imagekit.io/v1/files/
