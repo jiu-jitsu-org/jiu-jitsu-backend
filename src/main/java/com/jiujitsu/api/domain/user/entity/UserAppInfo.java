@@ -14,7 +14,6 @@ import java.util.List;
 @Entity
 @Table(name = "user_app_info")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -45,4 +44,12 @@ public class UserAppInfo {
     @OneToMany(mappedBy = "userAppInfo", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PushSendLog> pushSendLogs = new ArrayList<>();
+
+    public void changeOsVersion(String osVersion) {
+        this.osVersion = osVersion;
+    }
+
+    public void assignUser(User user) {
+        this.user = user;
+    }
 }

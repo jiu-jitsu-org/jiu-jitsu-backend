@@ -15,7 +15,6 @@ server:
 logging:
   level:
     root: INFO
-    com.jiujitsu.api: INFO
   pattern:
     console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} - %msg%n"
 
@@ -37,6 +36,7 @@ jwt:
   secret: jiujitsu-secret-key-for-development-only-change-in-production-environment
   access-token-validity: 3600000
   refresh-token-validity: 604800000
+  temporary-token-validity: 300000
 
 # Swagger/OpenAPI 공통
 springdoc:
@@ -56,3 +56,8 @@ fcm:
   url: https://fcm.googleapis.com/v1/projects/jiu-jitsu-lab/messages:send
   google_api: https://www.googleapis.com/auth/cloud-platform
   project_id: jiu-jitsu-lab
+
+# imageKit
+imagekit:
+  private-key: ${IMAGEKIT_PRIVATE_KEY}
+  api-url: https://api.imagekit.io/v1/files/

@@ -30,20 +30,23 @@
 ```
 src/main/java/com/jiujitsu/api/
 ├── domain/
-│   ├── auth/                   # SNS 로그인, 토큰 관리
-│   ├── user/                   # 사용자 관리
+│   ├── admin/                  # 관리자 인증 (이메일/비밀번호)
+│   ├── user/                   # 사용자 관리, 차단
 │   ├── community/
 │   │   ├── board/              # 커뮤니티 게시글
 │   │   ├── comment/            # 댓글
-│   │   └── profile/            # 주짓수 커뮤니티 프로필
+│   │   ├── profile/            # 주짓수 커뮤니티 프로필
+│   │   └── report/             # 게시물/댓글 신고
 │   ├── notice/                 # 알림
 │   ├── boot_strap/             # 앱 버전 관리
-│   └── file/                   # 이미지 CDN
+│   ├── file/                   # 이미지 CDN
+│   └── log/                    # API 호출 로그
 └── global/
     ├── config/                 # Security, Swagger, WebClient 설정
     ├── exception/              # 전역 예외 처리, 에러 코드
     ├── security/               # JWT 필터, 토큰 블랙리스트
     ├── fcm/                    # FCM 푸시 알림
+    ├── log/                    # API 로그 서비스
     └── util/                   # 공통 유틸
 ```
 
@@ -62,6 +65,13 @@ src/main/java/com/jiujitsu/api/
 | POST | `/auth/refresh` | 액세스 토큰 갱신 |
 | POST | `/auth/logout` | 로그아웃 (토큰 무효화) |
 
+### 관리자 인증 (`/api/admin/auth`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| POST | `/admin/auth/signup` | 관리자 계정 생성 (이메일/비밀번호) |
+| POST | `/admin/auth/login` | 관리자 로그인 |
+
 ### 사용자 (`/api/user`)
 
 | Method | Path | 설명 |
@@ -73,6 +83,7 @@ src/main/java/com/jiujitsu/api/
 | GET | `/user/check/nickname` | 닉네임 중복/유효성 확인 |
 | PUT | `/user/grant/owner-role` | 관장/사범 권한 부여 |
 | POST | `/user/appInfo` | 앱 정보 등록 (FCM 토큰 등) |
+| POST | `/user/block/{id}` | 유저 차단/차단 해제 (토글) |
 
 ### 커뮤니티 게시글 (`/api/board`)
 
@@ -121,11 +132,31 @@ src/main/java/com/jiujitsu/api/
 |--------|------|------|
 | GET | `/bootstrap/info` | 앱 버전 체크 (강제/선택 업데이트 여부) |
 
+### 신고 (`/api/reports`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| POST | `/reports` | 게시물/댓글 신고 (중복 신고 불가, 자기 자신 신고 불가) |
+
+### 관리자 신고 관리 (`/api/admin/reports`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/admin/reports` | 전체 신고 목록 조회 (페이징) |
+| PATCH | `/admin/reports/board/{contentId}/unhide` | 게시물 숨김 해제 |
+| PATCH | `/admin/reports/comment/{commentId}/unhide` | 댓글 숨김 해제 |
+
 ### 이미지 (`/api/image`)
 
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/image/auth` | ImageKit CDN 업로드용 서명 발급 |
+
+### API 로그 (`/api/log`) - 관리자 전용
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/log` | API 호출 로그 목록 조회 (날짜, 성공 여부 필터링, 페이징) |
 
 ---
 
@@ -149,6 +180,14 @@ src/main/java/com/jiujitsu/api/
 
 ### Owner Profile
 - 관장/사범 전용 프로필 (지도 철학, 경력 시작일, 경력 상세)
+
+### Report
+- 게시물(`BOARD`) 또는 댓글(`COMMENT`) 단위 신고
+- 동일 대상 중복 신고 방지, 자기 자신 신고 불가
+- 신고 누적 시 자동 숨김 처리 (관리자 해제 가능)
+
+### UserBlock
+- 특정 유저 차단 (토글 방식: 재요청 시 차단 해제)
 
 ---
 

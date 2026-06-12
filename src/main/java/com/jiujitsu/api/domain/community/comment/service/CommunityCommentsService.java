@@ -8,6 +8,7 @@ import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeResponse;
 import com.jiujitsu.api.domain.community.comment.entity.CommentLike;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
+import com.jiujitsu.api.domain.community.comment.event.CommentNoticeEvent;
 import com.jiujitsu.api.domain.community.comment.factory.CommentFactory;
 import com.jiujitsu.api.domain.community.comment.factory.CommentLikeFactory;
 import com.jiujitsu.api.domain.community.comment.mapper.CommentLikeMapper;
@@ -16,7 +17,6 @@ import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepositor
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
-import com.jiujitsu.api.domain.community.comment.event.CommentNoticeEvent;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -27,7 +27,6 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
