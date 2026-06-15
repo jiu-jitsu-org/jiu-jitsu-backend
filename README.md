@@ -191,10 +191,10 @@ src/main/java/com/jiujitsu/api/
 
 ### 프로파일
 
-| 프로파일 | 설명 |
-|----------|------|
+| 프로파일 | 설명                   |
+|----------|----------------------|
 | `local` | H2 인메모리 DB, 로컬 개발 환경 |
-| `dev` | PostgreSQL, 운영 서버 환경 |
+| `dev` | PostgreSQL, 개발 서버 환경 |
 
 ### 주요 환경 변수 (dev)
 
@@ -268,4 +268,4 @@ GET /actuator/health
 서버 실행 후 아래 URL에서 API 문서를 확인할 수 있습니다.
 
 - **로컬**: `http://localhost:8080/api/swagger-ui.html`
-- **운영**: `https://api.developer-chanq.xyz/api/swagger-ui.html`
+- **개발**: `https://api.developer-chanq.xyz/api/swagger-ui.html`
