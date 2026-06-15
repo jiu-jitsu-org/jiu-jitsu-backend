@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.community.board.entity.BoardListType;
 import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
+import com.jiujitsu.api.domain.community.board.service.BoardHideService;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -44,6 +46,7 @@ public class BoardService {
     private final UserBlockService userBlockService;
     private final NoticeService noticeService;
     private final ReportService reportService;
+    private final BoardHideService boardHideService;
 
     /**
      * 게시물 목록 조회
@@ -53,10 +56,13 @@ public class BoardService {
         BoardListType boardListType = boardListRequest.boardListType();
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
         List<Long> reportedContentIds = reportService.getReportedTargetIds(ReportType.BOARD);
+        List<Long> hiddenContentIds = boardHideService.getHiddenContentIds();
 
         // 빈 리스트일 때 IN 절 오류 방지용 sentinel
         List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
-        List<Long> excludedContentIds = reportedContentIds.isEmpty() ? List.of(-1L) : reportedContentIds;
+        List<Long> mergedExcludedContentIds = Stream.concat(reportedContentIds.stream(), hiddenContentIds.stream())
+                .distinct().toList();
+        List<Long> excludedContentIds = mergedExcludedContentIds.isEmpty() ? List.of(-1L) : mergedExcludedContentIds;
 
         Page<Board> page = switch (boardListType) {
             case CATEGORY -> boardRepository.findAllByCategoryFiltered(
