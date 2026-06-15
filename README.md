@@ -31,10 +31,11 @@
 src/main/java/com/jiujitsu/api/
 ├── domain/
 │   ├── auth/                   # SNS 로그인, 토큰 관리
-│   ├── user/                   # 사용자 관리
+│   ├── user/                   # 사용자 관리, 차단
 │   ├── community/
-│   │   ├── board/              # 커뮤니티 게시글
+│   │   ├── board/              # 커뮤니티 게시글, 숨김
 │   │   ├── comment/            # 댓글
+│   │   ├── report/             # 신고 (게시글/댓글)
 │   │   └── profile/            # 주짓수 커뮤니티 프로필
 │   ├── notice/                 # 알림
 │   ├── boot_strap/             # 앱 버전 관리
@@ -73,6 +74,7 @@ src/main/java/com/jiujitsu/api/
 | GET | `/user/check/nickname` | 닉네임 중복/유효성 확인 |
 | PUT | `/user/grant/owner-role` | 관장/사범 권한 부여 |
 | POST | `/user/appInfo` | 앱 정보 등록 (FCM 토큰 등) |
+| POST | `/user/block/{id}` | 유저 차단/차단해제 (toggle) |
 
 ### 커뮤니티 게시글 (`/api/board`)
 
@@ -86,6 +88,7 @@ src/main/java/com/jiujitsu/api/
 | DELETE | `/board/{id}` | 게시글 삭제 |
 | PUT | `/board/like/{id}` | 게시글 좋아요 등록/취소 |
 | PUT | `/board/save/{id}` | 게시글 저장/취소 |
+| PUT | `/board/hide/{id}` | 게시글 숨김/숨김해제 (toggle, 본인 게시글 불가) |
 | GET | `/board/write` | 내가 작성한 글 목록 |
 | GET | `/board/save` | 내가 저장한 글 목록 |
 
@@ -106,6 +109,22 @@ src/main/java/com/jiujitsu/api/
 | POST | `/community/profile` | 커뮤니티 프로필 생성/수정 |
 
 > 커뮤니티 프로필 포함 정보: 벨트 등급, 스트라이프, 성별, 선호 포지션/기술/서브미션, 대회 출전 이력
+
+### 신고 (`/api/reports`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| POST | `/reports` | 게시글/댓글 신고 (중복 신고 불가, 본인 신고 불가) |
+
+> 동일 대상 3회 이상 신고 시 전체 유저에게 자동 숨김 처리
+
+### 관리자 신고 관리 (`/api/admin/reports`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/admin/reports` | 신고 목록 조회 (페이징) |
+| PATCH | `/admin/reports/board/{contentId}/unhide` | 게시글 숨김 해제 |
+| PATCH | `/admin/reports/comment/{commentId}/unhide` | 댓글 숨김 해제 |
 
 ### 알림 (`/api/notice`)
 
@@ -146,6 +165,13 @@ src/main/java/com/jiujitsu/api/
 - 게시글(`Board`)은 컨텐츠(`Content`)와 1:1 관계
 - 컨텐츠에 댓글, 이미지, 좋아요 포함
 - 카테고리(`BoardCategory`) 기반 분류
+- `BoardHide`: 사용자별 게시글 숨김 (toggle, 본인 게시글 제외)
+
+### Report
+- 게시글(`BOARD`) / 댓글(`COMMENT`) 신고
+- 동일 대상 3회 이상 신고 시 `hiddenAt` 자동 설정 → 전체 숨김
+- 신고자 본인에게는 즉시 숨김 처리
+- 관리자가 숨김 해제 가능
 
 ### Owner Profile
 - 관장/사범 전용 프로필 (지도 철학, 경력 시작일, 경력 상세)
