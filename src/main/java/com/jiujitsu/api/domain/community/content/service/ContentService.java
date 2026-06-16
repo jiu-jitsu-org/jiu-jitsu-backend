@@ -5,8 +5,6 @@ import com.jiujitsu.api.domain.community.content.dto.ContentSaveResponse;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentLike;
 import com.jiujitsu.api.domain.community.content.entity.ContentSave;
-import com.jiujitsu.api.domain.community.content.factory.ContentLikeFactory;
-import com.jiujitsu.api.domain.community.content.factory.ContentSaveFactory;
 import com.jiujitsu.api.domain.community.content.mapper.ContentLikeMapper;
 import com.jiujitsu.api.domain.community.content.mapper.ContentSaveMapper;
 import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
@@ -20,7 +18,6 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,17 +25,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
 @Transactional
 public class ContentService {
     private final AuthenticationFacade authenticationFacade;
     private final ContentRepository contentRepository;
     private final ContentLikeRepository contentLikeRepository;
-    private final ContentLikeFactory contentLikeFactory;
     private final ContentLikeMapper contentLikeMapper;
     private final ContentSaveRepository contentSaveRepository;
-    private final ContentSaveFactory contentSaveFactory;
     private final ContentSaveMapper contentSaveMapper;
     private final FcmPushEventPublisher fcmPushEventPublisher;
     private final NoticeService noticeService;
@@ -63,7 +57,7 @@ public class ContentService {
             contentLikeRepository.delete(existLike.get());
         } else {
             // 좋아요 등록
-            newLike = contentLikeFactory.createCommentLike(content);
+            newLike = ContentLike.builder().content(content).build();
             contentLikeRepository.save(newLike);
 
             if (!Objects.equals(user.getId(), content.getCreatedBy().getId())) {
@@ -109,11 +103,11 @@ public class ContentService {
         Optional<ContentSave> existSave = contentSaveRepository.findByContentIdAndCreatedBy(id, user);
 
         if (existSave.isPresent()) {
-            // 좋아요 취소
+            // 저장 취소
             contentSaveRepository.delete(existSave.get());
         } else {
-            // 좋아요 등록
-            newSave = contentSaveFactory.createCommentSave(content);
+            // 저장 등록
+            newSave = ContentSave.builder().content(content).build();
             contentSaveRepository.save(newSave);
         }
 

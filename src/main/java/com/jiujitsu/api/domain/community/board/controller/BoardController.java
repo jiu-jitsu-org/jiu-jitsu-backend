@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.board.controller;
 
 import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.service.BoardCategoryService;
+import com.jiujitsu.api.domain.community.board.service.BoardHideService;
 import com.jiujitsu.api.domain.community.board.service.BoardService;
 import com.jiujitsu.api.domain.community.content.dto.ContentLikeResponse;
 import com.jiujitsu.api.domain.community.content.dto.ContentSaveResponse;
@@ -32,6 +33,7 @@ public class BoardController {
 
     private final BoardService boardService;
     private final BoardCategoryService boardCategoryService;
+    private final BoardHideService boardHideService;
     private final ContentService contentService;
 
     /**
@@ -112,6 +114,16 @@ public class BoardController {
             @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
     ) {
         return contentService.save(id);
+    }
+
+    @Operation(summary = "게시물 숨김/숨김해제", description = "게시물을 숨기거나 숨김 해제합니다. (true = 숨김, false = 숨김해제)")
+    @LoginErrorExamples
+    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND, ErrorCode.SELF_HIDE_NOT_ALLOWED})
+    @PutMapping("/hide/{id}")
+    public Boolean hide(
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
+    ) {
+        return boardHideService.toggleHide(id);
     }
 
     @Operation(summary = "내가 작성한 글 조회", description = "내가 작성한 글 목록을 조회합니다.")

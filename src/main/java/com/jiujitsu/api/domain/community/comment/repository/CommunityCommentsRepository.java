@@ -14,53 +14,47 @@ import java.util.Set;
 public interface CommunityCommentsRepository extends JpaRepository<CommunityComments, Long> {
 
     /**
-     * Content 다건의 상위 댓글 수 조회 (parentId가 null인 댓글만, 대댓글 제외)
-     * @param contentIds Content ID 목록
-     * @return [id, count] 형태의 리스트
+     * Content 다건의 상위 댓글 수 조회 (hiddenAt IS NULL, parentId가 null인 댓글만)
      */
     @Query("""
-        select c.content.id, count(c)
-        from CommunityComments c
-        where c.content.id in :contentIds
-            and c.parentId is null
-        group by c.content.id
-   \s""")
+        SELECT c.content.id, COUNT(c)
+        FROM CommunityComments c
+        WHERE c.content.id IN :contentIds
+          AND c.parentId IS NULL
+          AND c.hiddenAt IS NULL
+        GROUP BY c.content.id
+        """)
     List<Object[]> countTopLevelCommentsByContentIds(@Param("contentIds") List<Long> contentIds);
 
     /**
-     * Content 단건의 상위 댓글 수 조회 (parentId가 null인 댓글만, 대댓글 제외)
+     * Content 단건의 상위 댓글 수 조회 (hiddenAt IS NULL, parentId가 null인 댓글만)
      */
-    long countByContent_IdAndParentIdIsNull(Long content_Id);
+    long countByContent_IdAndParentIdIsNullAndHiddenAtIsNull(Long contentId);
 
     /**
-     * contents의 전체 댓글 조회(댓글 + 대댓글)
+     * 댓글 목록 조회 (hiddenAt IS NULL, 차단 유저 + 신고한 댓글 제외)
      */
     @Query("""
-    select c from CommunityComments c
-    left join fetch c.createdBy
-    left join fetch c.content
-    where c.content.id = :contentId
-    order by c.createdAt desc
+    SELECT c FROM CommunityComments c
+    LEFT JOIN FETCH c.createdBy
+    LEFT JOIN FETCH c.content
+    WHERE c.content.id = :contentId
+      AND c.hiddenAt IS NULL
+      AND c.createdBy.id NOT IN :excludedAuthorIds
+      AND c.id NOT IN :excludedCommentIds
+    ORDER BY c.createdAt DESC
     """)
-    List<CommunityComments> findByContentIdOrderByCreatedAtDesc(@Param("contentId") Long contentId);
-
-    @Query("""
-    select distinct c.content.id
-    from CommunityComments c
-    where c.createdBy.id = :userId
-      and c.content.id in :contentIds
-    """)
-    Set<Long> findUserCommentedContentIds(@Param("userId")Long userId, @Param("contentIds")List<Long> contentIds);
-
-    @Query("""
-    select c from CommunityComments c
-    left join fetch c.createdBy
-    left join fetch c.content
-    where c.content.id = :contentId
-    and c.createdBy.id not in :blockedUserIds
-    order by c.createdAt desc
-    """)
-    List<CommunityComments> findByContentIdExcludingBlockedUsersOrderByCreatedAtDesc(
+    List<CommunityComments> findByContentIdFiltered(
             @Param("contentId") Long contentId,
-            @Param("blockedUserIds") Collection<Long> blockedUserIds);
+            @Param("excludedAuthorIds") Collection<Long> excludedAuthorIds,
+            @Param("excludedCommentIds") Collection<Long> excludedCommentIds);
+
+    @Query("""
+    SELECT DISTINCT c.content.id
+    FROM CommunityComments c
+    WHERE c.createdBy.id = :userId
+      AND c.content.id IN :contentIds
+    """)
+    Set<Long> findUserCommentedContentIds(@Param("userId") Long userId,
+                                          @Param("contentIds") List<Long> contentIds);
 }

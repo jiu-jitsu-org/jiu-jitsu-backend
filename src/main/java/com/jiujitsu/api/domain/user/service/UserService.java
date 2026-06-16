@@ -21,7 +21,6 @@ import com.jiujitsu.api.global.security.JwtTokenProvider;
 import com.jiujitsu.api.global.security.TokenBlacklistService;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +30,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -209,7 +207,7 @@ public class UserService {
         ownerProfileRepository.save(ownerProfile);
 
         // 관장-커뮤 프로필 매핑
-        CommunityProfile communityProfile = communityProfileRepository.findByUserId(user.getId())
+        CommunityProfile communityProfile = communityProfileRepository.findByUser(user)
                 .orElseThrow(() -> new ErrorException(ErrorCode.REQUIRED_PROFILE));
         communityProfile.insertOwnerProfile(ownerProfile);
 
@@ -219,7 +217,7 @@ public class UserService {
     /**
      * 닉네임 유효성 체크
      */
-    public Boolean validateNickname(String nickname) {
+    public void validateNickname(String nickname) {
         // 유효성 체크
         String pattern = "^[가-힣a-zA-Z0-9]{2,12}$";
         if (!nickname.matches(pattern)) {
@@ -229,13 +227,12 @@ public class UserService {
         if (userRepository.findByNickname(nickname).isPresent()) {
             throw new ErrorException(ErrorCode.NICKNAME_DUPLICATED);
         }
-        return true;
     }
 
     /**
      * 앱 정보 등록
      */
-    public Boolean insertUserAppInfo(UserAppInfoRequest userAppInfoRequest) {
+    public void insertUserAppInfo(UserAppInfoRequest userAppInfoRequest) {
         // 사용자 조회
         User user = authenticationFacade.getCurrentUser();
 
@@ -248,7 +245,7 @@ public class UserService {
             // 동일한 fcm 토큰 있는 경우
             UserAppInfo userAppInfo = userAppInfoOptional.get();
             if (!Objects.equals(userAppInfo.getOsVersion(), userAppInfoRequest.getOsVersion())) {
-                userAppInfo.setOsVersion(userAppInfo.getOsVersion());
+                userAppInfo.changeOsVersion(userAppInfoRequest.getOsVersion());
                 userAppInfoRepository.save(userAppInfo);
             }
         } else {
@@ -261,38 +258,18 @@ public class UserService {
 
             // 동일한 fcm 토큰 없는 경우
             UserAppInfo userAppInfo = userAppInfoRequest.toEntity();
-            userAppInfo.setUser(user);
+            userAppInfo.assignUser(user);
 
             userAppInfoRepository.save(userAppInfo);
         }
-
-        return true;
-    }
-
-    private User createNewUser(SnsProvider snsProvider, SnsUserInfo snsUserInfo) {
-        User newUser = User.builder()
-                .email(snsUserInfo.getEmail())
-                .nickname(snsUserInfo.getNickname())
-                .snsProvider(snsProvider)
-                .snsId(snsUserInfo.getSnsId())
-                .ownerRequested(false)
-                .role(UserRole.USER)
-                .status(UserStatus.ACTIVE)
-                .build();
-
-        return userRepository.save(newUser);
     }
 
     public List<UserAppInfoResponse> getUserAppInfo() {
         User user = authenticationFacade.getCurrentUser();
-        List<UserAppInfoResponse> result = new ArrayList<>();
-        for (UserAppInfo appInfo : user.getAppInfos()) {
-            result.add(
-                    UserAppInfoResponse.toResponse(appInfo, user.getNickname())
-            );
-        }
 
-        return result;
+        return user.getAppInfos().stream()
+                .map(info -> UserAppInfoResponse.toResponse(info, user.getNickname()))
+                .toList();
     }
 
     public List<UserAppInfoResponse> getUserAppInfoByNickname(String nickname) {

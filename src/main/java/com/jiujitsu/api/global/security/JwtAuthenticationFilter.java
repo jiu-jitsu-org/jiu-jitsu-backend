@@ -53,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
-            log.error("JWT 인증 처리 중 오류 발생: {}", e.getMessage());
+            log.error("JWT 인증 처리 중 오류 발생", e);
         }
         
         filterChain.doFilter(request, response);

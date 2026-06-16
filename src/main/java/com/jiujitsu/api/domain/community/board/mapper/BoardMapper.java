@@ -10,7 +10,6 @@ import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Objects;
 
 @Component
 public class BoardMapper {
@@ -54,7 +53,7 @@ public class BoardMapper {
                 board.getBody(),
                 board.getCreatedAt(),
                 board.getUpdatedAt(),
-                !Objects.equals(board.getCreatedAt(), board.getUpdatedAt()),
+                board.isUpdated(),
                 commentCount,
                 likeCount,
                 isCommented,
@@ -78,7 +77,7 @@ public class BoardMapper {
                 board.getBody(),
                 board.getCreatedAt(),
                 board.getUpdatedAt(),
-                !Objects.equals(board.getCreatedAt(), board.getUpdatedAt()),
+                board.isUpdated(),
                 null,
                 null,
                 null,

@@ -3,14 +3,12 @@ package com.jiujitsu.api.domain.community.comment.event;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CommentNoticeEventListener {

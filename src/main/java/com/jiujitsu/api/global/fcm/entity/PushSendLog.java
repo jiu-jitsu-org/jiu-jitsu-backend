@@ -10,7 +10,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Entity
 @Table(name = "push_send_log")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

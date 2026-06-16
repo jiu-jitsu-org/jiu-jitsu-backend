@@ -99,61 +99,6 @@ public class SwaggerConfig {
         }
     }
 
-//    @Bean
-//    public OperationCustomizer customize() {
-//        return (operation, handlerMethod) -> {
-//
-//            Set<ErrorCode> allErrorCodes = new LinkedHashSet<>();
-//
-//            // 메서드 어노테이션
-//            collectErrorCodes(
-//                    handlerMethod.getMethod(),
-//                    allErrorCodes
-//            );
-//
-//            // 클래스 어노테이션
-//            collectErrorCodes(
-//                    handlerMethod.getBeanType(),
-//                    allErrorCodes
-//            );
-//
-//            if (!allErrorCodes.isEmpty()) {
-//                generateErrorCodeResponseExample(
-//                        operation,
-//                        allErrorCodes.toArray(new ErrorCode[0])
-//                );
-//            }
-//
-//            return operation;
-//        };
-//    }
-//
-//    private void collectErrorCodes(
-//            AnnotatedElement element,
-//            Set<ErrorCode> allErrorCodes
-//    ) {
-//
-//        ApiErrorCodeExamples examples =
-//                AnnotatedElementUtils.findMergedAnnotation(
-//                        element,
-//                        ApiErrorCodeExamples.class
-//                );
-//
-//        if (examples != null) {
-//            allErrorCodes.addAll(Arrays.asList(examples.value()));
-//        }
-//
-//        ApiErrorCodeExample example =
-//                AnnotatedElementUtils.findMergedAnnotation(
-//                        element,
-//                        ApiErrorCodeExample.class
-//                );
-//
-//        if (example != null) {
-//            allErrorCodes.add(example.value());
-//        }
-//    }
-
     // ErrorCode 여러 개 응답값
     private void generateErrorCodeResponseExample(Operation operation, ErrorCode[] errorCodes) {
         ApiResponses responses = operation.getResponses();
@@ -169,20 +114,6 @@ public class SwaggerConfig {
                 ).collect(Collectors.groupingBy(ExampleHolder::getCode));
 
         addExampleToResponses(responses, statusWithExampleHolders);
-    }
-
-    // ErrorCode 한 개 응답값
-    private void generateErrorCodeResponseExample(Operation operation, ErrorCode errorCode) {
-        ApiResponses responses = operation.getResponses();
-
-        // ExampleHolder 객체 생성 및 ApiResponses에 추가
-        ExampleHolder exampleHolder = ExampleHolder.builder()
-                .holder(getSwaggerExample(errorCode))
-                .name(errorCode.name())
-                .code(errorCode.getStatus())
-                .build();
-
-        addExamplesToResponses(responses, exampleHolder);
     }
 
     private Example getSwaggerExample(ErrorCode errorCode) {
@@ -212,16 +143,5 @@ public class SwaggerConfig {
                     responses.addApiResponse(String.valueOf(status), apiResponse);
                 }
         );
-    }
-
-    private void addExamplesToResponses(ApiResponses responses, ExampleHolder exampleHolder) {
-        Content content = new Content();
-        MediaType mediaType = new MediaType();
-        io.swagger.v3.oas.models.responses.ApiResponse apiResponse = new io.swagger.v3.oas.models.responses.ApiResponse();
-
-        mediaType.addExamples(exampleHolder.getName(), exampleHolder.getHolder());
-        content.addMediaType("application/json", mediaType);
-        apiResponse.setContent(content);
-        responses.addApiResponse(String.valueOf(exampleHolder.getCode()), apiResponse);
     }
 }

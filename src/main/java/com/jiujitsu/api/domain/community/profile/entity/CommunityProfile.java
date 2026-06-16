@@ -135,10 +135,6 @@ public class CommunityProfile {
         this.favoritePosition = favoritePosition;
     }
 
-    public void upsertFavoritePosition(PositionType favoritePosition) {
-        this.favoritePosition = favoritePosition;
-    }
-
     /**
      * 서브미션 수정
      */
@@ -162,7 +158,7 @@ public class CommunityProfile {
     public void upsertCompetitions(List<CompetitionInfoDto> competitionInfos) {
         this.competitions = competitionInfos.stream()
                 .map(CompetitionInfoDto::toEntity)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**

@@ -50,27 +50,7 @@ public class CommunityProfileMapper {
      * 프로필 응답 생성 - User 정보만
      */
     public CommunityProfileResponse getCommunityProfileResponseUser(User user) {
-        return new CommunityProfileResponse(
-                user.getNickname(),
-                ImageInfo.from(user.getProfileImageFile()),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-        );
+        return CommunityProfileResponse.ofUserOnly(user);
     }
 
     //Owner 프로필 가져오기

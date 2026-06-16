@@ -7,9 +7,12 @@ import com.jiujitsu.api.domain.community.board.entity.BoardListType;
 import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
+import com.jiujitsu.api.domain.community.board.service.BoardHideService;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
+import com.jiujitsu.api.domain.community.report.entity.ReportType;
+import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -17,16 +20,16 @@ import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Stream;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -41,6 +44,8 @@ public class BoardService {
     private final ContentService contentService;
     private final UserBlockService userBlockService;
     private final NoticeService noticeService;
+    private final ReportService reportService;
+    private final BoardHideService boardHideService;
 
     /**
      * 게시물 목록 조회
@@ -49,24 +54,23 @@ public class BoardService {
     public Page<BoardListResponse> getList(BoardListRequest boardListRequest, Pageable pageable) {
         BoardListType boardListType = boardListRequest.boardListType();
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
+        List<Long> reportedContentIds = reportService.getReportedTargetIds(ReportType.BOARD);
+        List<Long> hiddenContentIds = boardHideService.getHiddenContentIds();
 
-        // 게시판 조회
+        // 빈 리스트일 때 IN 절 오류 방지용 sentinel
+        List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
+        List<Long> mergedExcludedContentIds = Stream.concat(reportedContentIds.stream(), hiddenContentIds.stream())
+                .distinct().toList();
+        List<Long> excludedContentIds = mergedExcludedContentIds.isEmpty() ? List.of(-1L) : mergedExcludedContentIds;
+
         Page<Board> page = switch (boardListType) {
-            case CATEGORY -> {
-                Long categoryId = boardListRequest.categoryId();
-                yield blockedUserIds.isEmpty()
-                        ? boardRepository.findAllByCategory_Id(categoryId, pageable)
-                        : boardRepository.findAllByCategoryExcludingBlockedUsers(categoryId, blockedUserIds, pageable);
-            }
+            case CATEGORY -> boardRepository.findAllByCategoryFiltered(
+                    boardListRequest.categoryId(), excludedAuthorIds, excludedContentIds, pageable);
             case SEARCH -> {
                 String keyword = StringUtils.trimToEmpty(boardListRequest.searchKeyword()).toUpperCase(Locale.ROOT);
-                yield blockedUserIds.isEmpty()
-                        ? boardRepository.findByTitleBodyKeyword(keyword, pageable)
-                        : boardRepository.findByTitleBodyKeywordExcludingBlockedUsers(keyword, blockedUserIds, pageable);
+                yield boardRepository.findByTitleBodyKeywordFiltered(keyword, excludedAuthorIds, excludedContentIds, pageable);
             }
-            default -> blockedUserIds.isEmpty()
-                    ? boardRepository.findAll(pageable)
-                    : boardRepository.findAllExcludingBlockedUsers(blockedUserIds, pageable);
+            default -> boardRepository.findAllFiltered(excludedAuthorIds, excludedContentIds, pageable);
         };
 
         return mapBoardsToResponse(page);
@@ -80,16 +84,28 @@ public class BoardService {
         // 게시글 조회
         Board board = boardRepository.findByContent_Id(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
+
+        // 전체 숨김 처리된 게시물
+        if (board.isHidden()) {
+            throw new ErrorException(ErrorCode.BOARD_NOT_FOUND);
+        }
+
+        // 신고한 게시물은 신고자에게 숨김
+        authenticationFacade.getCurrentUserOptional().ifPresent(user -> {
+            if (reportService.hasReported(user, ReportType.BOARD, id)) {
+                throw new ErrorException(ErrorCode.BOARD_NOT_FOUND);
+            }
+        });
         Long contentId = board.getContent().getId();
 
         // 댓글 수 조회
         long commentCount = communityCommentsService.getCountComments(contentId);
 
         // 좋아요 수 조회
-        long likeCount = contentService.getContentLikeCount(Collections.singletonList(contentId))
+        long likeCount = contentService.getContentLikeCount(List.of(contentId))
                 .getOrDefault(contentId, 0L);
 
-        // 설정 여부 전화
+        // 설정 여부 확인
         Set<Long> commentedContentIds = new HashSet<>();
         Set<Long> likedContentIds = new HashSet<>();
         Set<Long> savedContentIds = new HashSet<>();
@@ -97,9 +113,9 @@ public class BoardService {
         Boolean noticeEnabled = null;
         Optional<User> user = authenticationFacade.getCurrentUserOptional();
         if (user.isPresent()) {
-            commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), Collections.singletonList(contentId));
-            likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), Collections.singletonList(contentId));
-            savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), Collections.singletonList(contentId));
+            commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), List.of(contentId));
+            likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), List.of(contentId));
+            savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), List.of(contentId));
             noticeEnabled = noticeService.isContentNoticeEnabled(user.get().getId(), contentId);
         }
 
@@ -142,7 +158,7 @@ public class BoardService {
      */
     public BoardResponse update(Long id, BoardUpdateRequest request) {
         // 게시물 조회
-        Board board = boardRepository.findById(id)
+        Board board = boardRepository.findByContent_Id(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
         // 권한 체크
@@ -189,7 +205,7 @@ public class BoardService {
     @Transactional(readOnly = true)
     public Page<BoardListResponse> getWriteList(Pageable pageable) {
         User user = authenticationFacade.getCurrentUser();
-        Page<Board> page = boardRepository.findAllByCreatedBy(user, pageable);
+        Page<Board> page = boardRepository.findAllByCreatedByAndNotHidden(user, pageable);
 
         return mapBoardsToResponse(page);
     }
@@ -200,7 +216,7 @@ public class BoardService {
     @Transactional(readOnly = true)
     public Page<BoardListResponse> getSaveList(Pageable pageable) {
         User user = authenticationFacade.getCurrentUser();
-        Page<Board> page = boardRepository.findSavedBoards(user.getId(), pageable);
+        Page<Board> page = boardRepository.findSavedBoardsNotHidden(user.getId(), pageable);
 
         return mapBoardsToResponse(page);
     }
@@ -221,7 +237,7 @@ public class BoardService {
                 ? Map.of()
                 : contentService.getContentLikeCount(contentIds);
 
-        // 설정 여부 전화
+        // 설정 여부 확인
         Set<Long> commentedContentIds = new HashSet<>();
         Set<Long> likedContentIds = new HashSet<>();
         Set<Long> savedContentIds = new HashSet<>();

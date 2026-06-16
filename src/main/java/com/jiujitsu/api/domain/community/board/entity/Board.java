@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.board.entity;
 
+import com.jiujitsu.api.domain.community.Hideable;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.global.entity.BaseEntity;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -21,7 +23,7 @@ import java.util.Objects;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Board extends BaseEntity {
+public class Board extends BaseEntity implements Hideable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -47,6 +49,10 @@ public class Board extends BaseEntity {
     public void addTags(List<BoardTag> newTags) {
         this.tags.addAll(newTags);
     }
+    @Column
+    private LocalDateTime hiddenAt; // 숨김일시
+
+    // todo : 투표, 태그
 
     public void changeTitle(String title) {
         this.title = title;
@@ -65,5 +71,22 @@ public class Board extends BaseEntity {
         if (!Objects.equals(this.getCreatedBy(), user)) {
             throw new ErrorException(ErrorCode.PERMISSION_DENIED);
         }
+    }
+
+    public void hide() {
+        this.hiddenAt = LocalDateTime.now();
+    }
+
+    public void unhide() {
+        this.hiddenAt = null;
+    }
+
+    public boolean isHidden() {
+        return this.hiddenAt != null;
+    }
+
+    // 수정 여부 체크
+    public boolean isUpdated() {
+        return !Objects.equals(getCreatedAt(), getUpdatedAt());
     }
 }

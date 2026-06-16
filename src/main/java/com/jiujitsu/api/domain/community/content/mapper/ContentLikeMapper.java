@@ -5,8 +5,6 @@ import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentLike;
 import org.springframework.stereotype.Component;
 
-import java.util.Objects;
-
 @Component
 public class ContentLikeMapper {
     /**
@@ -15,7 +13,7 @@ public class ContentLikeMapper {
     public ContentLikeResponse toContentLikeResponse(Content content, ContentLike contentLike) {
         return new ContentLikeResponse(
                 content.getId(),
-                !Objects.isNull(contentLike)    // 좋아요가 있으면 true, 없으면 false
+                contentLike != null
         );
     }
 }

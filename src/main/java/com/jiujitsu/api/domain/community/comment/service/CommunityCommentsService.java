@@ -8,6 +8,7 @@ import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeResponse;
 import com.jiujitsu.api.domain.community.comment.entity.CommentLike;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
+import com.jiujitsu.api.domain.community.comment.event.CommentNoticeEvent;
 import com.jiujitsu.api.domain.community.comment.factory.CommentFactory;
 import com.jiujitsu.api.domain.community.comment.factory.CommentLikeFactory;
 import com.jiujitsu.api.domain.community.comment.mapper.CommentLikeMapper;
@@ -16,7 +17,8 @@ import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepositor
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
-import com.jiujitsu.api.domain.community.comment.event.CommentNoticeEvent;
+import com.jiujitsu.api.domain.community.report.entity.ReportType;
+import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
@@ -25,7 +27,6 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -44,6 +44,7 @@ public class CommunityCommentsService {
     private final ContentRepository contentRepository;
     private final AuthenticationFacade authenticationFacade;
     private final UserBlockService userBlockService;
+    private final ReportService reportService;
     private final ApplicationEventPublisher eventPublisher;
     private final CommentFactory commentFactory;
     private final CommentMapper commentMapper;
@@ -65,9 +66,13 @@ public class CommunityCommentsService {
 
         // 댓글 전체 리스트 조회(댓글+대댓글) - createdBy, content fetch join으로 N+1 방지
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
-        List<CommunityComments> comments = blockedUserIds.isEmpty()
-                ? communityCommentsRepository.findByContentIdOrderByCreatedAtDesc(contentId)
-                : communityCommentsRepository.findByContentIdExcludingBlockedUsersOrderByCreatedAtDesc(contentId, blockedUserIds);
+        List<Long> reportedCommentIds = reportService.getReportedTargetIds(ReportType.COMMENT);
+
+        List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
+        List<Long> excludedCommentIds = reportedCommentIds.isEmpty() ? List.of(-1L) : reportedCommentIds;
+
+        List<CommunityComments> comments = communityCommentsRepository
+                .findByContentIdFiltered(contentId, excludedAuthorIds, excludedCommentIds);
 
 
         // 좋아요 조회(n+1 방지 > 전체 조회 후 mapping)
@@ -87,7 +92,7 @@ public class CommunityCommentsService {
                 .orElse(new HashSet<>());
 
         // 작성자 여부
-        User userOptional = authenticationFacade.getCurrentUserOptional().orElse(null);
+        User user = authenticationFacade.getCurrentUserOptional().orElse(null);
 
         // 전체 댓글 Response 로 mapping
         Map<Long, CommunityCommentsResponse> commentsMap = comments.stream()
@@ -98,7 +103,7 @@ public class CommunityCommentsService {
                                 new ArrayList<>(),    // 대댓글 하단에서 추가하기 위해 mutable list 사용
                                 likeCountMap.getOrDefault(c.getId(), 0L),
                                 likedCommentIds.contains(c.getId()),
-                                Objects.equals(c.getCreatedBy(), userOptional))
+                                Objects.equals(c.getCreatedBy(), user))
                         ));
 
         // 결과에 댓글/대댓글 나눠 넣기
@@ -138,10 +143,12 @@ public class CommunityCommentsService {
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
         // 대댓글일 경우 부모댓글 조회
-        Optional<CommunityComments> parentComments = communityCommentsRepository.findById(request.parentId());
+        Long parentID = request.parentId() == null ? 0L : request.parentId();
+        Optional<CommunityComments> parentComments = communityCommentsRepository.findById(parentID);
+
 
         // 댓글 entity 생성
-        CommunityComments communityComments = commentFactory.createComments(content, request.parentId(), request.body());
+        CommunityComments communityComments = commentFactory.createComments(content, parentID, request.body());
         communityCommentsRepository.save(communityComments);
 
         // 알림 설정 (커밋 후 FCM 발송 + 알림 저장)
@@ -162,7 +169,7 @@ public class CommunityCommentsService {
         if (parentComments.isPresent()) {
             if (!Objects.equals(user.getId(), parentComments.get().getCreatedBy().getId())) {
                 eventPublisher.publishEvent(new CommentNoticeEvent(
-                        boardWriter.getId(),
+                        parentComments.get().getCreatedBy().getId(),
                         content.getId(),
                         FcmPushType.NEW_CHILD_COMMENTS,
                         Map.of("type", FcmPushType.NEW_CHILD_COMMENTS.getActionType().toString(),
@@ -227,14 +234,16 @@ public class CommunityCommentsService {
     /**
      * 게시글 단건 > 댓글 카운트 조회
      */
+    @Transactional(readOnly = true)
     public long getCountComments(Long contentId) {
         return communityCommentsRepository
-                .countByContent_IdAndParentIdIsNull(contentId);
+                .countByContent_IdAndParentIdIsNullAndHiddenAtIsNull(contentId);
     }
 
     /**
      * 게시글 목록 > 댓글 카운트 조회
      */
+    @Transactional(readOnly = true)
     public Map<Long, Long> getContentsComments(List<Long> contentIds) {
         return communityCommentsRepository.countTopLevelCommentsByContentIds(contentIds).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
@@ -243,6 +252,7 @@ public class CommunityCommentsService {
     /**
      * 게시글 - 댓글id 조회
      */
+    @Transactional(readOnly = true)
     public Set<Long> getUserCommentedContentIds(Long userId, List<Long> contentIds) {
         return communityCommentsRepository.findUserCommentedContentIds(userId, contentIds);
     }
