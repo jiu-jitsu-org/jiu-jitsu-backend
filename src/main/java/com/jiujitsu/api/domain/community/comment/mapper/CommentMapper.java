@@ -19,19 +19,21 @@ public class CommentMapper {
                                                                  Boolean liked,
                                                                  Boolean isAuthor) {
         Content content = comments.getContent();
+        boolean deleted = comments.isDeleted();
 
         return new CommunityCommentsResponse(
                 comments.getId(),
                 content.getId(),
                 comments.getParentId(),
-                comments.getBody(),
-                likeCount,
-                liked,
-                isAuthor,
-                CommunityProfileInfo.from(comments.getCreatedBy()),
+                deleted ? null : comments.getBody(),
+                deleted ? null : likeCount,
+                deleted ? null : liked,
+                !deleted && isAuthor,
+                deleted ? null : CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
-                childrenList
+                childrenList,
+                deleted
         );
     }
 
@@ -41,19 +43,21 @@ public class CommentMapper {
     public CommunityCommentsResponse toCommunityCommentsResponse(CommunityComments comments,
                                                                  List<CommunityCommentsResponse> childrenList) {
         Content content = comments.getContent();
+        boolean deleted = comments.isDeleted();
 
         return new CommunityCommentsResponse(
                 comments.getId(),
                 content.getId(),
                 comments.getParentId(),
-                comments.getBody(),
+                deleted ? null : comments.getBody(),
                 null,
                 null,
-                null,
-                CommunityProfileInfo.from(comments.getCreatedBy()),
+                deleted ? false : null,
+                deleted ? null : CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
-                childrenList
+                childrenList,
+                deleted
         );
     }
 }

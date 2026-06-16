@@ -222,6 +222,7 @@ public class CommunityCommentsService {
 
     /**
      * 댓글 삭제
+     * 대댓글이 존재하면 soft delete (삭제된 댓글입니다 노출), 없으면 hard delete
      */
     public void deleteComment(Long commentId) {
         CommunityComments comment = communityCommentsRepository.findById(commentId)
@@ -230,7 +231,11 @@ public class CommunityCommentsService {
         // 수정 권한 체크
         comment.validateOwner(authenticationFacade.getCurrentUser());
 
-        communityCommentsRepository.delete(comment);
+        if (communityCommentsRepository.existsByParentId(commentId)) {
+            comment.softDelete();
+        } else {
+            communityCommentsRepository.delete(comment);
+        }
     }
 
     /**
@@ -239,7 +244,7 @@ public class CommunityCommentsService {
     @Transactional(readOnly = true)
     public long getCountComments(Long contentId) {
         return communityCommentsRepository
-                .countByContent_IdAndParentIdIsNullAndHiddenAtIsNull(contentId);
+                .countByContent_IdAndParentIdIsNullAndHiddenAtIsNullAndDeletedAtIsNull(contentId);
     }
 
     /**

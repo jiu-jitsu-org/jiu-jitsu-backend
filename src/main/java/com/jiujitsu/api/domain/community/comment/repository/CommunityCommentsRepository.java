@@ -14,7 +14,7 @@ import java.util.Set;
 public interface CommunityCommentsRepository extends JpaRepository<CommunityComments, Long> {
 
     /**
-     * Content 다건의 상위 댓글 수 조회 (hiddenAt IS NULL, parentId가 null인 댓글만)
+     * Content 다건의 상위 댓글 수 조회 (hiddenAt IS NULL, deletedAt IS NULL, parentId가 null인 댓글만)
      */
     @Query("""
         SELECT c.content.id, COUNT(c)
@@ -22,17 +22,19 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
         WHERE c.content.id IN :contentIds
           AND c.parentId IS NULL
           AND c.hiddenAt IS NULL
+          AND c.deletedAt IS NULL
         GROUP BY c.content.id
         """)
     List<Object[]> countTopLevelCommentsByContentIds(@Param("contentIds") List<Long> contentIds);
 
     /**
-     * Content 단건의 상위 댓글 수 조회 (hiddenAt IS NULL, parentId가 null인 댓글만)
+     * Content 단건의 상위 댓글 수 조회 (hiddenAt IS NULL, deletedAt IS NULL, parentId가 null인 댓글만)
      */
-    long countByContent_IdAndParentIdIsNullAndHiddenAtIsNull(Long contentId);
+    long countByContent_IdAndParentIdIsNullAndHiddenAtIsNullAndDeletedAtIsNull(Long contentId);
 
     /**
      * 댓글 목록 조회 (hiddenAt IS NULL, 차단 유저 + 신고한 댓글 제외)
+     * soft-deleted 댓글은 필터링 없이 포함 (대댓글 컨텍스트 유지용)
      */
     @Query("""
     SELECT c FROM CommunityComments c
@@ -40,14 +42,21 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
     LEFT JOIN FETCH c.content
     WHERE c.content.id = :contentId
       AND c.hiddenAt IS NULL
-      AND c.createdBy.id NOT IN :excludedAuthorIds
-      AND c.id NOT IN :excludedCommentIds
+      AND (
+        c.deletedAt IS NOT NULL
+        OR (
+          c.createdBy.id NOT IN :excludedAuthorIds
+          AND c.id NOT IN :excludedCommentIds
+        )
+      )
     ORDER BY c.createdAt DESC
     """)
     List<CommunityComments> findByContentIdFiltered(
             @Param("contentId") Long contentId,
             @Param("excludedAuthorIds") Collection<Long> excludedAuthorIds,
             @Param("excludedCommentIds") Collection<Long> excludedCommentIds);
+
+    boolean existsByParentId(Long parentId);
 
     @Query("""
     SELECT DISTINCT c.content.id

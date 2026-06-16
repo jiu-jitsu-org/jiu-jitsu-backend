@@ -51,6 +51,9 @@ public class CommunityComments extends BaseEntity implements Hideable {
     @Column
     private LocalDateTime hiddenAt;
 
+    @Column
+    private LocalDateTime deletedAt;
+
     // 수정권한 체크
     public void validateOwner(User user) {
         if (!Objects.equals(this.getCreatedBy(), user)) {
@@ -68,5 +71,13 @@ public class CommunityComments extends BaseEntity implements Hideable {
 
     public boolean isHidden() {
         return this.hiddenAt != null;
+    }
+
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public boolean isDeleted() {
+        return this.deletedAt != null;
     }
 }
