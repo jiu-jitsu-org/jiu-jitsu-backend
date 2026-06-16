@@ -1,5 +1,6 @@
 package com.jiujitsu.api.global.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +18,17 @@ import java.util.Set;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ErrorException.class)
-    public ResponseEntity<ApiResponse<Object>> handleCustomException(ErrorException e) {
+    public ResponseEntity<ApiResponse<Object>> handleCustomException(ErrorException e, HttpServletRequest request) {
         ErrorCode errorCode = e.getErrorCode();
-        log.error("예외 발생: {}", e.getMessage(), e);
+
+        if (errorCode.getStatus() >= 500) {
+            log.error("서버 오류: {}", e.getMessage(), e);
+        } else {
+            log.warn("클라이언트 오류: {}", e.getMessage());
+        }
+
+        request.setAttribute("api.error.type", e.getClass().getSimpleName());
+        request.setAttribute("api.error.message", errorCode.getMessage());
 
         return ResponseEntity
                 .status(HttpStatus.valueOf(errorCode.getStatus()))
@@ -27,16 +36,18 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiResponse<Object>> handleRuntimeException(RuntimeException e) {
+    public ResponseEntity<ApiResponse<Object>> handleRuntimeException(RuntimeException e, HttpServletRequest request) {
         log.error("Runtime exception occurred", e);
-        
+        request.setAttribute("api.error.type", e.getClass().getSimpleName());
+        request.setAttribute("api.error.message", e.getMessage());
+
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(ErrorCode.SERVER_ERROR));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
-    public ResponseEntity<ApiResponse<Object>> handleValidationException(Exception e) {
+    public ResponseEntity<ApiResponse<Object>> handleValidationException(Exception e, HttpServletRequest request) {
         BindingResult bindingResult = e instanceof MethodArgumentNotValidException mave
                 ? mave.getBindingResult()
                 : ((BindException) e).getBindingResult();
@@ -44,6 +55,8 @@ public class GlobalExceptionHandler {
         FieldError fieldError = bindingResult.getFieldErrors().stream().findFirst().orElse(null);
 
         if (fieldError == null) {
+            request.setAttribute("api.error.type", e.getClass().getSimpleName());
+            request.setAttribute("api.error.message", "Required/wrong parameter");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(ErrorCode.WRONG_PARAMETER));
@@ -52,7 +65,9 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = resolveValidationErrorCode(fieldError);
         String message = fieldError.getDefaultMessage();
 
-        log.error("Validation exception - field: {}, message: {}", fieldError.getField(), message);
+        log.warn("Validation exception - field: {}, message: {}", fieldError.getField(), message);
+        request.setAttribute("api.error.type", e.getClass().getSimpleName());
+        request.setAttribute("api.error.message", fieldError.getField() + ": " + message);
 
         return ResponseEntity
                 .status(HttpStatus.valueOf(errorCode.getStatus()))
@@ -74,8 +89,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleGenericException(Exception e) {
+    public ResponseEntity<ApiResponse<Object>> handleGenericException(Exception e, HttpServletRequest request) {
         log.error("Unexpected exception occurred", e);
+        request.setAttribute("api.error.type", e.getClass().getSimpleName());
+        request.setAttribute("api.error.message", e.getMessage());
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -5,8 +5,6 @@ import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentSave;
 import org.springframework.stereotype.Component;
 
-import java.util.Objects;
-
 @Component
 public class ContentSaveMapper {
     /**
@@ -15,7 +13,7 @@ public class ContentSaveMapper {
     public ContentSaveResponse toContentSaveResponse(Content content, ContentSave contentSave) {
         return new ContentSaveResponse(
                 content.getId(),
-                !Objects.isNull(contentSave)    // 좋아요가 있으면 true, 없으면 false
+                contentSave != null
         );
     }
 }
