@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.board.factory;
 
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
+import com.jiujitsu.api.domain.community.board.entity.BoardTag;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.file.ImageFile;
@@ -28,13 +29,25 @@ public class BoardFactory {
         return content;
     }
 
-    public Board createBoard(BoardCategory category, Content content, String title, String body) {
-        return Board.builder()
+    public Board createBoard(BoardCategory category, Content content, String title, String body, List<String> tagNames) {
+        // 게시물 생성
+        Board board = Board.builder()
                 .category(category)
                 .content(content)
                 .title(title)
                 .body(body)
                 .build();
+        // 태그 리스트 생성 (공백 제거 → 소문자 → 빈 값 제거 → 중복 제거)
+        List<BoardTag> tags = tagNames.stream()
+                .map(String::strip)
+                .map(String::toLowerCase)
+                .filter(name -> !name.isBlank())
+                .distinct()
+                .map(name -> BoardTag.builder().board(board).name(name).build())
+                .toList();
+        board.addTags(tags);
+
+        return board;
     }
 
     public List<ImageFile> createImageFiles(List<Long> imageFileIds) {

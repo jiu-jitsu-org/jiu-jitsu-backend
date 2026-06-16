@@ -12,6 +12,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -40,6 +42,13 @@ public class Board extends BaseEntity implements Hideable {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String body;    // 내용
 
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<BoardTag> tags = new ArrayList<>();
+
+    public void addTags(List<BoardTag> newTags) {
+        this.tags.addAll(newTags);
+    }
     @Column
     private LocalDateTime hiddenAt; // 숨김일시
 

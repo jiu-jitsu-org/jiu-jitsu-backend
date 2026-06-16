@@ -22,6 +22,7 @@ public record BoardListResponse(
         @Schema(description = "좋아요 여부", example = "true") Boolean isLiked,
         @Schema(description = "저장 여부", example = "true") Boolean isSaved,
         @Schema(description = "이미지 리스트") List<ImageInfo> imageList,
+        @Schema(description = "태그 목록", example = "[\"BJJ\", \"운동\"]") List<String> tags,
         @Schema(description = "작성자 프로필") CommunityProfileInfo author,
         @Schema(description = "작성여부") Boolean isAuthor
 ) {
