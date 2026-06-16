@@ -38,8 +38,9 @@ public class CommunityComments extends BaseEntity implements Hideable {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Content content;
 
-    @Column
-    private Long parentId;  // 대댓글 - comment 연동
+    @Column(nullable = false)
+    @Builder.Default
+    private Long parentId = 0L;  // 대댓글 - comment 연동 (최상위 댓글: 0)
 
     @Column(nullable = false)
     private String body;        // 댓글 내용

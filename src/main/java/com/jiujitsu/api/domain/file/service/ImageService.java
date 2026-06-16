@@ -8,44 +8,46 @@ import com.jiujitsu.api.domain.file.ImageFileStatus;
 import com.jiujitsu.api.domain.file.dto.CdnSignatureResponse;
 import com.jiujitsu.api.domain.file.dto.ImageFileRegisterRequest;
 import com.jiujitsu.api.domain.file.dto.ImageFileResponse;
+import com.jiujitsu.api.domain.file.event.ImageFileDeletedEvent;
+import com.jiujitsu.api.global.properties.ImageKitProperties;
 import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
+import java.util.HexFormat;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ImageService {
 
-    private final String IMAGEKIT_PRIVATE_KEY = System.getenv("IMAGEKIT_PRIVATE_KEY");
+    private final ImageKitProperties imagekitProperties;
     private final ImageFileRepository imageFileRepository;
     private final ContentRepository contentRepository;
     private final UserRepository userRepository;
     private final OwnerProfileRepository ownerProfileRepository;
-    private final WebClient webClient;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void deleteImageFile(Long id) {
         ImageFile imageFile = imageFileRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
 
+        // DB 커밋 후 CDN 삭제 (커밋 전 실패 시 이벤트 발행 안 됨)
         if (imageFile.getCdnId() != null) {
-            deleteCdnFile(imageFile.getCdnId());
+            eventPublisher.publishEvent(new ImageFileDeletedEvent(imageFile.getCdnId()));
         }
+
+        //todo: 아래 각 도메인 참조가 현재 역방향성이라 이벤트 생성해서 처리하든 추후 아키텍쳐 개선이 필요함.
 
         // Content join table 정리
         contentRepository.findByImageFile(imageFile)
@@ -66,27 +68,10 @@ public class ImageService {
         imageFileRepository.delete(imageFile);
     }
 
-    private void deleteCdnFile(String cdnId) {
-        String authHeader = "Basic " + Base64.getEncoder()
-                .encodeToString((IMAGEKIT_PRIVATE_KEY + ":").getBytes(StandardCharsets.UTF_8));
-        try {
-            webClient.delete()
-                    .uri("https://api.imagekit.io/v1/files/" + cdnId)
-                    .header(HttpHeaders.AUTHORIZATION, authHeader)
-                    .retrieve()
-                    .onStatus(
-                            status -> !status.is2xxSuccessful() && status != HttpStatus.NOT_FOUND,
-                            response -> Mono.error(new ErrorException(ErrorCode.FAILED_CDN_DELETE))
-                    )
-                    .toBodilessEntity()
-                    .block();
-        } catch (ErrorException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ErrorException(ErrorCode.FAILED_CDN_DELETE);
-        }
-    }
-
+    /**
+     * 이미지 파일 저장
+     */
+    @Transactional
     public ImageFileResponse registerImageFile(ImageFileRegisterRequest request) {
         ImageFile imageFile = ImageFile.builder()
                 .cdnId(request.cdnId())
@@ -101,35 +86,17 @@ public class ImageService {
      */
     public CdnSignatureResponse getCdnSignature() {
         String token = UUID.randomUUID().toString().replace("-", "");
-
-        // 2️⃣ 만료 시간 (현재시간 + 4분)
         long expire = (System.currentTimeMillis() / 1000L) + 240;
-
-        // 3️⃣ 서명 생성 (HMAC-SHA1)
         String signature = generateSignature(token, expire);
-
-        // 4️⃣ 결과 반환
         return new CdnSignatureResponse(token, expire, signature);
     }
 
     private String generateSignature(String token, long expire) {
-
         try {
             String data = token + expire;
-
             Mac mac = Mac.getInstance("HmacSHA1");
-            SecretKeySpec secretKey = new SecretKeySpec(IMAGEKIT_PRIVATE_KEY.getBytes(StandardCharsets.UTF_8), "HmacSHA1");
-            mac.init(secretKey);
-
-            byte[] hmacData = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-
-            // Hex 문자열로 변환
-            StringBuilder hex = new StringBuilder();
-            for (byte b : hmacData) {
-                hex.append(String.format("%02x", b));
-            }
-
-            return hex.toString();
+            mac.init(new SecretKeySpec(imagekitProperties.privateKey().getBytes(StandardCharsets.UTF_8), "HmacSHA1"));
+            return HexFormat.of().formatHex(mac.doFinal(data.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
             throw new ErrorException(ErrorCode.FAILED_SIGNATURE);
         }

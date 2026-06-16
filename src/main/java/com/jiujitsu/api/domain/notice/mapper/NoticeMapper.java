@@ -6,9 +6,7 @@ import com.jiujitsu.api.domain.notice.dto.NoticeSettingResponse;
 import com.jiujitsu.api.domain.notice.entity.ContentNoticeSetting;
 import com.jiujitsu.api.domain.notice.entity.Notice;
 import com.jiujitsu.api.domain.notice.entity.UserNoticeSetting;
-import org.springframework.stereotype.Component;
 
-@Component
 public class NoticeMapper {
     public static NoticeListResponse toNoticeListResponse(Notice notice) {
         return new NoticeListResponse(
