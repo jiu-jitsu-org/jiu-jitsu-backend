@@ -146,7 +146,7 @@ public class BoardService {
         Content content = boardFactory.createContent(request.imageFileIdListOrEmpty());
 
         // Board 생성
-        Board board = boardFactory.createBoard(category, content, request.title(), request.body());
+        Board board = boardFactory.createBoard(category, content, request.title(), request.body(), request.tagsOrEmpty());
         board = boardRepository.save(board);
 
         // dto 생성
