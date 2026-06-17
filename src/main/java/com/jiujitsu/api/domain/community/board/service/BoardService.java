@@ -79,7 +79,6 @@ public class BoardService {
     /**
      * 게시물 상세 조회
      */
-    @Transactional(readOnly = true)
     public BoardResponse getById(Long id) {
         // 게시글 조회
         Board board = boardRepository.findByContent_Id(id)
@@ -96,6 +95,16 @@ public class BoardService {
                 throw new ErrorException(ErrorCode.BOARD_NOT_FOUND);
             }
         });
+
+        // 조회수 증가 (작성자는 최초 1회만 카운트)
+        Optional<User> currentUser = authenticationFacade.getCurrentUserOptional();
+        boolean isAuthor = Objects.equals(board.getCreatedBy(), currentUser.orElse(null));
+        if (isAuthor) {
+            board.getContent().incrementViewCountForAuthor();
+        } else {
+            board.getContent().incrementViewCount();
+        }
+
         Long contentId = board.getContent().getId();
 
         // 댓글 수 조회
@@ -111,12 +120,11 @@ public class BoardService {
         Set<Long> savedContentIds = new HashSet<>();
 
         Boolean noticeEnabled = null;
-        Optional<User> user = authenticationFacade.getCurrentUserOptional();
-        if (user.isPresent()) {
-            commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), List.of(contentId));
-            likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), List.of(contentId));
-            savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), List.of(contentId));
-            noticeEnabled = noticeService.isContentNoticeEnabled(user.get().getId(), contentId);
+        if (currentUser.isPresent()) {
+            commentedContentIds = communityCommentsService.getUserCommentedContentIds(currentUser.get().getId(), List.of(contentId));
+            likedContentIds = contentService.getUserLikedContentIds(currentUser.get().getId(), List.of(contentId));
+            savedContentIds = contentService.getUserSavedContentIds(currentUser.get().getId(), List.of(contentId));
+            noticeEnabled = noticeService.isContentNoticeEnabled(currentUser.get().getId(), contentId);
         }
 
         // dto 생성
@@ -128,7 +136,7 @@ public class BoardService {
                 likedContentIds.contains(contentId),
                 savedContentIds.contains(contentId),
                 noticeEnabled,
-                Objects.equals(board.getCreatedBy(), user.orElse(null))
+                isAuthor
                 );
     }
 
