@@ -46,11 +46,11 @@ public class Content extends BaseEntity {
 
     @Column(nullable = false)
     @Builder.Default
-    private long viewCount = 0;
+    private long viewCount = 0;     // 조회수
 
     @Column(nullable = false)
     @Builder.Default
-    private boolean authorViewCounted = false;
+    private boolean authorViewCounted = false;  // 작성자 조회수 추가됐는지 여부
 
     public void incrementViewCount() {
         this.viewCount++;
