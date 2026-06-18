@@ -17,7 +17,8 @@ public class CommentMapper {
                                                                  List<CommunityCommentsResponse> childrenList,
                                                                  Long likeCount,
                                                                  Boolean liked,
-                                                                 Boolean isAuthor) {
+                                                                 Boolean isAuthor,
+                                                                 Boolean isReportedByMe) {
         Content content = comments.getContent();
 
         return new CommunityCommentsResponse(
@@ -28,6 +29,9 @@ public class CommentMapper {
                 likeCount,
                 liked,
                 isAuthor,
+                comments.isDeleted(),
+                comments.getIsReported(),
+                isReportedByMe,
                 CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
@@ -36,7 +40,7 @@ public class CommentMapper {
     }
 
     /**
-     * 댓글 response - 좋아요 없는 버전
+     * 댓글 response - 좋아요 없는 버전 (댓글 작성 직후 응답)
      */
     public CommunityCommentsResponse toCommunityCommentsResponse(CommunityComments comments,
                                                                  List<CommunityCommentsResponse> childrenList) {
@@ -50,6 +54,9 @@ public class CommentMapper {
                 null,
                 null,
                 null,
+                comments.isDeleted(),
+                comments.getIsReported(),
+                false,
                 CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),

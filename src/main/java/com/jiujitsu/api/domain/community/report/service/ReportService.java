@@ -170,9 +170,15 @@ public class ReportService {
     }
 
     // 신고 수 임계값 도달 시 자동 숨김 (validate에서 조회한 엔티티 재사용)
+    // 댓글에 대댓글이 있으면 isReported 플래그만 설정 (soft-delete 방식, 삭제와 구분)
     private void autoHideIfThresholdReached(ReportType reportType, Long targetId, Hideable target) {
         long count = reportRepository.countByReportTypeAndTargetId(reportType, targetId);
-        if (count >= AUTO_HIDE_THRESHOLD && !target.isHidden()) {
+        if (count < AUTO_HIDE_THRESHOLD || target.isHidden()) return;
+
+        if (reportType == ReportType.COMMENT
+                && communityCommentsRepository.existsByParentId(targetId)) {
+            ((CommunityComments) target).markAsReported();
+        } else {
             target.hide();
         }
     }
