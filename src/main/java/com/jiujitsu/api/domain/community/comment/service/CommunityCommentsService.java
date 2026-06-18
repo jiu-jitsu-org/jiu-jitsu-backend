@@ -67,6 +67,7 @@ public class CommunityCommentsService {
         // 댓글 전체 리스트 조회(댓글+대댓글) - createdBy, content fetch join으로 N+1 방지
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
         List<Long> reportedCommentIds = reportService.getReportedTargetIds(ReportType.COMMENT);
+        Set<Long> reportedCommentIdSet = new HashSet<>(reportedCommentIds);
 
         List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
         List<Long> excludedCommentIds = reportedCommentIds.isEmpty() ? List.of(-1L) : reportedCommentIds;
@@ -103,7 +104,8 @@ public class CommunityCommentsService {
                                 new ArrayList<>(),    // 대댓글 하단에서 추가하기 위해 mutable list 사용
                                 likeCountMap.getOrDefault(c.getId(), 0L),
                                 likedCommentIds.contains(c.getId()),
-                                Objects.equals(c.getCreatedBy(), user))
+                                Objects.equals(c.getCreatedBy(), user),
+                                reportedCommentIdSet.contains(c.getId()))
                         ));
 
         // 결과에 댓글/대댓글 나눠 넣기
@@ -220,6 +222,7 @@ public class CommunityCommentsService {
 
     /**
      * 댓글 삭제
+     * 대댓글이 있으면 soft-delete (deletedAt 설정), 없으면 hard-delete
      */
     public void deleteComment(Long commentId) {
         CommunityComments comment = communityCommentsRepository.findById(commentId)
@@ -228,7 +231,11 @@ public class CommunityCommentsService {
         // 수정 권한 체크
         comment.validateOwner(authenticationFacade.getCurrentUser());
 
-        communityCommentsRepository.delete(comment);
+        if (communityCommentsRepository.existsByParentId(commentId)) {
+            comment.softDelete();
+        } else {
+            communityCommentsRepository.delete(comment);
+        }
     }
 
     /**
