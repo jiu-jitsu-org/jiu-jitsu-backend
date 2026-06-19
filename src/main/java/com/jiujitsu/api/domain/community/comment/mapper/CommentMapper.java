@@ -20,6 +20,7 @@ public class CommentMapper {
                                                                  Boolean isAuthor,
                                                                  Boolean isReportedByMe) {
         Content content = comments.getContent();
+        boolean deleted = comments.isDeleted();
 
         return new CommunityCommentsResponse(
                 comments.getId(),
@@ -35,7 +36,8 @@ public class CommentMapper {
                 CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
-                childrenList
+                childrenList,
+                deleted
         );
     }
 
@@ -45,12 +47,13 @@ public class CommentMapper {
     public CommunityCommentsResponse toCommunityCommentsResponse(CommunityComments comments,
                                                                  List<CommunityCommentsResponse> childrenList) {
         Content content = comments.getContent();
+        boolean deleted = comments.isDeleted();
 
         return new CommunityCommentsResponse(
                 comments.getId(),
                 content.getId(),
                 comments.getParentId(),
-                comments.getBody(),
+                deleted ? null : comments.getBody(),
                 null,
                 null,
                 null,
@@ -60,7 +63,8 @@ public class CommentMapper {
                 CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
-                childrenList
+                childrenList,
+                deleted
         );
     }
 }

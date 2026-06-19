@@ -14,7 +14,7 @@ import java.util.Set;
 public interface CommunityCommentsRepository extends JpaRepository<CommunityComments, Long> {
 
     /**
-     * Content 다건의 상위 댓글 수 조회 (hiddenAt IS NULL, parentId가 null인 댓글만)
+     * Content 다건의 상위 댓글 수 조회 (hiddenAt IS NULL, deletedAt IS NULL, parentId가 null인 댓글만)
      */
     @Query("""
         SELECT c.content.id, COUNT(c)
@@ -22,14 +22,15 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
         WHERE c.content.id IN :contentIds
           AND c.parentId IS NULL
           AND c.hiddenAt IS NULL
+          AND c.deletedAt IS NULL
         GROUP BY c.content.id
         """)
     List<Object[]> countTopLevelCommentsByContentIds(@Param("contentIds") List<Long> contentIds);
 
     /**
-     * Content 단건의 상위 댓글 수 조회 (hiddenAt IS NULL, parentId가 null인 댓글만)
+     * Content 단건의 상위 댓글 수 조회 (hiddenAt IS NULL, deletedAt IS NULL, parentId가 null인 댓글만)
      */
-    long countByContent_IdAndParentIdIsNullAndHiddenAtIsNull(Long contentId);
+    long countByContent_IdAndParentIdIsNullAndHiddenAtIsNullAndDeletedAtIsNull(Long contentId);
 
     boolean existsByParentId(Long parentId);
 
@@ -59,6 +60,8 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
             @Param("contentId") Long contentId,
             @Param("excludedAuthorIds") Collection<Long> excludedAuthorIds,
             @Param("excludedCommentIds") Collection<Long> excludedCommentIds);
+
+    boolean existsByParentId(Long parentId);
 
     @Query("""
     SELECT DISTINCT c.content.id

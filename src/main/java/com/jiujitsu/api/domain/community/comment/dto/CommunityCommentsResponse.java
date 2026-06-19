@@ -19,7 +19,8 @@ public record CommunityCommentsResponse(
         CommunityProfileInfo author,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        List<CommunityCommentsResponse> childrenList
+        List<CommunityCommentsResponse> childrenList,
+        Boolean deletedYn
 ) {
 
 }

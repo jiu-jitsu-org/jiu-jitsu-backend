@@ -93,4 +93,12 @@ public class CommunityComments extends BaseEntity implements Hideable {
     public boolean isHidden() {
         return this.hiddenAt != null || this.isReported;
     }
+
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public boolean isDeleted() {
+        return this.deletedAt != null;
+    }
 }

@@ -128,9 +128,12 @@ public class CommunityCommentsService {
         }
 
         // 부모 기준 정렬하여 return
-        return Objects.equals(sortType, CommentsSortType.CREATE_DESC)
-                ? result.stream().sorted(Comparator.comparing(CommunityCommentsResponse::createdAt).reversed()).toList()
-                : result.stream().sorted(Comparator.comparing(CommunityCommentsResponse::createdAt)).toList();
+        Comparator<CommunityCommentsResponse> comparator = switch (sortType) {
+            case CREATE_ASC -> Comparator.comparing(CommunityCommentsResponse::createdAt);
+            case LIKE_DESC -> Comparator.comparing(CommunityCommentsResponse::likes).reversed();
+            default -> Comparator.comparing(CommunityCommentsResponse::createdAt).reversed();
+        };
+        return result.stream().sorted(comparator).toList();
     }
 
     /**
@@ -244,7 +247,7 @@ public class CommunityCommentsService {
     @Transactional(readOnly = true)
     public long getCountComments(Long contentId) {
         return communityCommentsRepository
-                .countByContent_IdAndParentIdIsNullAndHiddenAtIsNull(contentId);
+                .countByContent_IdAndParentIdIsNullAndHiddenAtIsNullAndDeletedAtIsNull(contentId);
     }
 
     /**
