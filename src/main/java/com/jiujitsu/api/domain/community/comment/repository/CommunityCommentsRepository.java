@@ -32,22 +32,27 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
      */
     long countByContent_IdAndParentIdIsNullAndHiddenAtIsNullAndDeletedAtIsNull(Long contentId);
 
+    boolean existsByParentId(Long parentId);
+
     /**
-     * 댓글 목록 조회 (hiddenAt IS NULL, 차단 유저 + 신고한 댓글 제외)
-     * soft-deleted 댓글은 필터링 없이 포함 (대댓글 컨텍스트 유지용)
+     * 댓글 목록 조회
+     * - 일반 댓글: hiddenAt IS NULL, isReported = false, deletedAt IS NULL, 차단 유저/신고한 댓글 제외
+     *   - 최상위 댓글(parentId=0): 신고한 댓글이어도 포함 (대댓글 구조 유지, isReportedByMe로 구분)
+     *   - 대댓글(parentId!=0): 신고한 댓글 제외
+     * - soft-delete 플레이스홀더: deletedAt IS NOT NULL (유저 삭제, 대댓글 있음)
+     * - reported 플레이스홀더: isReported = true (신고 자동숨김, 대댓글 있음)
      */
     @Query("""
     SELECT c FROM CommunityComments c
     LEFT JOIN FETCH c.createdBy
     LEFT JOIN FETCH c.content
     WHERE c.content.id = :contentId
-      AND c.hiddenAt IS NULL
       AND (
-        c.deletedAt IS NOT NULL
-        OR (
-          c.createdBy.id NOT IN :excludedAuthorIds
-          AND c.id NOT IN :excludedCommentIds
-        )
+        (c.hiddenAt IS NULL AND c.isReported = false AND c.deletedAt IS NULL
+         AND c.createdBy.id NOT IN :excludedAuthorIds
+         AND (c.parentId = 0 OR c.id NOT IN :excludedCommentIds))
+        OR c.deletedAt IS NOT NULL
+        OR c.isReported = true
       )
     ORDER BY c.createdAt DESC
     """)

@@ -4,7 +4,6 @@ import com.jiujitsu.api.domain.log.dto.ApiLogResponse;
 import com.jiujitsu.api.global.log.entity.ApiLog;
 import com.jiujitsu.api.global.log.repository.ApiLogRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -13,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ApiLogService {
@@ -22,11 +20,7 @@ public class ApiLogService {
 
     @Transactional
     public void save(ApiLog apiLog) {
-        try {
-            apiLogRepository.save(apiLog);
-        } catch (Exception e) {
-            log.error("API 로그 저장 실패: {}", e.getMessage());
-        }
+        apiLogRepository.save(apiLog);
     }
 
     @Transactional(readOnly = true)

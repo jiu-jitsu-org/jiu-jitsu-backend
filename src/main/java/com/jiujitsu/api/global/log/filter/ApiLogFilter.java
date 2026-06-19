@@ -60,7 +60,7 @@ public class ApiLogFilter extends OncePerRequestFilter {
 
             apiLogService.save(apiLog);
         } catch (Exception e) {
-            log.error("API 로그 저장 중 오류 발생: {}", e.getMessage());
+            log.error("API 로그 저장 중 오류 발생", e);
         }
     }
 

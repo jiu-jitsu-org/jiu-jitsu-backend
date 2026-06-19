@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.board.mapper;
 import com.jiujitsu.api.domain.community.board.dto.BoardListResponse;
 import com.jiujitsu.api.domain.community.board.dto.BoardResponse;
 import com.jiujitsu.api.domain.community.board.entity.Board;
+import com.jiujitsu.api.domain.community.board.entity.BoardTag;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileInfo;
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
@@ -29,10 +30,12 @@ public class BoardMapper {
                 board.getUpdatedAt(),
                 commentCount,
                 likeCount,
+                content.getViewCount(),
                 isCommented,
                 isLiked,
                 isSaved,
                 getImageInfoList(content),
+                getTagNames(board),
                 CommunityProfileInfo.from(board.getCreatedBy()),
                 isAuthor
         );
@@ -54,10 +57,12 @@ public class BoardMapper {
                 board.isUpdated(),
                 commentCount,
                 likeCount,
+                content.getViewCount(),
                 isCommented,
                 isLiked,
                 isSaved,
                 getImageInfoList(content),
+                getTagNames(board),
                 noticeEnabled,
                 CommunityProfileInfo.from(board.getCreatedBy()),
                 isAuthor
@@ -77,10 +82,12 @@ public class BoardMapper {
                 board.isUpdated(),
                 null,
                 null,
+                content.getViewCount(),
                 null,
                 null,
                 null,
                 getImageInfoList(content),
+                getTagNames(board),
                 null,
                 CommunityProfileInfo.from(board.getCreatedBy()),
                 true
@@ -90,6 +97,12 @@ public class BoardMapper {
     private List<ImageInfo> getImageInfoList(Content content) {
         return content.getImageFiles().stream()
                 .map(ImageInfo::from)
+                .toList();
+    }
+
+    private List<String> getTagNames(Board board) {
+        return board.getTags().stream()
+                .map(BoardTag::getName)
                 .toList();
     }
 }

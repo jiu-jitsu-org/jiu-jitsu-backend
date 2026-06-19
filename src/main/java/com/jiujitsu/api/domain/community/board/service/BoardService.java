@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.community.board.entity.BoardListType;
 import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
+import com.jiujitsu.api.domain.community.board.service.BoardHideService;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
@@ -19,16 +20,16 @@ import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Stream;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -44,6 +45,7 @@ public class BoardService {
     private final UserBlockService userBlockService;
     private final NoticeService noticeService;
     private final ReportService reportService;
+    private final BoardHideService boardHideService;
 
     /**
      * 게시물 목록 조회
@@ -53,10 +55,13 @@ public class BoardService {
         BoardListType boardListType = boardListRequest.boardListType();
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
         List<Long> reportedContentIds = reportService.getReportedTargetIds(ReportType.BOARD);
+        List<Long> hiddenContentIds = boardHideService.getHiddenContentIds();
 
         // 빈 리스트일 때 IN 절 오류 방지용 sentinel
         List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
-        List<Long> excludedContentIds = reportedContentIds.isEmpty() ? List.of(-1L) : reportedContentIds;
+        List<Long> mergedExcludedContentIds = Stream.concat(reportedContentIds.stream(), hiddenContentIds.stream())
+                .distinct().toList();
+        List<Long> excludedContentIds = mergedExcludedContentIds.isEmpty() ? List.of(-1L) : mergedExcludedContentIds;
 
         Page<Board> page = switch (boardListType) {
             case CATEGORY -> boardRepository.findAllByCategoryFiltered(
@@ -74,7 +79,6 @@ public class BoardService {
     /**
      * 게시물 상세 조회
      */
-    @Transactional(readOnly = true)
     public BoardResponse getById(Long id) {
         // 게시글 조회
         Board board = boardRepository.findByContent_Id(id)
@@ -91,6 +95,16 @@ public class BoardService {
                 throw new ErrorException(ErrorCode.BOARD_NOT_FOUND);
             }
         });
+
+        // 조회수 증가 (작성자는 최초 1회만 카운트)
+        Optional<User> currentUser = authenticationFacade.getCurrentUserOptional();
+        boolean isAuthor = Objects.equals(board.getCreatedBy(), currentUser.orElse(null));
+        if (isAuthor) {
+            board.getContent().incrementViewCountForAuthor();
+        } else {
+            board.getContent().incrementViewCount();
+        }
+
         Long contentId = board.getContent().getId();
 
         // 댓글 수 조회
@@ -106,12 +120,11 @@ public class BoardService {
         Set<Long> savedContentIds = new HashSet<>();
 
         Boolean noticeEnabled = null;
-        Optional<User> user = authenticationFacade.getCurrentUserOptional();
-        if (user.isPresent()) {
-            commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.get().getId(), List.of(contentId));
-            likedContentIds = contentService.getUserLikedContentIds(user.get().getId(), List.of(contentId));
-            savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), List.of(contentId));
-            noticeEnabled = noticeService.isContentNoticeEnabled(user.get().getId(), contentId);
+        if (currentUser.isPresent()) {
+            commentedContentIds = communityCommentsService.getUserCommentedContentIds(currentUser.get().getId(), List.of(contentId));
+            likedContentIds = contentService.getUserLikedContentIds(currentUser.get().getId(), List.of(contentId));
+            savedContentIds = contentService.getUserSavedContentIds(currentUser.get().getId(), List.of(contentId));
+            noticeEnabled = noticeService.isContentNoticeEnabled(currentUser.get().getId(), contentId);
         }
 
         // dto 생성
@@ -123,7 +136,7 @@ public class BoardService {
                 likedContentIds.contains(contentId),
                 savedContentIds.contains(contentId),
                 noticeEnabled,
-                Objects.equals(board.getCreatedBy(), user.orElse(null))
+                isAuthor
                 );
     }
 
@@ -141,7 +154,7 @@ public class BoardService {
         Content content = boardFactory.createContent(request.imageFileIdListOrEmpty());
 
         // Board 생성
-        Board board = boardFactory.createBoard(category, content, request.title(), request.body());
+        Board board = boardFactory.createBoard(category, content, request.title(), request.body(), request.tagsOrEmpty());
         board = boardRepository.save(board);
 
         // dto 생성

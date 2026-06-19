@@ -23,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,7 +33,6 @@ import java.util.Objects;
 public class NoticeService {
     private final NoticeRepository noticeRepository;
     private final NoticeFactory noticeFactory;
-    private final NoticeMapper noticeMapper;
     private final AuthenticationFacade authenticationFacade;
     private final UserNoticeSettingRepository userNoticeSettingRepository;
     private final ContentNoticeSettingRepository contentNoticeSettingRepository;
@@ -46,11 +44,10 @@ public class NoticeService {
     @Transactional(readOnly = true)
     public List<NoticeListResponse> getNoticeList() {
         User user = authenticationFacade.getCurrentUser();
-        List<Notice> notices = noticeRepository.findByUserId(user.getId());
 
-        return notices.stream()
+        return noticeRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
+                .stream()
                 .map(NoticeMapper::toNoticeListResponse)
-                .sorted(Comparator.comparing(NoticeListResponse::createdAt).reversed())
                 .toList();
     }
 
@@ -85,7 +82,6 @@ public class NoticeService {
 
         // 읽음 처리
         notice.setRead();
-        noticeRepository.save(notice);
         return true;
     }
 
@@ -115,9 +111,9 @@ public class NoticeService {
      * 게시물 알림 설정 조회
      */
     @Transactional(readOnly = true)
-    public BoardNoticeSettingResponse getBoardNoticeSetting(Long boardId) {
+    public BoardNoticeSettingResponse getBoardNoticeSetting(Long id) {
         User user = authenticationFacade.getCurrentUser();
-        Board board = boardRepository.findById(boardId)
+        Board board = boardRepository.findByContent_Id(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
         ContentNoticeSetting setting = contentNoticeSettingRepository
@@ -128,15 +124,15 @@ public class NoticeService {
                         .enabled(true)
                         .build());
 
-        return NoticeMapper.toBoardNoticeSettingResponse(boardId, setting);
+        return NoticeMapper.toBoardNoticeSettingResponse(id, setting);
     }
 
     /**
      * 게시물 알림 설정 토글 (댓글/좋아요/게시물 알림 전체 켜기/끄기)
      */
-    public BoardNoticeSettingResponse toggleBoardNoticeSetting(Long boardId) {
+    public BoardNoticeSettingResponse toggleBoardNoticeSetting(Long id) {
         User user = authenticationFacade.getCurrentUser();
-        Board board = boardRepository.findById(boardId)
+        Board board = boardRepository.findByContent_Id(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
         ContentNoticeSetting setting = contentNoticeSettingRepository
@@ -150,7 +146,7 @@ public class NoticeService {
         setting.toggle();
         contentNoticeSettingRepository.save(setting);
 
-        return NoticeMapper.toBoardNoticeSettingResponse(boardId, setting);
+        return NoticeMapper.toBoardNoticeSettingResponse(id, setting);
     }
 
     /**

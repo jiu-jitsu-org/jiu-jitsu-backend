@@ -20,7 +20,7 @@ public enum ErrorCode {
     BOARD_NOT_FOUND(404, "C0002", "존재하지 않는 게시글입니다."),
     BOARD_CATEGORY_NOT_FOUND(404, "C0003", "존재하지 않는 카테고리입니다."),
     COMMENT_NOT_FOUND(404, "C0004", "존재하지 않는 댓글입니다."),
-    NOTICE_NOT_FOUND(404, "C0004", "존재하지 않는 게시물입니다."),
+    NOTICE_NOT_FOUND(404, "C0005", "존재하지 않는 알림입니다."),
     EMAIL_DUPLICATED(400, "R0006", "이미 사용중인 이메일입니다."),
 
 
@@ -44,6 +44,7 @@ public enum ErrorCode {
     SELF_REPORT_NOT_ALLOWED(400, "U0007", "자신의 게시물/댓글은 신고할 수 없습니다."),
     ALREADY_REPORTED(400, "U0008", "이미 신고한 게시물/댓글입니다."),
     REPORT_NOT_FOUND(404, "U0009", "존재하지 않는 신고입니다."),
+    SELF_HIDE_NOT_ALLOWED(400, "U0010", "자신의 게시물은 숨길 수 없습니다."),
 
     /**
      * 인증 에러
@@ -51,14 +52,14 @@ public enum ErrorCode {
     NO_TOKEN(400, "A0001", "토큰이 존재하지 않습니다."),
     NOT_MATCH_CATEGORY(400, "A0002", "잘못된 유형의 토큰입니다."),
     TOKEN_EXPIRED(403, "A0003", "만료된 토큰입니다."),
-    ACCESS_TOKEN_EXPIRED(403, "A004", "만료된 엑세스 토큰입니다."),
+    ACCESS_TOKEN_EXPIRED(403, "A0004", "만료된 엑세스 토큰입니다."),
     TOKEN_NOT_EXPIRED(403, "A0005", "아직 토큰이 만료되지 않았습니다."),
     INVALID_TOKEN(401, "A0006", "유효하지 않은 토큰입니다."),
     UNAUTHENTICATED_USER(401, "A0007", "인증정보가 등록되지 않았습니다. 서버에 문의해 주세요."),
     FAIL_CREATE_REVOKE_TOKEN(500, "A0008", "revoke Token 생성에 실패했습니다."),
     INVALID_REFRESH_TOKEN(401, "A0009", "유효하지 않은 refresh token입니다. 재로그인 해 주세요."),
     KEY_PARSING_ERROR(401, "A0010", "인증 키 파싱 중 오류가 발생하였습니다."),
-    AUTHENTICATION_FAILED(401, "A0010", "인증에 실패하였습니다."),
+    AUTHENTICATION_FAILED(401, "A0011", "인증에 실패하였습니다."),
 
     /**
      * 앱 버전 조회 에러

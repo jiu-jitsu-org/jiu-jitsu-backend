@@ -44,6 +44,25 @@ public class Content extends BaseEntity {
     @Builder.Default
     private List<ContentLike> likes = new ArrayList<>();   // 좋아요
 
+    @Column(nullable = false)
+    @Builder.Default
+    private long viewCount = 0;     // 조회수
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean authorViewCounted = false;  // 작성자 조회수 추가됐는지 여부
+
+    public void incrementViewCount() {
+        this.viewCount++;
+    }
+
+    public void incrementViewCountForAuthor() {
+        if (!this.authorViewCounted) {
+            this.viewCount++;
+            this.authorViewCounted = true;
+        }
+    }
+
     public void addImageFiles(List<ImageFile> imageFiles) {
         if (imageFiles == null || imageFiles.isEmpty()) {
             return;

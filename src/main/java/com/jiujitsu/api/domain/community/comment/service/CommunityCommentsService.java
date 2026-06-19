@@ -8,6 +8,7 @@ import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeResponse;
 import com.jiujitsu.api.domain.community.comment.entity.CommentLike;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
+import com.jiujitsu.api.domain.community.comment.event.CommentNoticeEvent;
 import com.jiujitsu.api.domain.community.comment.factory.CommentFactory;
 import com.jiujitsu.api.domain.community.comment.factory.CommentLikeFactory;
 import com.jiujitsu.api.domain.community.comment.mapper.CommentLikeMapper;
@@ -16,7 +17,6 @@ import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepositor
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
-import com.jiujitsu.api.domain.community.comment.event.CommentNoticeEvent;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -27,7 +27,6 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -69,6 +67,7 @@ public class CommunityCommentsService {
         // 댓글 전체 리스트 조회(댓글+대댓글) - createdBy, content fetch join으로 N+1 방지
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
         List<Long> reportedCommentIds = reportService.getReportedTargetIds(ReportType.COMMENT);
+        Set<Long> reportedCommentIdSet = new HashSet<>(reportedCommentIds);
 
         List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
         List<Long> excludedCommentIds = reportedCommentIds.isEmpty() ? List.of(-1L) : reportedCommentIds;
@@ -105,7 +104,8 @@ public class CommunityCommentsService {
                                 new ArrayList<>(),    // 대댓글 하단에서 추가하기 위해 mutable list 사용
                                 likeCountMap.getOrDefault(c.getId(), 0L),
                                 likedCommentIds.contains(c.getId()),
-                                Objects.equals(c.getCreatedBy(), user))
+                                Objects.equals(c.getCreatedBy(), user),
+                                reportedCommentIdSet.contains(c.getId()))
                         ));
 
         // 결과에 댓글/대댓글 나눠 넣기
@@ -225,7 +225,7 @@ public class CommunityCommentsService {
 
     /**
      * 댓글 삭제
-     * 대댓글이 존재하면 soft delete (삭제된 댓글입니다 노출), 없으면 hard delete
+     * 대댓글이 있으면 soft-delete (deletedAt 설정), 없으면 hard-delete
      */
     public void deleteComment(Long commentId) {
         CommunityComments comment = communityCommentsRepository.findById(commentId)

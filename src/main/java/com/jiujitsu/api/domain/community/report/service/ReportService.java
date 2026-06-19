@@ -48,11 +48,11 @@ public class ReportService {
         User reporter = authenticationFacade.getCurrentUser();
 
         // 대상 검증 + 자기 신고 방지 (조회한 엔티티 재사용)
-        Hideable target = validateTargetAndNotSelfReport(request, reporter);
-
         if (reportRepository.existsByCreatedByAndReportTypeAndTargetId(reporter, request.reportType(), request.targetId())) {
             throw new ErrorException(ErrorCode.ALREADY_REPORTED);
         }
+
+        Hideable target = validateTargetAndNotSelfReport(request, reporter);
 
         reportRepository.save(Report.builder()
                 .reportType(request.reportType())
@@ -92,7 +92,7 @@ public class ReportService {
         Map<ReportType, List<Long>> targetIdsByType = reports.stream()
                 .collect(Collectors.groupingBy(
                         Report::getReportType,
-                        Collectors.mapping(Report::getTargetId, Collectors.toList())
+                        Collectors.mapping(Report::getTargetId, Collectors.toUnmodifiableList())
                 ));
 
         List<Long> boardTargetIds = targetIdsByType.getOrDefault(ReportType.BOARD, List.of())
@@ -170,9 +170,15 @@ public class ReportService {
     }
 
     // 신고 수 임계값 도달 시 자동 숨김 (validate에서 조회한 엔티티 재사용)
+    // 댓글에 대댓글이 있으면 isReported 플래그만 설정 (soft-delete 방식, 삭제와 구분)
     private void autoHideIfThresholdReached(ReportType reportType, Long targetId, Hideable target) {
         long count = reportRepository.countByReportTypeAndTargetId(reportType, targetId);
-        if (count >= AUTO_HIDE_THRESHOLD && !target.isHidden()) {
+        if (count < AUTO_HIDE_THRESHOLD || target.isHidden()) return;
+
+        if (reportType == ReportType.COMMENT
+                && communityCommentsRepository.existsByParentId(targetId)) {
+            ((CommunityComments) target).markAsReported();
+        } else {
             target.hide();
         }
     }
