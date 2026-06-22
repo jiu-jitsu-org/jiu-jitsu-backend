@@ -61,8 +61,6 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
             @Param("excludedAuthorIds") Collection<Long> excludedAuthorIds,
             @Param("excludedCommentIds") Collection<Long> excludedCommentIds);
 
-    boolean existsByParentId(Long parentId);
-
     @Query("""
     SELECT DISTINCT c.content.id
     FROM CommunityComments c
