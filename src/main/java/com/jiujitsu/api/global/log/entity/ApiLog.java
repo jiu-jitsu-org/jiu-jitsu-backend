@@ -43,4 +43,7 @@ public class ApiLog {
 
     @Column
     private String uri;
+
+    @Column
+    private String testColumn;
 }
