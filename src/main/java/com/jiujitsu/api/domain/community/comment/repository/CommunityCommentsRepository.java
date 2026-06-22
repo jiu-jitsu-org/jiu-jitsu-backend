@@ -35,11 +35,10 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
 
     /**
      * 댓글 목록 조회
-     * - 일반 댓글: hiddenAt IS NULL, isReported = false, deletedAt IS NULL, 차단 유저/신고한 댓글 제외
-     *   - 최상위 댓글(parentId=0): 신고한 댓글이어도 포함 (대댓글 구조 유지, isReportedByMe로 구분)
-     *   - 대댓글(parentId!=0): 신고한 댓글 제외
+     * - 일반 댓글: hiddenAt IS NULL, isReported = false, deletedAt IS NULL, 차단 유저 제외
+     *   - 댓글/대댓글 모두 신고해도 포함 (isReportedByMe로 구분)
      * - soft-delete 플레이스홀더: deletedAt IS NOT NULL (유저 삭제, 대댓글 있음)
-     * - reported 플레이스홀더: isReported = true (신고 자동숨김, 대댓글 있음)
+     * - reported 플레이스홀더: isReported = true (신고 자동숨김, 대댓글 있거나 대댓글 자신)
      */
     @Query("""
     SELECT c FROM CommunityComments c
@@ -48,8 +47,7 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
     WHERE c.content.id = :contentId
       AND (
         (c.hiddenAt IS NULL AND c.isReported = false AND c.deletedAt IS NULL
-         AND c.createdBy.id NOT IN :excludedAuthorIds
-         AND (c.parentId = 0 OR c.id NOT IN :excludedCommentIds))
+         AND c.createdBy.id NOT IN :excludedAuthorIds)
         OR c.deletedAt IS NOT NULL
         OR c.isReported = true
       )
@@ -57,8 +55,7 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
     """)
     List<CommunityComments> findByContentIdFiltered(
             @Param("contentId") Long contentId,
-            @Param("excludedAuthorIds") Collection<Long> excludedAuthorIds,
-            @Param("excludedCommentIds") Collection<Long> excludedCommentIds);
+            @Param("excludedAuthorIds") Collection<Long> excludedAuthorIds);
 
     @Query("""
     SELECT DISTINCT c.content.id

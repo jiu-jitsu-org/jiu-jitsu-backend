@@ -15,7 +15,6 @@ public record CommunityCommentsResponse(
         Boolean isAuthor,
         Boolean isDeleted,
         Boolean isReported,
-        Boolean isReportedByMe,
         CommunityProfileInfo author,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
