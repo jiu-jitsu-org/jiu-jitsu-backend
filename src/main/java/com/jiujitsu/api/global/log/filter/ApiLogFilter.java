@@ -99,6 +99,7 @@ public class ApiLogFilter extends OncePerRequestFilter {
         return uri.startsWith("/api/log")
                 || uri.startsWith("/api/swagger-ui")
                 || uri.startsWith("/api/v3/api-docs")
+                || uri.startsWith("/api/api-docs")
                 || uri.startsWith("/api/actuator");
     }
 }
