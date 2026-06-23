@@ -52,7 +52,6 @@ public enum ErrorCode {
     NO_TOKEN(400, "A0001", "토큰이 존재하지 않습니다."),
     NOT_MATCH_CATEGORY(400, "A0002", "잘못된 유형의 토큰입니다."),
     TOKEN_EXPIRED(403, "A0003", "만료된 토큰입니다."),
-    ACCESS_TOKEN_EXPIRED(403, "A0004", "만료된 엑세스 토큰입니다."),
     TOKEN_NOT_EXPIRED(403, "A0005", "아직 토큰이 만료되지 않았습니다."),
     INVALID_TOKEN(401, "A0006", "유효하지 않은 토큰입니다."),
     UNAUTHENTICATED_USER(401, "A0007", "인증정보가 등록되지 않았습니다. 서버에 문의해 주세요."),
