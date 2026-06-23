@@ -70,10 +70,9 @@ public class CommunityCommentsService {
         Set<Long> reportedCommentIdSet = new HashSet<>(reportedCommentIds);
 
         List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
-        List<Long> excludedCommentIds = reportedCommentIds.isEmpty() ? List.of(-1L) : reportedCommentIds;
 
         List<CommunityComments> comments = communityCommentsRepository
-                .findByContentIdFiltered(contentId, excludedAuthorIds, excludedCommentIds);
+                .findByContentIdFiltered(contentId, excludedAuthorIds);
 
 
         // 좋아요 조회(n+1 방지 > 전체 조회 후 mapping)

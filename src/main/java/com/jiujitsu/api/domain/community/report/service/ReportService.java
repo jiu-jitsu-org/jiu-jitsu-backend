@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -175,9 +176,14 @@ public class ReportService {
         long count = reportRepository.countByReportTypeAndTargetId(reportType, targetId);
         if (count < AUTO_HIDE_THRESHOLD || target.isHidden()) return;
 
-        if (reportType == ReportType.COMMENT
-                && communityCommentsRepository.existsByParentId(targetId)) {
-            ((CommunityComments) target).markAsReported();
+        if (reportType == ReportType.COMMENT) {
+            CommunityComments comment = (CommunityComments) target;
+            boolean isReply = !Objects.equals(comment.getParentId(), 0L);
+            if (isReply || communityCommentsRepository.existsByParentId(targetId)) {
+                comment.markAsReported();
+            } else {
+                comment.hide();
+            }
         } else {
             target.hide();
         }
