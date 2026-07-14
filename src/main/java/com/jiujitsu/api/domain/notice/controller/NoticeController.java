@@ -57,6 +57,13 @@ public class NoticeController {
         return noticeService.saveNoticeSetting(request);
     }
 
+    @Operation(summary = "알림 설정 조회", description = "알림 타입별 수신여부를 조회합니다.")
+    @LoginErrorExamples
+    @GetMapping("/setting")
+    public NoticeSettingResponse getNoticeSetting() {
+        return noticeService.getNoticeSetting();
+    }
+
     @Operation(summary = "게시물 알림 설정 조회", description = "특정 게시물의 댓글/좋아요 알림 설정을 조회합니다.")
     @LoginErrorExamples
     @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND})
