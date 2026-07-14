@@ -94,6 +94,14 @@ public class NoticeService {
     }
 
     /**
+     * 알림 수신동의여부 조회
+     */
+    public NoticeSettingResponse getNoticeSetting() {
+        User user = authenticationFacade.getCurrentUser();
+        return NoticeMapper.toNoticeSettingResponse(user.getUserNoticeSetting());
+    }
+
+    /**
      * 알림 수신동의여부 저장
      */
     public NoticeSettingResponse saveNoticeSetting(NoticeSettingRequest request) {
