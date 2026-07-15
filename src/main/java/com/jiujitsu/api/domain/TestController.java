@@ -1,5 +1,8 @@
 package com.jiujitsu.api.domain;
 
+import com.jiujitsu.api.domain.community.balance_game.dto.BalanceGameCreateRequest;
+import com.jiujitsu.api.domain.community.balance_game.dto.BalanceGameResponse;
+import com.jiujitsu.api.domain.community.balance_game.service.BalanceGameService;
 import com.jiujitsu.api.domain.community.board.service.BoardCategoryService;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.service.AuthService;
@@ -24,6 +27,7 @@ public class TestController {
     private final UserService userService;
     private final BoardCategoryService boardCategoryService;
     private final AuthService authService;
+    private final BalanceGameService balanceGameService;
 
     /**
      * 인증
@@ -90,5 +94,16 @@ public class TestController {
     @PostMapping("/category")
     public void createCategory() {
         boardCategoryService.createCategory();
+    }
+
+    //todo: 정식 관리자 등록 기능으로 대체 예정
+    @Operation(
+            summary = "밸런스 게임 등록(임시)",
+            description = "테스트 데이터 생성을 위한 임시 밸런스 게임 등록 API 입니다."
+    )
+    @ApiErrorCodeExamples({ErrorCode.IMAGE_FILE_NOT_FOUND})
+    @PostMapping("/balance-game")
+    public BalanceGameResponse createBalanceGame(@Valid @RequestBody BalanceGameCreateRequest request) {
+        return balanceGameService.create(request);
     }
 }
