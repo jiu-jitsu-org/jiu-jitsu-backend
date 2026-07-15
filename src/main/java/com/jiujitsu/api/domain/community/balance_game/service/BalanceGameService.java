@@ -11,12 +11,16 @@ import com.jiujitsu.api.domain.community.balance_game.repository.BalanceGameRepo
 import com.jiujitsu.api.domain.community.balance_game.repository.BalanceGameVoteRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
+import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +43,51 @@ public class BalanceGameService {
         return balanceGameRepository.findTopByEndAtAfterOrderByEndAtAsc(LocalDateTime.now())
                 .map(this::toResponseWithVotes)
                 .orElse(null);
+    }
+
+    /**
+     * 밸런스 게임 상세 조회 (마감된 게임도 조회 가능 - 결과만 노출)
+     */
+    @Transactional(readOnly = true)
+    public BalanceGameResponse getDetail(Long contentId) {
+        BalanceGame game = balanceGameRepository.findByContentId(contentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND));
+        return toResponseWithVotes(game);
+    }
+
+    /**
+     * 밸런스 게임 투표/변경/취소 (토글)
+     * - 미투표         → 등록
+     * - 같은 선택지 재요청 → 취소
+     * - 다른 선택지     → 변경
+     * 투표 반영 후 최신 상태를 그대로 반환한다. (클라이언트 재조회 불필요)
+     */
+    public BalanceGameResponse vote(Long contentId, BalanceGameOption option) {
+        User user = authenticationFacade.getCurrentUser();
+
+        BalanceGame game = balanceGameRepository.findByContentId(contentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND));
+
+        if (game.getEndAt().isBefore(LocalDateTime.now())) {
+            throw new ErrorException(ErrorCode.BALANCE_GAME_CLOSED);
+        }
+
+        Optional<BalanceGameVote> existing =
+                balanceGameVoteRepository.findByBalanceGameIdAndCreatedBy(game.getId(), user);
+
+        if (existing.isPresent()) {
+            BalanceGameVote vote = existing.get();
+            if (vote.getOption() == option) {
+                balanceGameVoteRepository.delete(vote);     // 같은 선택지 재요청 → 투표 취소
+            } else {
+                vote.changeOption(option);                  // 다른 선택지 → 변경
+            }
+        } else {
+            balanceGameVoteRepository.save(
+                    BalanceGameVote.builder().balanceGame(game).option(option).build());
+        }
+
+        return toResponseWithVotes(game);
     }
 
     /**
