@@ -3,11 +3,15 @@ package com.jiujitsu.api.domain.community.balance_game.service;
 import com.jiujitsu.api.domain.community.balance_game.dto.BalanceGameCreateRequest;
 import com.jiujitsu.api.domain.community.balance_game.dto.BalanceGameResponse;
 import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGame;
+import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGameOption;
+import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGameVote;
 import com.jiujitsu.api.domain.community.balance_game.factory.BalanceGameFactory;
 import com.jiujitsu.api.domain.community.balance_game.mapper.BalanceGameMapper;
 import com.jiujitsu.api.domain.community.balance_game.repository.BalanceGameRepository;
+import com.jiujitsu.api.domain.community.balance_game.repository.BalanceGameVoteRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
+import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,9 +24,11 @@ import java.time.LocalDateTime;
 public class BalanceGameService {
 
     private final BalanceGameRepository balanceGameRepository;
+    private final BalanceGameVoteRepository balanceGameVoteRepository;
     private final BalanceGameFactory balanceGameFactory;
     private final BalanceGameMapper balanceGameMapper;
     private final CommunityCommentsService communityCommentsService;
+    private final AuthenticationFacade authenticationFacade;
 
     /**
      * 커뮤니티 메인 - 현재 진행중인 밸런스 게임 조회
@@ -31,10 +37,7 @@ public class BalanceGameService {
     @Transactional(readOnly = true)
     public BalanceGameResponse getCurrent() {
         return balanceGameRepository.findTopByEndAtAfterOrderByEndAtAsc(LocalDateTime.now())
-                .map(game -> balanceGameMapper.toResponse(
-                        game,
-                        communityCommentsService.getCountComments(game.getContent().getId())
-                ))
+                .map(this::toResponseWithVotes)
                 .orElse(null);
     }
 
@@ -52,6 +55,24 @@ public class BalanceGameService {
         );
         game = balanceGameRepository.save(game);
 
-        return balanceGameMapper.toResponse(game, 0L);
+        return balanceGameMapper.toResponse(game, 0L, 0L, 0L, null, LocalDateTime.now());
+    }
+
+    // 득표수/내 투표/댓글수를 채워 응답으로 변환
+    private BalanceGameResponse toResponseWithVotes(BalanceGame game) {
+        Long balanceGameId = game.getId();
+
+        long voteCountA = balanceGameVoteRepository.countByBalanceGameIdAndOption(balanceGameId, BalanceGameOption.A);
+        long voteCountB = balanceGameVoteRepository.countByBalanceGameIdAndOption(balanceGameId, BalanceGameOption.B);
+
+        // 비로그인 사용자는 myVote = null (프론트에서 결과 숨김 처리)
+        BalanceGameOption myVote = authenticationFacade.getCurrentUserOptional()
+                .flatMap(user -> balanceGameVoteRepository.findByBalanceGameIdAndCreatedBy(balanceGameId, user))
+                .map(BalanceGameVote::getOption)
+                .orElse(null);
+
+        long commentCount = communityCommentsService.getCountComments(game.getContent().getId());
+
+        return balanceGameMapper.toResponse(game, commentCount, voteCountA, voteCountB, myVote, LocalDateTime.now());
     }
 }
