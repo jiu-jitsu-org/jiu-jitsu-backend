@@ -114,6 +114,10 @@ public class BoardService {
         long likeCount = contentService.getContentLikeCount(List.of(contentId))
                 .getOrDefault(contentId, 0L);
 
+        // 저장 수 조회
+        long saveCount = contentService.getContentSaveCount(List.of(contentId))
+                .getOrDefault(contentId, 0L);
+
         // 설정 여부 확인
         Set<Long> commentedContentIds = new HashSet<>();
         Set<Long> likedContentIds = new HashSet<>();
@@ -132,6 +136,7 @@ public class BoardService {
                 board,
                 commentCount,
                 likeCount,
+                saveCount,
                 commentedContentIds.contains(contentId),
                 likedContentIds.contains(contentId),
                 savedContentIds.contains(contentId),
@@ -245,6 +250,11 @@ public class BoardService {
                 ? Map.of()
                 : contentService.getContentLikeCount(contentIds);
 
+        // 저장 조회
+        Map<Long, Long> contentSaveMap = contentIds.isEmpty()
+                ? Map.of()
+                : contentService.getContentSaveCount(contentIds);
+
         // 설정 여부 확인
         Set<Long> commentedContentIds = new HashSet<>();
         Set<Long> likedContentIds = new HashSet<>();
@@ -268,6 +278,7 @@ public class BoardService {
                             board,
                             commentCountMap.getOrDefault(contentId, 0L),
                             contentLikeMap.getOrDefault(contentId, 0L),
+                            contentSaveMap.getOrDefault(contentId, 0L),
                             finalCommentedContentIds.contains(contentId),
                             finalLikedContentIds.contains(contentId),
                             finalSavedContentIds.contains(contentId),

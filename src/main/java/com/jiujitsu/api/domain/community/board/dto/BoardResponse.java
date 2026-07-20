@@ -19,6 +19,7 @@ public record BoardResponse(
         @Schema(description = "수정 여부") Boolean isUpdated,
         @Schema(description = "상위 댓글 수 (대댓글 제외)", example = "5") Long commentCount,
         @Schema(description = "좋아요 수", example = "17") Long likeCount,
+        @Schema(description = "저장 수", example = "5") Long saveCount,
         @Schema(description = "조회 수", example = "100") Long viewCount,
         @Schema(description = "댓글 작성 여부", example = "true") Boolean isCommented,
         @Schema(description = "좋아요 여부", example = "true") Boolean isLiked,
