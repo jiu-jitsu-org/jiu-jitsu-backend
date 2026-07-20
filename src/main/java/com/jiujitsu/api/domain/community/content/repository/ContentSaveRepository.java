@@ -22,4 +22,12 @@ public interface ContentSaveRepository extends JpaRepository<ContentSave, Long> 
               and c.content.id in :contentIds
             """)
     Set<Long> findUserSavedContentIds(@Param("userId") Long userId, @Param("contentIds") List<Long> contentIds);
+
+    @Query("""
+        select c.content.id, count(c)
+        from ContentSave c
+        where c.content.id in :contentIds
+        group by c.content.id
+   \s""")
+    List<Object[]> countContentSaveByContentIds(@Param("contentIds") List<Long> contentIds);
 }

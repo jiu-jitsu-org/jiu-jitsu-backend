@@ -17,7 +17,7 @@ public class BoardMapper {
     /**
      * 목록 response
      */
-    public BoardListResponse toBoardListResponse(Board board, long commentCount, long likeCount, boolean isCommented, boolean isLiked, boolean isSaved, boolean isAuthor) {
+    public BoardListResponse toBoardListResponse(Board board, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, boolean isAuthor) {
         Content content = board.getContent();
 
         return new BoardListResponse(
@@ -30,6 +30,7 @@ public class BoardMapper {
                 board.getUpdatedAt(),
                 commentCount,
                 likeCount,
+                saveCount,
                 content.getViewCount(),
                 isCommented,
                 isLiked,
@@ -44,7 +45,7 @@ public class BoardMapper {
     /**
      * 상세 response
      */
-    public BoardResponse toResponse(Board board, Long commentCount, Long likeCount, boolean isCommented, boolean isLiked, boolean isSaved, Boolean noticeEnabled, boolean isAuthor) {
+    public BoardResponse toResponse(Board board, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, Boolean noticeEnabled, boolean isAuthor) {
         Content content = board.getContent();
         return new BoardResponse(
                 content.getId(),
@@ -57,6 +58,7 @@ public class BoardMapper {
                 board.isUpdated(),
                 commentCount,
                 likeCount,
+                saveCount,
                 content.getViewCount(),
                 isCommented,
                 isLiked,
@@ -80,6 +82,7 @@ public class BoardMapper {
                 board.getCreatedAt(),
                 board.getUpdatedAt(),
                 board.isUpdated(),
+                null,
                 null,
                 null,
                 content.getViewCount(),

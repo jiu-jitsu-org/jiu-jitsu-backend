@@ -115,6 +115,15 @@ public class ContentService {
     }
 
     /**
+     * 게시글 목록 > 저장 카운트 조회
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, Long> getContentSaveCount(List<Long> contentIds) {
+        return contentSaveRepository.countContentSaveByContentIds(contentIds).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+    }
+
+    /**
      * 게시글 - 좋아요id 조회
      */
     @Transactional(readOnly = true)
