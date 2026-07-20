@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.community.board.entity.BoardTag;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileInfo;
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
+import com.jiujitsu.api.global.util.TimeAgoUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -38,7 +39,8 @@ public class BoardMapper {
                 getImageInfoList(content),
                 getTagNames(board),
                 CommunityProfileInfo.from(board.getCreatedBy()),
-                isAuthor
+                isAuthor,
+                TimeAgoUtil.format(board.getCreatedAt())
         );
     }
 
@@ -67,7 +69,8 @@ public class BoardMapper {
                 getTagNames(board),
                 noticeEnabled,
                 CommunityProfileInfo.from(board.getCreatedBy()),
-                isAuthor
+                isAuthor,
+                TimeAgoUtil.format(board.getCreatedAt())
         );
     }
 
@@ -93,7 +96,8 @@ public class BoardMapper {
                 getTagNames(board),
                 null,
                 CommunityProfileInfo.from(board.getCreatedBy()),
-                true
+                true,
+                TimeAgoUtil.format(board.getCreatedAt())
         );
     }
 
