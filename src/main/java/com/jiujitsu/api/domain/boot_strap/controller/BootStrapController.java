@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
-@Tag(name = "[SYS] AppVersion", description = "강제업데이트, 선택업데이트 >> 26.07.30 GitHubWebhooks deveop branch $$$$$$$$$$$$$$$$")
+@Tag(name = "[SYS] AppVersion", description = "강제업데이트, 선택업데이트 >> 26.07.31 GitHubWebhooks deveop branch TEST $$$$$$$$$$$$$$$$")
 @CommonApiResponses
 @RestController
 @RequestMapping("/bootstrap")
