@@ -1,8 +1,8 @@
-# application-dev.yml
+# application-prod.yml
 spring:
   config:
     activate:
-      on-profile: dev
+      on-profile: prod
   datasource:
     url: jdbc:p6spy:postgresql://postgres:5432/jiujitsu   # ✅ 변경
     username: jiujitsu
