@@ -46,4 +46,4 @@ cors:
 springdoc:
   swagger-ui:
     server:
-      url: https://dev-api.bjj-oss.kr
+      url: https://dev-api.bjj-oss.kr/api
