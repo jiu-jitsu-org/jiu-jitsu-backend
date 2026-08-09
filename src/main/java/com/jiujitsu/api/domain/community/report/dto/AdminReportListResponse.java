@@ -13,6 +13,7 @@ public record AdminReportListResponse(
         Long reporterUserId,
         String reporterNickname,
         ReportReason reason,
+        String detail,
         long totalReportCount,
         boolean isHidden,
         LocalDateTime createdAt

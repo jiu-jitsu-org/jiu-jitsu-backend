@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.community.report.entity;
 
 import com.jiujitsu.api.global.entity.BaseEntity;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,4 +33,7 @@ public class Report extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ReportReason reason;
+
+    @Column
+    private String detail;
 }

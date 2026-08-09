@@ -59,6 +59,7 @@ public class ReportService {
                 .reportType(request.reportType())
                 .targetId(request.targetId())
                 .reason(request.reason())
+                .detail(request.detail())
                 .build());
 
         autoHideIfThresholdReached(request.reportType(), request.targetId(), target);
@@ -104,12 +105,12 @@ public class ReportService {
         Map<Long, Board> boardMap = boardTargetIds.isEmpty()
                 ? Map.of()
                 : boardRepository.findAllByContentIdIn(boardTargetIds).stream()
-                        .collect(Collectors.toMap(b -> b.getContent().getId(), b -> b));
+                .collect(Collectors.toMap(b -> b.getContent().getId(), b -> b));
 
         Map<Long, CommunityComments> commentMap = commentTargetIds.isEmpty()
                 ? Map.of()
                 : communityCommentsRepository.findAllById(commentTargetIds).stream()
-                        .collect(Collectors.toMap(CommunityComments::getId, c -> c));
+                .collect(Collectors.toMap(CommunityComments::getId, c -> c));
 
         Map<Long, Long> boardReportCounts = toCountMap(
                 reportRepository.countByReportTypeAndTargetIds(ReportType.BOARD, boardTargetIds));
