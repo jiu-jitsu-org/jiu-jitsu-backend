@@ -14,6 +14,8 @@ public record ReportCreateRequest(
         Long targetId,
         @NotNull(message = "신고 사유는 필수입니다.")
         @Schema(description = "신고 사유", example = "SPAM", requiredMode = Schema.RequiredMode.REQUIRED)
-        ReportReason reason
+        ReportReason reason,
+        @Schema(description = "사유 상세")
+        String detail
 ) {
 }

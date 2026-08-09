@@ -19,6 +19,7 @@ public class ReportMapper {
                 report.getCreatedBy().getId(),
                 report.getCreatedBy().getNickname(),
                 report.getReason(),
+                report.getDetail(),
                 totalReportCount,
                 isHidden,
                 report.getCreatedAt()
