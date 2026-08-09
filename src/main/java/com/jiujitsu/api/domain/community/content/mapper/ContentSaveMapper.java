@@ -10,10 +10,11 @@ public class ContentSaveMapper {
     /**
      * 게시물 저장 response
      */
-    public ContentSaveResponse toContentSaveResponse(Content content, ContentSave contentSave) {
+    public ContentSaveResponse toContentSaveResponse(Content content, ContentSave contentSave, Long saveCount) {
         return new ContentSaveResponse(
                 content.getId(),
-                contentSave != null
+                contentSave != null,
+                saveCount
         );
     }
 }

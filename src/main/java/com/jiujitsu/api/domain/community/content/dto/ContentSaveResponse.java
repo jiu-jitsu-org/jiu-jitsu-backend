@@ -6,6 +6,8 @@ public record ContentSaveResponse(
         @Schema(description = "게시글 ID", example = "1")
         Long contentID,
         @Schema(description = "저장 상태", example = "true")
-        Boolean isSaved
+        Boolean isSaved,
+        @Schema(description = "저장 수", example = "10")
+        Long saveCount
 ) {
 }

@@ -111,7 +111,12 @@ public class ContentService {
             contentSaveRepository.save(newSave);
         }
 
-        return contentSaveMapper.toContentSaveResponse(content, newSave);
+        // 저장 조회
+        // 저장 수 조회
+        long saveCount = getContentSaveCount(List.of(content.getId()))
+                .getOrDefault(content.getId(), 0L);
+
+        return contentSaveMapper.toContentSaveResponse(content, newSave, saveCount);
     }
 
     /**
