@@ -49,7 +49,7 @@ public class BoardController {
     /**
      * 게시물
      */
-    @Operation(summary = "게시글 목록 조회", description = "카테고리별·페이징 게시글 목록을 조회합니다.")
+    @Operation(summary = "게시글 목록 조회", description = "카테고리별 페이징 게시글 목록을 조회합니다.")
     @GetMapping
     public Page<BoardListResponse> getList(
             @ModelAttribute BoardListRequest boardListRequest,
