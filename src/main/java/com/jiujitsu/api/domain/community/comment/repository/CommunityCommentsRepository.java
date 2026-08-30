@@ -1,11 +1,14 @@
 package com.jiujitsu.api.domain.community.comment.repository;
 
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -50,9 +53,24 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
         OR c.deletedAt IS NOT NULL
         OR c.isReported = true
       )
-    ORDER BY c.createdAt DESC
+    ORDER BY c.createdAt DESC, c.id DESC
     """)
     List<CommunityComments> findByContentIdFiltered(@Param("contentId") Long contentId);
+
+    /**
+     * 대댓글 추가 조회 (parentId 기준, 숨김 필터는 목록 조회와 동일)
+     */
+    @EntityGraph(attributePaths = {"createdBy", "content"})
+    @Query("""
+    SELECT c FROM CommunityComments c
+    WHERE c.parentId = :parentId
+      AND (
+        (c.hiddenAt IS NULL AND c.isReported = false AND c.deletedAt IS NULL)
+        OR c.deletedAt IS NOT NULL
+        OR c.isReported = true
+      )
+    """)
+    List<CommunityComments> findRepliesByParentId(@Param("parentId") Long parentId, Pageable pageable);
 
     @Query("""
     SELECT DISTINCT c.content.id
@@ -62,4 +80,13 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
     """)
     Set<Long> findUserCommentedContentIds(@Param("userId") Long userId,
                                           @Param("contentIds") List<Long> contentIds);
+
+    @Query("""
+    SELECT DISTINCT c.parentId
+    FROM CommunityComments c
+    WHERE c.createdBy.id = :userId
+      AND c.parentId IN :parentIds
+    """)
+    Set<Long> findRepliedParentIds(@Param("userId") Long userId,
+                                   @Param("parentIds") Collection<Long> parentIds);
 }

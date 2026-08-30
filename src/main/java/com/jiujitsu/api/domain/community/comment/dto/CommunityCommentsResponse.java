@@ -17,10 +17,12 @@ public record CommunityCommentsResponse(
         Boolean isDeleted,
         Boolean isReported,
         Boolean isBlocked,
+        @Schema(description = "내가 이 댓글에 대댓글을 단 적 있는지") Boolean isReplied,
         CommunityProfileInfo author,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         @Schema(description = "등록 경과 시간") String timeAgo,
+        @Schema(description = "대댓글 수") Long childCount,
         List<CommunityCommentsResponse> childrenList
 ) {
 

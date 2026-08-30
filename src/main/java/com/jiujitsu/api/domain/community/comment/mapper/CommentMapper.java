@@ -20,7 +20,9 @@ public class CommentMapper {
                                                                  Boolean liked,
                                                                  Boolean isAuthor,
                                                                  Boolean isReportedByMe,
-                                                                 Boolean isBlocked) {
+                                                                 Boolean isBlocked,
+                                                                 Boolean isReplied,
+                                                                 Long childCount) {
         Content content = comments.getContent();
 
         return new CommunityCommentsResponse(
@@ -34,10 +36,12 @@ public class CommentMapper {
                 comments.isDeleted(),
                 comments.getIsReported() || isReportedByMe,
                 isBlocked,
+                isReplied,
                 isBlocked ? CommunityProfileInfo.masked() : CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
                 TimeAgoUtil.format(comments.getCreatedAt()),
+                childCount,
                 childrenList
         );
     }
@@ -60,10 +64,12 @@ public class CommentMapper {
                 comments.isDeleted(),
                 comments.getIsReported(),
                 false,
+                false,
                 CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
                 TimeAgoUtil.format(comments.getCreatedAt()),
+                0L,
                 childrenList
         );
     }
