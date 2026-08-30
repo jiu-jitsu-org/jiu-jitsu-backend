@@ -10,10 +10,11 @@ public class ContentLikeMapper {
     /**
      * 게시물 좋아요 response
      */
-    public ContentLikeResponse toContentLikeResponse(Content content, ContentLike contentLike) {
+    public ContentLikeResponse toContentLikeResponse(Content content, ContentLike contentLike, Long likeCount) {
         return new ContentLikeResponse(
                 content.getId(),
-                contentLike != null
+                contentLike != null,
+                likeCount
         );
     }
 }

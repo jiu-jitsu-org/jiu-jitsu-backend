@@ -215,7 +215,13 @@ public class CommunityCommentsService {
             }
         }
 
-        return commentLikeMapper.toCommentLikeResponse(comment, newLike);
+        long likeCount = commentLikeRepository.countGroupByCommentIds(List.of(comment.getId()))
+                .stream()
+                .findFirst()
+                .map(row -> ((Number) row[1]).longValue())
+                .orElse(0L);
+
+        return commentLikeMapper.toCommentLikeResponse(comment, newLike, likeCount);
     }
 
     /**

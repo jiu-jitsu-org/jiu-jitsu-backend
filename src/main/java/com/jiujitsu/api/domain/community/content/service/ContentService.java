@@ -75,7 +75,10 @@ public class ContentService {
             }
         }
 
-        return contentLikeMapper.toContentLikeResponse(content, newLike);
+        long likeCount = getContentLikeCount(List.of(content.getId()))
+                .getOrDefault(content.getId(), 0L);
+
+        return contentLikeMapper.toContentLikeResponse(content, newLike, likeCount);
     }
 
     /**

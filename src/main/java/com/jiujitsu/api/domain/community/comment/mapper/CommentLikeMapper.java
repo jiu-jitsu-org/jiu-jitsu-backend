@@ -10,10 +10,11 @@ public class CommentLikeMapper {
     /**
      * 댓글 좋아요 response
      */
-    public CommentLikeResponse toCommentLikeResponse(CommunityComments comment, CommentLike commentLike) {
+    public CommentLikeResponse toCommentLikeResponse(CommunityComments comment, CommentLike commentLike, Long likeCount) {
         return new CommentLikeResponse(
                 comment.getId(),
-                commentLike != null
+                commentLike != null,
+                likeCount
         );
     }
 }
