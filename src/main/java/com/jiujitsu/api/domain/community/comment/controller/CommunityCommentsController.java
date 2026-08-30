@@ -29,7 +29,7 @@ public class CommunityCommentsController {
 
     @Operation(
             summary = "커뮤니티 게시글 댓글 목록 조회",
-            description = "현재 커뮤니티 게시물의 댓글을 조회합니다."
+            description = "현재 커뮤니티 게시물의 댓글을 조회합니다. 차단한 작성자의 댓글/대댓글은 제외하지 않고 isBlocked=true로 내려가며, 본문과 작성자 정보는 마스킹됩니다."
     )
     @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
     @GetMapping

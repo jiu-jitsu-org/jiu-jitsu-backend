@@ -65,14 +65,12 @@ public class CommunityCommentsService {
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
         // 댓글 전체 리스트 조회(댓글+대댓글) - createdBy, content fetch join으로 N+1 방지
-        List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
+        Set<Long> blockedUserIds = new HashSet<>(userBlockService.getBlockedUserIds());
         List<Long> reportedCommentIds = reportService.getReportedTargetIds(ReportType.COMMENT);
         Set<Long> reportedCommentIdSet = new HashSet<>(reportedCommentIds);
 
-        List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
-
         List<CommunityComments> comments = communityCommentsRepository
-                .findByContentIdFiltered(contentId, excludedAuthorIds);
+                .findByContentIdFiltered(contentId);
 
 
         // 좋아요 조회(n+1 방지 > 전체 조회 후 mapping)
@@ -104,7 +102,8 @@ public class CommunityCommentsService {
                                 likeCountMap.getOrDefault(c.getId(), 0L),
                                 likedCommentIds.contains(c.getId()),
                                 Objects.equals(c.getCreatedBy(), user),
-                                reportedCommentIdSet.contains(c.getId()))
+                                reportedCommentIdSet.contains(c.getId()),
+                                blockedUserIds.contains(c.getCreatedBy().getId()))
                         ));
 
         // 결과에 댓글/대댓글 나눠 넣기
