@@ -254,7 +254,7 @@ public class CommunityCommentsService {
     @Transactional(readOnly = true)
     public long getCountComments(Long contentId) {
         return communityCommentsRepository
-                .countByContent_IdAndParentIdIsNullAndHiddenAtIsNull(contentId);
+                .countVisibleRootComments(contentId);
     }
 
     /**
