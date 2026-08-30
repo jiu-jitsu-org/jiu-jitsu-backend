@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileInfo;
+import com.jiujitsu.api.global.util.TimeAgoUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -36,6 +37,7 @@ public class CommentMapper {
                 isBlocked ? CommunityProfileInfo.masked() : CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
+                TimeAgoUtil.format(comments.getCreatedAt()),
                 childrenList
         );
     }
@@ -61,6 +63,7 @@ public class CommentMapper {
                 CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
+                TimeAgoUtil.format(comments.getCreatedAt()),
                 childrenList
         );
     }

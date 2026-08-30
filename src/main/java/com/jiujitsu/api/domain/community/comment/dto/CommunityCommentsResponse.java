@@ -20,6 +20,7 @@ public record CommunityCommentsResponse(
         CommunityProfileInfo author,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
+        @Schema(description = "등록 경과 시간") String timeAgo,
         List<CommunityCommentsResponse> childrenList
 ) {
 
