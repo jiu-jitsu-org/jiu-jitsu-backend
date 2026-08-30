@@ -19,7 +19,7 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
@@ -40,12 +40,10 @@ logging:
 # CORS
 cors:
   allowed-origins:
-    - https://api.developer-chanq.xyz
-    - http://localhost:3000
-    #todo: 로컬호스트 삭제
+    - https://dev-api.bjj-oss.kr
 
 # Swagger server URL
 springdoc:
   swagger-ui:
     server:
-      url: https://api.developer-chanq.xyz/api
+      url: https://dev-api.bjj-oss.kr/api
