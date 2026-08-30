@@ -28,7 +28,7 @@ public class UserBlockController {
     @ApiErrorCodeExamples({ErrorCode.SELF_BLOCK_NOT_ALLOWED, ErrorCode.AUTHENTICATION_FAILED})
     @PostMapping("/block/{id}")
     public Boolean toggleBlock(
-            @Parameter(name = "id", description = "차단할 유저 ID", required = true) @PathVariable Long id
+            @Parameter(name = "id", description = "차단할 유저 ID", required = true) @PathVariable(value = "id") Long id
     ) {
         return userBlockService.toggleBlock(id);
     }

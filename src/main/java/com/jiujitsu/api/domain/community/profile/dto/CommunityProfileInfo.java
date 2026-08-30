@@ -15,4 +15,8 @@ public record CommunityProfileInfo(
                 ImageInfo.from(user.getProfileImageFile())
         );
     }
+
+    public static CommunityProfileInfo masked() {
+        return new CommunityProfileInfo(null, null, null);
+    }
 }

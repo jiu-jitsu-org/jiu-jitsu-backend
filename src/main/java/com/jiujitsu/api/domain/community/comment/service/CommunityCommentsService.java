@@ -28,6 +28,11 @@ import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,87 +57,84 @@ public class CommunityCommentsService {
     private final CommentLikeMapper commentLikeMapper;
 
 
+    private static final int INITIAL_CHILD_LIMIT = 3;
+    private static final int REPLY_PAGE_SIZE = 10;
+
     /**
      * 댓글 목록 조회
+     * 대댓글은 sortType 기준 3개만 미리보기로 포함한다. 나머지는 대댓글 추가 조회로 가져온다.
      */
     @Transactional(readOnly = true)
     public List<CommunityCommentsResponse> getComments(CommentsListRequest request) {
         Long contentId = request.id();
         CommentsSortType sortType = request.sortType();
 
-        // 컨텐츠 조회
-        Content content = contentRepository.findById(contentId)
+        contentRepository.findById(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
-        // 댓글 전체 리스트 조회(댓글+대댓글) - createdBy, content fetch join으로 N+1 방지
-        List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
-        List<Long> reportedCommentIds = reportService.getReportedTargetIds(ReportType.COMMENT);
-        Set<Long> reportedCommentIdSet = new HashSet<>(reportedCommentIds);
+        Set<Long> blockedUserIds = new HashSet<>(userBlockService.getBlockedUserIds());
+        Set<Long> reportedCommentIdSet = new HashSet<>(reportService.getReportedTargetIds(ReportType.COMMENT));
 
-        List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
+        List<CommunityComments> comments = communityCommentsRepository.findByContentIdFiltered(contentId);
+        CommentViewContext viewContext = buildViewContext(comments, blockedUserIds, reportedCommentIdSet);
 
-        List<CommunityComments> comments = communityCommentsRepository
-                .findByContentIdFiltered(contentId, excludedAuthorIds);
+        Map<Long, List<CommunityComments>> childrenByParentId = comments.stream()
+                .filter(c -> !isRootComment(c))
+                .collect(Collectors.groupingBy(CommunityComments::getParentId, LinkedHashMap::new, Collectors.toList()));
 
+        List<CommunityComments> roots = comments.stream()
+                .filter(this::isRootComment)
+                .toList();
 
-        // 좋아요 조회(n+1 방지 > 전체 조회 후 mapping)
-        List<Long> commentIds = comments.stream().map(CommunityComments::getId).toList();
+        List<CommunityCommentsResponse> result = roots.stream()
+                .map(root -> {
+                    List<CommunityComments> children = sortComments(
+                            childrenByParentId.getOrDefault(root.getId(), List.of()),
+                            sortType
+                    );
+                    List<CommunityCommentsResponse> preview = children.stream()
+                            .limit(INITIAL_CHILD_LIMIT)
+                            .map(child -> toResponse(child, new ArrayList<>(), 0L, viewContext))
+                            .toList();
+                    return toResponse(root, new ArrayList<>(preview), (long) children.size(), viewContext);
+                })
+                .toList();
 
-        // 좋아요 수
-        Map<Long, Long> likeCountMap = commentLikeRepository.countGroupByCommentIds(commentIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        row -> (Long) row[0],
-                        row -> (Long) row[1]
-                ));
+        return Objects.equals(sortType, CommentsSortType.CREATE_DESC)
+                ? result.stream().sorted(Comparator.comparing(CommunityCommentsResponse::createdAt).reversed()).toList()
+                : result.stream().sorted(Comparator.comparing(CommunityCommentsResponse::createdAt)).toList();
+    }
 
-        // 좋아요 여부
-        Set<Long> likedCommentIds = AuthenticationUtil.getCurrentUserId()
-                .map(userId -> new HashSet<>(commentLikeRepository.findLikedCommentIds(commentIds, userId)))
-                .orElse(new HashSet<>());
-
-        // 작성자 여부
-        User user = authenticationFacade.getCurrentUserOptional().orElse(null);
-
-        // 전체 댓글 Response 로 mapping
-        Map<Long, CommunityCommentsResponse> commentsMap = comments.stream()
-                .collect(Collectors.toMap(
-                        CommunityComments::getId,
-                        c -> commentMapper.toCommunityCommentsResponse(
-                                c,
-                                new ArrayList<>(),    // 대댓글 하단에서 추가하기 위해 mutable list 사용
-                                likeCountMap.getOrDefault(c.getId(), 0L),
-                                likedCommentIds.contains(c.getId()),
-                                Objects.equals(c.getCreatedBy(), user),
-                                reportedCommentIdSet.contains(c.getId()))
-                        ));
-
-        // 결과에 댓글/대댓글 나눠 넣기
-        List<CommunityCommentsResponse> result = new ArrayList<>();
-
-        for (CommunityComments comment : comments) {
-            CommunityCommentsResponse dto = commentsMap.get(comment.getId());
-
-            if (comment.getParentId() == null || Objects.equals(comment.getParentId(), 0L)) {
-                // 댓글 case(부모)
-                result.add(dto);    // 바로 result 넣는다.
-            } else {
-                // 대댓글 case(자식)
-                CommunityCommentsResponse parent = commentsMap.get(comment.getParentId());
-                if (parent != null) {
-                    // 댓글 > childrenList에 해당 데이터 넣는다.
-                    parent.childrenList().add(dto);
-                }
-            }
+    /**
+     * 대댓글 추가 조회
+     * 댓글 목록의 미리보기 3개 이후부터 10개씩 페이징한다. 정렬은 댓글 목록과 동일한 sortType을 따른다.
+     */
+    @Transactional(readOnly = true)
+    public Slice<CommunityCommentsResponse> getReplies(Long commentId, int page, CommentsSortType sortType) {
+        if (page < 0) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
         }
 
-        // 부모 기준 정렬하여 return
-        Comparator<CommunityCommentsResponse> comparator = switch (sortType) {
-            case CREATE_ASC -> Comparator.comparing(CommunityCommentsResponse::createdAt);
-            case LIKE_DESC -> Comparator.comparing(CommunityCommentsResponse::likes).reversed();
-            default -> Comparator.comparing(CommunityCommentsResponse::createdAt).reversed();
-        };
-        return result.stream().sorted(comparator).toList();
+        communityCommentsRepository.findById(commentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
+
+        Set<Long> blockedUserIds = new HashSet<>(userBlockService.getBlockedUserIds());
+        Set<Long> reportedCommentIdSet = new HashSet<>(reportService.getReportedTargetIds(ReportType.COMMENT));
+
+        Sort sort = toSort(sortType);
+        long offset = INITIAL_CHILD_LIMIT + (long) page * REPLY_PAGE_SIZE;
+        Pageable pageable = new OffsetLimitRequest(offset, REPLY_PAGE_SIZE + 1, sort);
+
+        List<CommunityComments> fetched = communityCommentsRepository.findRepliesByParentId(commentId, pageable);
+        boolean hasNext = fetched.size() > REPLY_PAGE_SIZE;
+        List<CommunityComments> pageItems = hasNext ? fetched.subList(0, REPLY_PAGE_SIZE) : fetched;
+
+        CommentViewContext viewContext = buildViewContext(pageItems, blockedUserIds, reportedCommentIdSet);
+        List<CommunityCommentsResponse> content = pageItems.stream()
+                .map(reply -> toResponse(reply, new ArrayList<>(), 0L, viewContext))
+                .toList();
+
+        return new SliceImpl<>(content, PageRequest.of(page, REPLY_PAGE_SIZE, sort), hasNext);
     }
 
     /**
@@ -219,7 +221,13 @@ public class CommunityCommentsService {
             }
         }
 
-        return commentLikeMapper.toCommentLikeResponse(comment, newLike);
+        long likeCount = commentLikeRepository.countGroupByCommentIds(List.of(comment.getId()))
+                .stream()
+                .findFirst()
+                .map(row -> ((Number) row[1]).longValue())
+                .orElse(0L);
+
+        return commentLikeMapper.toCommentLikeResponse(comment, newLike, likeCount);
     }
 
     /**
@@ -233,11 +241,7 @@ public class CommunityCommentsService {
         // 수정 권한 체크
         comment.validateOwner(authenticationFacade.getCurrentUser());
 
-        if (communityCommentsRepository.existsByParentId(commentId)) {
-            comment.softDelete();
-        } else {
-            communityCommentsRepository.delete(comment);
-        }
+        comment.softDelete();
     }
 
     /**
@@ -246,7 +250,7 @@ public class CommunityCommentsService {
     @Transactional(readOnly = true)
     public long getCountComments(Long contentId) {
         return communityCommentsRepository
-                .countByContent_IdAndParentIdIsNullAndHiddenAtIsNullAndDeletedAtIsNull(contentId);
+                .countVisibleRootComments(contentId);
     }
 
     /**
@@ -264,6 +268,130 @@ public class CommunityCommentsService {
     @Transactional(readOnly = true)
     public Set<Long> getUserCommentedContentIds(Long userId, List<Long> contentIds) {
         return communityCommentsRepository.findUserCommentedContentIds(userId, contentIds);
+    }
+
+    private boolean isRootComment(CommunityComments comment) {
+        return comment.getParentId() == null || Objects.equals(comment.getParentId(), 0L);
+    }
+
+    private boolean isCreateDesc(CommentsSortType sortType) {
+        return Objects.equals(sortType, CommentsSortType.CREATE_DESC);
+    }
+
+    private Sort toSort(CommentsSortType sortType) {
+        Sort.Direction direction = isCreateDesc(sortType) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return Sort.by(direction, "createdAt").and(Sort.by(direction, "id"));
+    }
+
+    private List<CommunityComments> sortComments(List<CommunityComments> comments, CommentsSortType sortType) {
+        Comparator<CommunityComments> comparator = Comparator
+                .comparing(CommunityComments::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(CommunityComments::getId);
+        if (isCreateDesc(sortType)) {
+            comparator = comparator.reversed();
+        }
+        return comments.stream().sorted(comparator).toList();
+    }
+
+    private CommentViewContext buildViewContext(List<CommunityComments> comments,
+                                                Set<Long> blockedUserIds,
+                                                Set<Long> reportedCommentIdSet) {
+        List<Long> commentIds = comments.stream().map(CommunityComments::getId).toList();
+
+        Map<Long, Long> likeCountMap = commentIds.isEmpty()
+                ? Map.of()
+                : commentLikeRepository.countGroupByCommentIds(commentIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> ((Number) row[1]).longValue()
+                ));
+
+        Set<Long> likedCommentIds = commentIds.isEmpty()
+                ? Set.of()
+                : AuthenticationUtil.getCurrentUserId()
+                .map(userId -> new HashSet<>(commentLikeRepository.findLikedCommentIds(commentIds, userId)))
+                .orElseGet(HashSet::new);
+
+        User user = authenticationFacade.getCurrentUserOptional().orElse(null);
+        Set<Long> repliedParentIds = (user == null || commentIds.isEmpty())
+                ? Set.of()
+                : communityCommentsRepository.findRepliedParentIds(user.getId(), commentIds);
+
+        return new CommentViewContext(likeCountMap, likedCommentIds, user, blockedUserIds, reportedCommentIdSet, repliedParentIds);
+    }
+
+    private CommunityCommentsResponse toResponse(CommunityComments comment,
+                                                 List<CommunityCommentsResponse> childrenList,
+                                                 Long childCount,
+                                                 CommentViewContext viewContext) {
+        return commentMapper.toCommunityCommentsResponse(
+                comment,
+                childrenList,
+                viewContext.likeCountMap().getOrDefault(comment.getId(), 0L),
+                viewContext.likedCommentIds().contains(comment.getId()),
+                Objects.equals(comment.getCreatedBy(), viewContext.user()),
+                viewContext.reportedCommentIdSet().contains(comment.getId()),
+                comment.getCreatedBy() != null && viewContext.blockedUserIds().contains(comment.getCreatedBy().getId()),
+                viewContext.repliedParentIds().contains(comment.getId()),
+                childCount
+        );
+    }
+
+    private record CommentViewContext(
+            Map<Long, Long> likeCountMap,
+            Set<Long> likedCommentIds,
+            User user,
+            Set<Long> blockedUserIds,
+            Set<Long> reportedCommentIdSet,
+            Set<Long> repliedParentIds
+    ) {
+    }
+
+    private record OffsetLimitRequest(long offset, int size, Sort sort) implements Pageable {
+        @Override
+        public int getPageNumber() {
+            return 0;
+        }
+
+        @Override
+        public int getPageSize() {
+            return size;
+        }
+
+        @Override
+        public long getOffset() {
+            return offset;
+        }
+
+        @Override
+        public Sort getSort() {
+            return sort;
+        }
+
+        @Override
+        public Pageable next() {
+            return new OffsetLimitRequest(offset + size, size, sort);
+        }
+
+        @Override
+        public Pageable previousOrFirst() {
+            return this;
+        }
+
+        @Override
+        public Pageable first() {
+            return this;
+        }
+
+        @Override
+        public Pageable withPage(int pageNumber) {
+            return this;
+        }
+
+        @Override
+        public boolean hasPrevious() {
+            return false;
+        }
     }
 
 }

@@ -6,6 +6,8 @@ public record ContentLikeResponse(
         @Schema(description = "게시글 ID", example = "1")
         Long contentID,
         @Schema(description = "좋아요 상태", example = "true")
-        Boolean isLiked
+        Boolean isLiked,
+        @Schema(description = "좋아요 수", example = "17")
+        Long likeCount
 ) {
 }

@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileInfo;
+import com.jiujitsu.api.global.util.TimeAgoUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -18,25 +19,30 @@ public class CommentMapper {
                                                                  Long likeCount,
                                                                  Boolean liked,
                                                                  Boolean isAuthor,
-                                                                 Boolean isReportedByMe) {
+                                                                 Boolean isReportedByMe,
+                                                                 Boolean isBlocked,
+                                                                 Boolean isReplied,
+                                                                 Long childCount) {
         Content content = comments.getContent();
-        boolean deleted = comments.isDeleted();
 
         return new CommunityCommentsResponse(
                 comments.getId(),
                 content.getId(),
                 comments.getParentId(),
-                comments.getBody(),
+                isBlocked ? null : comments.getBody(),
                 likeCount,
                 liked,
                 isAuthor,
                 comments.isDeleted(),
                 comments.getIsReported() || isReportedByMe,
-                CommunityProfileInfo.from(comments.getCreatedBy()),
+                isBlocked,
+                isReplied,
+                isBlocked ? CommunityProfileInfo.masked() : CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
-                childrenList,
-                deleted
+                TimeAgoUtil.format(comments.getCreatedAt()),
+                childCount,
+                childrenList
         );
     }
 
@@ -46,23 +52,25 @@ public class CommentMapper {
     public CommunityCommentsResponse toCommunityCommentsResponse(CommunityComments comments,
                                                                  List<CommunityCommentsResponse> childrenList) {
         Content content = comments.getContent();
-        boolean deleted = comments.isDeleted();
 
         return new CommunityCommentsResponse(
                 comments.getId(),
                 content.getId(),
                 comments.getParentId(),
-                deleted ? null : comments.getBody(),
+                comments.getBody(),
                 null,
                 null,
                 null,
                 comments.isDeleted(),
                 comments.getIsReported(),
+                false,
+                false,
                 CommunityProfileInfo.from(comments.getCreatedBy()),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
-                childrenList,
-                deleted
+                TimeAgoUtil.format(comments.getCreatedAt()),
+                0L,
+                childrenList
         );
     }
 }
