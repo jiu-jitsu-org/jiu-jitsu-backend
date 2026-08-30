@@ -241,11 +241,7 @@ public class CommunityCommentsService {
         // 수정 권한 체크
         comment.validateOwner(authenticationFacade.getCurrentUser());
 
-        if (communityCommentsRepository.existsByParentId(commentId)) {
-            comment.softDelete();
-        } else {
-            communityCommentsRepository.delete(comment);
-        }
+        comment.softDelete();
     }
 
     /**
