@@ -1,7 +1,7 @@
 package com.jiujitsu.api.domain.notice.service;
 
-import com.jiujitsu.api.domain.community.board.entity.Board;
-import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
+import com.jiujitsu.api.domain.community.content.entity.Content;
+import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.notice.dto.BoardNoticeSettingResponse;
 import com.jiujitsu.api.domain.notice.dto.NoticeListResponse;
 import com.jiujitsu.api.domain.notice.dto.NoticeSettingRequest;
@@ -36,7 +36,7 @@ public class NoticeService {
     private final AuthenticationFacade authenticationFacade;
     private final UserNoticeSettingRepository userNoticeSettingRepository;
     private final ContentNoticeSettingRepository contentNoticeSettingRepository;
-    private final BoardRepository boardRepository;
+    private final ContentRepository contentRepository;
 
     /**
      * 알림 목록 조회
@@ -117,20 +117,15 @@ public class NoticeService {
 
     /**
      * 게시물 알림 설정 조회
+     * 알림 설정은 Content 단위라 게시글/밸런스 게임 모두 같은 API 를 사용한다.
      */
     @Transactional(readOnly = true)
     public BoardNoticeSettingResponse getBoardNoticeSetting(Long id) {
         User user = authenticationFacade.getCurrentUser();
-        Board board = boardRepository.findByContent_Id(id)
-                .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
+        Content content = contentRepository.findById(id)
+                .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
-        ContentNoticeSetting setting = contentNoticeSettingRepository
-                .findByUserIdAndContentId(user.getId(), board.getContent().getId())
-                .orElseGet(() -> ContentNoticeSetting.builder()
-                        .userId(user.getId())
-                        .contentId(board.getContent().getId())
-                        .enabled(true)
-                        .build());
+        ContentNoticeSetting setting = findOrDefaultSetting(user.getId(), content.getId());
 
         return NoticeMapper.toBoardNoticeSettingResponse(id, setting);
     }
@@ -140,21 +135,26 @@ public class NoticeService {
      */
     public BoardNoticeSettingResponse toggleBoardNoticeSetting(Long id) {
         User user = authenticationFacade.getCurrentUser();
-        Board board = boardRepository.findByContent_Id(id)
-                .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
+        Content content = contentRepository.findById(id)
+                .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
-        ContentNoticeSetting setting = contentNoticeSettingRepository
-                .findByUserIdAndContentId(user.getId(), board.getContent().getId())
-                .orElseGet(() -> ContentNoticeSetting.builder()
-                        .userId(user.getId())
-                        .contentId(board.getContent().getId())
-                        .enabled(true)
-                        .build());
+        ContentNoticeSetting setting = findOrDefaultSetting(user.getId(), content.getId());
 
         setting.toggle();
         contentNoticeSettingRepository.save(setting);
 
         return NoticeMapper.toBoardNoticeSettingResponse(id, setting);
+    }
+
+    // 저장된 설정이 없으면 기본값(ON) 설정을 만들어 반환 (아직 저장하지 않음)
+    private ContentNoticeSetting findOrDefaultSetting(Long userId, Long contentId) {
+        return contentNoticeSettingRepository
+                .findByUserIdAndContentId(userId, contentId)
+                .orElseGet(() -> ContentNoticeSetting.builder()
+                        .userId(userId)
+                        .contentId(contentId)
+                        .enabled(true)
+                        .build());
     }
 
     /**

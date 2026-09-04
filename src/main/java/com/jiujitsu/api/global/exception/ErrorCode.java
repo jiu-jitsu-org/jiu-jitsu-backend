@@ -23,6 +23,7 @@ public enum ErrorCode {
     NOTICE_NOT_FOUND(404, "C0005", "존재하지 않는 알림입니다."),
     BALANCE_GAME_NOT_FOUND(404, "C0006", "존재하지 않는 밸런스 게임입니다."),
     BALANCE_GAME_CLOSED(400, "C0007", "이미 마감된 밸런스 게임입니다."),
+    CONTENT_SAVE_NOT_SUPPORTED(400, "C0008", "저장할 수 없는 게시물입니다."),
     EMAIL_DUPLICATED(400, "R0006", "이미 사용중인 이메일입니다."),
 
 

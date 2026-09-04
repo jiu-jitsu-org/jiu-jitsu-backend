@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 public class BalanceGameMapper {
 
     public BalanceGameResponse toResponse(BalanceGame game, long commentCount,
+                                          long likeCount, boolean isLiked,
                                           long voteCountA, long voteCountB,
                                           BalanceGameOption myVote, LocalDateTime now) {
         return new BalanceGameResponse(
@@ -26,7 +27,9 @@ public class BalanceGameMapper {
                         BalanceGameOption.B, game.getOptionBText(), ImageInfo.from(game.getOptionBImage()), voteCountB),
                 voteCountA + voteCountB,
                 myVote,
-                commentCount
+                commentCount,
+                likeCount,
+                isLiked
         );
     }
 }

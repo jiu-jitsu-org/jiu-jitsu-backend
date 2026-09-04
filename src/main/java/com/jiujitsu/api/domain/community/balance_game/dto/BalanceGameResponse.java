@@ -15,5 +15,7 @@ public record BalanceGameResponse(
         @Schema(description = "선택지 B") BalanceGameOptionResponse optionB,
         @Schema(description = "전체 득표 수", example = "10") long totalVoteCount,
         @Schema(description = "내가 투표한 선택지 (null이면 미투표 → 결과·퍼센트 숨김)", example = "A") BalanceGameOption myVote,
-        @Schema(description = "댓글 수 (0이면 '첫 댓글 남기러 가기'로 노출)", example = "5") long commentCount
+        @Schema(description = "댓글 수 (0이면 '첫 댓글 남기러 가기'로 노출)", example = "5") long commentCount,
+        @Schema(description = "좋아요 수", example = "17") long likeCount,
+        @Schema(description = "좋아요 여부 (비로그인 시 false)", example = "true") boolean isLiked
 ) { }

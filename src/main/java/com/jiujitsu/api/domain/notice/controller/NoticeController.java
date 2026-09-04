@@ -64,22 +64,22 @@ public class NoticeController {
         return noticeService.getNoticeSetting();
     }
 
-    @Operation(summary = "게시물 알림 설정 조회", description = "특정 게시물의 댓글/좋아요 알림 설정을 조회합니다.")
+    @Operation(summary = "게시물 알림 설정 조회", description = "특정 컨텐츠의 댓글/좋아요 알림 설정을 조회합니다. 컨텐츠 단위 기능이라 밸런스 게임의 contentId 로도 호출할 수 있습니다.")
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
     @GetMapping("/setting/board/{boardId}")
     public BoardNoticeSettingResponse getBoardNoticeSetting(
-            @Parameter(name = "boardId", description = "게시글 ID", required = true) @PathVariable Long boardId
+            @Parameter(name = "boardId", description = "컨텐츠 ID (게시글/밸런스 게임 공통)", required = true) @PathVariable Long boardId
     ) {
         return noticeService.getBoardNoticeSetting(boardId);
     }
 
-    @Operation(summary = "게시물 알림 설정 토글", description = "특정 게시물의 알림(댓글/좋아요/게시물 전체)을 켜거나 끕니다.")
+    @Operation(summary = "게시물 알림 설정 토글", description = "특정 컨텐츠의 알림(댓글/좋아요/게시물 전체)을 켜거나 끕니다. 컨텐츠 단위 기능이라 밸런스 게임의 contentId 로도 호출할 수 있습니다.")
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
     @PutMapping("/setting/board/{boardId}")
     public BoardNoticeSettingResponse toggleBoardNoticeSetting(
-            @Parameter(name = "boardId", description = "게시글 ID", required = true) @PathVariable Long boardId
+            @Parameter(name = "boardId", description = "컨텐츠 ID (게시글/밸런스 게임 공통)", required = true) @PathVariable Long boardId
     ) {
         return noticeService.toggleBoardNoticeSetting(boardId);
     }

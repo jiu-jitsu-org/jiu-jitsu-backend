@@ -11,6 +11,7 @@ import com.jiujitsu.api.domain.community.balance_game.repository.BalanceGameRepo
 import com.jiujitsu.api.domain.community.balance_game.repository.BalanceGameVoteRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
+import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -32,6 +34,7 @@ public class BalanceGameService {
     private final BalanceGameFactory balanceGameFactory;
     private final BalanceGameMapper balanceGameMapper;
     private final CommunityCommentsService communityCommentsService;
+    private final ContentService contentService;
     private final AuthenticationFacade authenticationFacade;
 
     /**
@@ -104,24 +107,38 @@ public class BalanceGameService {
         );
         game = balanceGameRepository.save(game);
 
-        return balanceGameMapper.toResponse(game, 0L, 0L, 0L, null, LocalDateTime.now());
+        return balanceGameMapper.toResponse(game, 0L, 0L, false, 0L, 0L, null, LocalDateTime.now());
     }
 
-    // 득표수/내 투표/댓글수를 채워 응답으로 변환
+    // 득표수/내 투표/댓글수 + 좋아요 지표를 채워 응답으로 변환
     private BalanceGameResponse toResponseWithVotes(BalanceGame game) {
         Long balanceGameId = game.getId();
+        Long contentId = game.getContent().getId();
+        List<Long> contentIds = List.of(contentId);
 
         long voteCountA = balanceGameVoteRepository.countByBalanceGameIdAndOption(balanceGameId, BalanceGameOption.A);
         long voteCountB = balanceGameVoteRepository.countByBalanceGameIdAndOption(balanceGameId, BalanceGameOption.B);
 
+        Optional<User> currentUser = authenticationFacade.getCurrentUserOptional();
+
         // 비로그인 사용자는 myVote = null (프론트에서 결과 숨김 처리)
-        BalanceGameOption myVote = authenticationFacade.getCurrentUserOptional()
+        BalanceGameOption myVote = currentUser
                 .flatMap(user -> balanceGameVoteRepository.findByBalanceGameIdAndCreatedBy(balanceGameId, user))
                 .map(BalanceGameVote::getOption)
                 .orElse(null);
 
-        long commentCount = communityCommentsService.getCountComments(game.getContent().getId());
+        long commentCount = communityCommentsService.getCountComments(contentId);
 
-        return balanceGameMapper.toResponse(game, commentCount, voteCountA, voteCountB, myVote, LocalDateTime.now());
+        // 좋아요는 Content 공통 기능이라 게시글과 같은 집계를 그대로 사용한다.
+        // 저장은 밸런스 게임 미지원 (ContentService.save 에서 차단) 이라 응답에도 내리지 않는다.
+        long likeCount = contentService.getContentLikeCount(contentIds).getOrDefault(contentId, 0L);
+
+        // 비로그인 사용자는 내 상태가 없으므로 false
+        boolean isLiked = currentUser
+                .map(user -> contentService.getUserLikedContentIds(user.getId(), contentIds).contains(contentId))
+                .orElse(false);
+
+        return balanceGameMapper.toResponse(game, commentCount, likeCount, isLiked,
+                voteCountA, voteCountB, myVote, LocalDateTime.now());
     }
 }

@@ -96,22 +96,22 @@ public class BoardController {
         boardService.delete(id);
     }
 
-    @Operation(summary = "게시물 좋아요 등록/취소", description = "게시물 좋아요를 등록/취소합니다.")
+    @Operation(summary = "게시물 좋아요 등록/취소", description = "게시물 좋아요를 등록/취소합니다. 컨텐츠 단위 기능이라 밸런스 게임의 contentId 로도 호출할 수 있습니다.")
     @LoginErrorExamples
     @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
     @PutMapping("/like/{id}")
     public ContentLikeResponse like(
-            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
+            @Parameter(name = "id", description = "컨텐츠 ID (게시글/밸런스 게임 공통)", required = true) @PathVariable(name = "id") Long id
     ) {
         return contentService.like(id);
     }
 
-    @Operation(summary = "게시물 저장/취소", description = "게시물을 저장/취소합니다.")
+    @Operation(summary = "게시물 저장/취소", description = "게시물을 저장/취소합니다. 게시글만 지원하며, 밸런스 게임 등 다른 컨텐츠는 저장할 수 없습니다.")
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND, ErrorCode.CONTENT_SAVE_NOT_SUPPORTED})
     @PutMapping("/save/{id}")
     public ContentSaveResponse save(
-            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id
+            @Parameter(name = "id", description = "컨텐츠 ID (게시글/밸런스 게임 공통)", required = true) @PathVariable(name = "id") Long id
     ) {
         return contentService.save(id);
     }
