@@ -11,6 +11,7 @@ import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsServic
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
+import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -47,6 +48,7 @@ class BalanceGameServiceCreateTest {
     @Mock private BalanceGameMapper balanceGameMapper;
     @Mock private CommunityCommentsService communityCommentsService;
     @Mock private ContentService contentService;
+    @Mock private NoticeService noticeService;
     @Mock private AuthenticationFacade authenticationFacade;
 
     @Test
@@ -65,7 +67,7 @@ class BalanceGameServiceCreateTest {
         given(balanceGameFactory.createContent()).willReturn(content);
         given(balanceGameFactory.createBalanceGame(any(), any(), any(), any(), any(), any())).willReturn(game);
         given(balanceGameRepository.save(any())).willReturn(game);
-        given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyLong(), anyLong(), any(), any()))
+        given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), any(), anyLong(), anyLong(), any(), any()))
                 .willReturn(null);
 
         // when
@@ -97,7 +99,7 @@ class BalanceGameServiceCreateTest {
         given(balanceGameFactory.createContent()).willReturn(content);
         given(balanceGameFactory.createBalanceGame(any(), any(), any(), any(), any(), any())).willReturn(game);
         given(balanceGameRepository.save(any())).willReturn(game);
-        given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyLong(), anyLong(), any(), any()))
+        given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), any(), anyLong(), anyLong(), any(), any()))
                 .willReturn(null);
 
         // when

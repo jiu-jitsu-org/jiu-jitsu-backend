@@ -14,6 +14,7 @@ public class BalanceGameMapper {
 
     public BalanceGameResponse toResponse(BalanceGame game, long commentCount,
                                           long likeCount, boolean isLiked,
+                                          boolean isCommented, Boolean noticeEnabled,
                                           long voteCountA, long voteCountB,
                                           BalanceGameOption myVote, LocalDateTime now) {
         return new BalanceGameResponse(
@@ -29,7 +30,9 @@ public class BalanceGameMapper {
                 myVote,
                 commentCount,
                 likeCount,
-                isLiked
+                isLiked,
+                isCommented,
+                noticeEnabled
         );
     }
 }
