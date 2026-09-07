@@ -12,6 +12,7 @@ import com.jiujitsu.api.domain.community.balance_game.repository.BalanceGameVote
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
+import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -39,6 +40,7 @@ public class BalanceGameService {
     private final BalanceGameMapper balanceGameMapper;
     private final CommunityCommentsService communityCommentsService;
     private final ContentService contentService;
+    private final NoticeService noticeService;
     private final AuthenticationFacade authenticationFacade;
 
     /**
@@ -116,7 +118,7 @@ public class BalanceGameService {
         );
         game = balanceGameRepository.save(game);
 
-        return balanceGameMapper.toResponse(game, 0L, 0L, false, 0L, 0L, null, LocalDateTime.now());
+        return balanceGameMapper.toResponse(game, 0L, 0L, false, false, null, 0L, 0L, null, LocalDateTime.now());
     }
 
     /**
@@ -164,12 +166,20 @@ public class BalanceGameService {
         // 저장은 밸런스 게임 미지원 (ContentService.save 에서 차단) 이라 응답에도 내리지 않는다.
         long likeCount = contentService.getContentLikeCount(contentIds).getOrDefault(contentId, 0L);
 
-        // 비로그인 사용자는 내 상태가 없으므로 false
+        // 비로그인 사용자는 내 상태가 없으므로 false / null
         boolean isLiked = currentUser
                 .map(user -> contentService.getUserLikedContentIds(user.getId(), contentIds).contains(contentId))
                 .orElse(false);
 
+        boolean isCommented = currentUser
+                .map(user -> communityCommentsService.getUserCommentedContentIds(user.getId(), contentIds).contains(contentId))
+                .orElse(false);
+
+        Boolean noticeEnabled = currentUser
+                .map(user -> noticeService.isContentNoticeEnabled(user.getId(), contentId))
+                .orElse(null);
+
         return balanceGameMapper.toResponse(game, commentCount, likeCount, isLiked,
-                voteCountA, voteCountB, myVote, LocalDateTime.now());
+                isCommented, noticeEnabled, voteCountA, voteCountB, myVote, LocalDateTime.now());
     }
 }
