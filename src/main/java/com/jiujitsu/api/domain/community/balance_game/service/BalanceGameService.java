@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,7 +31,6 @@ import java.util.Optional;
 @Transactional
 public class BalanceGameService {
 
-    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
     private static final LocalTime END_OF_DAY = LocalTime.of(23, 59, 59);
 
     private final BalanceGameRepository balanceGameRepository;
@@ -122,9 +120,10 @@ public class BalanceGameService {
     }
 
     /**
-     * endAt이 null이면 당일 한국 시간 23:59:59를 기본값으로 사용한다.
+     * endAt이 null이면 당일 23:59:59를 기본값으로 사용한다.
      * 기본값이 이미 과거라면(심야 요청) 다음 날로 넘긴다.
      * 명시적으로 입력된 endAt이 과거이면 예외를 던진다.
+     * (JVM 타임존이 Asia/Seoul로 고정되어 있으므로 별도 ZoneId 지정 불필요)
      */
     private LocalDateTime resolveEndAt(LocalDateTime endAt) {
         LocalDateTime now = LocalDateTime.now();
@@ -136,8 +135,8 @@ public class BalanceGameService {
             return endAt;
         }
 
-        // 미입력: 당일 한국 시간 23:59:59, 이미 지났으면 다음 날
-        LocalDate today = LocalDate.now(KOREA_ZONE);
+        // 미입력: 당일 23:59:59, 이미 지났으면 다음 날
+        LocalDate today = LocalDate.now();
         LocalDateTime defaultEndAt = today.atTime(END_OF_DAY);
         return defaultEndAt.isAfter(now) ? defaultEndAt : today.plusDays(1).atTime(END_OF_DAY);
     }
