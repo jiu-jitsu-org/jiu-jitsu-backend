@@ -20,7 +20,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +31,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Transactional
 public class BalanceGameService {
+
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+    private static final LocalTime END_OF_DAY = LocalTime.of(23, 59, 59);
 
     private final BalanceGameRepository balanceGameRepository;
     private final BalanceGameVoteRepository balanceGameVoteRepository;
@@ -96,18 +102,44 @@ public class BalanceGameService {
     /**
      * [임시] 관리자 밸런스 게임 등록 (테스트 데이터용)
      * 추후 정식 관리자 등록 기능으로 대체 예정.
+     *
+     * endAt 미입력 시 당일 한국 시간 23:59:59 자동 설정.
+     * 자동 설정된 값이 이미 과거라면(심야 요청) 다음 날 23:59:59로 설정.
      */
     public BalanceGameResponse create(BalanceGameCreateRequest request) {
+        LocalDateTime endAt = resolveEndAt(request.endAt());
+
         Content content = balanceGameFactory.createContent();
         BalanceGame game = balanceGameFactory.createBalanceGame(
                 content,
                 request.optionAText(), request.optionAImageFileId(),
                 request.optionBText(), request.optionBImageFileId(),
-                request.endAt()
+                endAt
         );
         game = balanceGameRepository.save(game);
 
         return balanceGameMapper.toResponse(game, 0L, 0L, false, 0L, 0L, null, LocalDateTime.now());
+    }
+
+    /**
+     * endAt이 null이면 당일 한국 시간 23:59:59를 기본값으로 사용한다.
+     * 기본값이 이미 과거라면(심야 요청) 다음 날로 넘긴다.
+     * 명시적으로 입력된 endAt이 과거이면 예외를 던진다.
+     */
+    private LocalDateTime resolveEndAt(LocalDateTime endAt) {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (endAt != null) {
+            if (!endAt.isAfter(now)) {
+                throw new ErrorException(ErrorCode.BALANCE_GAME_END_AT_MUST_BE_FUTURE);
+            }
+            return endAt;
+        }
+
+        // 미입력: 당일 한국 시간 23:59:59, 이미 지났으면 다음 날
+        LocalDate today = LocalDate.now(KOREA_ZONE);
+        LocalDateTime defaultEndAt = today.atTime(END_OF_DAY);
+        return defaultEndAt.isAfter(now) ? defaultEndAt : today.plusDays(1).atTime(END_OF_DAY);
     }
 
     // 득표수/내 투표/댓글수 + 좋아요 지표를 채워 응답으로 변환
