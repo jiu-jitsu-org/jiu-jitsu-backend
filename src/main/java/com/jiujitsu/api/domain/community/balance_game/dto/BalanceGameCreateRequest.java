@@ -1,9 +1,7 @@
 package com.jiujitsu.api.domain.community.balance_game.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 
@@ -19,8 +17,6 @@ public record BalanceGameCreateRequest(
             String optionBText,
         @Schema(description = "선택지 B 이미지 파일 ID (선택)", example = "2")
             Long optionBImageFileId,
-        @NotNull(message = "마감 일시는 필수입니다.")
-        @Future(message = "마감 일시는 미래 시간이어야 합니다.")
-        @Schema(description = "마감 일시", example = "2026-07-15T09:00:00", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "마감 일시 (미입력 시 당일 한국 시간 23:59:59 자동 설정)", example = "2026-07-15T23:59:59", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
             LocalDateTime endAt
 ) { }
