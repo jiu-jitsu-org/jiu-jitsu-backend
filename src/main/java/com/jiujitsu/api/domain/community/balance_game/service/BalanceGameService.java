@@ -61,6 +61,7 @@ public class BalanceGameService {
      * 메인의 '오늘의 게임'(getCurrent)은 사용자가 의도해서 연 화면이 아니라
      * 커뮤니티 진입 때마다 자동 호출되므로 카운트하면 노출 수가 되어버린다.
      * 밸런스 게임은 운영자가 등록해 작성자 개념이 없으므로 게시글과 달리 작성자 예외 처리는 두지 않는다.
+     * 같은 사용자의 재진입도 그대로 누적한다. (사용자당 1회 집계 아님 - 의도된 동작, #124 에서 확정)
      */
     public BalanceGameResponse getDetail(Long contentId) {
         BalanceGame game = balanceGameRepository.findByContentId(contentId)
