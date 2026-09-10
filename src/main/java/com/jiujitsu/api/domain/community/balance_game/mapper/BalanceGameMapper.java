@@ -30,6 +30,7 @@ public class BalanceGameMapper {
                 myVote,
                 commentCount,
                 likeCount,
+                game.getContent().getViewCount(),
                 isLiked,
                 isCommented,
                 noticeEnabled
