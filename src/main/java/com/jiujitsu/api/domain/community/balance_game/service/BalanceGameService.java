@@ -105,6 +105,7 @@ public class BalanceGameService {
      *
      * endAt 미입력 시 당일 한국 시간 23:59:59 자동 설정.
      * 자동 설정된 값이 이미 과거라면(심야 요청) 다음 날 23:59:59로 설정.
+     * gameDate(진행일)는 확정된 endAt 의 날짜를 그대로 고정 저장한다.
      */
     public BalanceGameResponse create(BalanceGameCreateRequest request) {
         LocalDateTime endAt = resolveEndAt(request.endAt());
@@ -114,7 +115,8 @@ public class BalanceGameService {
                 content,
                 request.optionAText(), request.optionAImageFileId(),
                 request.optionBText(), request.optionBImageFileId(),
-                endAt
+                endAt,
+                endAt.toLocalDate()     // 진행일 = 마감일의 날짜 (하루 1회 정책)
         );
         game = balanceGameRepository.save(game);
 
