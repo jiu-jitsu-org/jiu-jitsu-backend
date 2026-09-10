@@ -77,9 +77,9 @@ public class BoardService {
     /**
      * 게시물 상세 조회
      */
-    public BoardResponse getById(Long id) {
+    public BoardResponse getById(Long contentId) {
         // 게시글 조회
-        Board board = boardRepository.findByContent_Id(id)
+        Board board = boardRepository.findByContent_Id(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
         // 전체 숨김 처리된 게시물
@@ -89,7 +89,7 @@ public class BoardService {
 
         // 신고한 게시물은 신고자에게 숨김
         authenticationFacade.getCurrentUserOptional().ifPresent(user -> {
-            if (reportService.hasReported(user, ReportType.BOARD, id)) {
+            if (reportService.hasReported(user, ReportType.BOARD, contentId)) {
                 throw new ErrorException(ErrorCode.BOARD_NOT_FOUND);
             }
         });
@@ -102,8 +102,6 @@ public class BoardService {
         } else {
             board.getContent().incrementViewCount();
         }
-
-        Long contentId = board.getContent().getId();
 
         // 댓글 수 조회
         long commentCount = communityCommentsService.getCountComments(contentId);
@@ -167,9 +165,9 @@ public class BoardService {
     /**
      * 게시물 수정
      */
-    public BoardResponse update(Long id, BoardUpdateRequest request) {
+    public BoardResponse update(Long contentId, BoardUpdateRequest request) {
         // 게시물 조회
-        Board board = boardRepository.findByContent_Id(id)
+        Board board = boardRepository.findByContent_Id(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
         // 권한 체크
@@ -200,8 +198,8 @@ public class BoardService {
     /**
      * 게시물 삭제
      */
-    public void delete(Long id) {
-        Board board = boardRepository.findByContent_Id(id)
+    public void delete(Long contentId) {
+        Board board = boardRepository.findByContent_Id(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
         // 권한 체크
