@@ -3,11 +3,13 @@ package com.jiujitsu.api.domain.community.balance_game.dto;
 import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGameOption;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Schema(description = "밸런스 게임 응답")
 public record BalanceGameResponse(
         @Schema(description = "컨텐츠 ID (댓글 조회/상세·투표 이동용)", example = "1") Long contentId,
+        @Schema(description = "게임 진행 날짜 (메타 행 표기용 - 밸런스 게임은 timeAgo 미노출)", example = "2026-09-10") LocalDate gameDate,
         @Schema(description = "마감 일시 (프론트 카운트다운 기준)") LocalDateTime endAt,
         @Schema(description = "서버 응답 시각 (기기 시계 대신 이 값을 기준으로 남은 시간 계산)") LocalDateTime serverTime,
         @Schema(description = "마감 여부 (true면 결과만 노출, 투표 불가)", example = "false") boolean closed,

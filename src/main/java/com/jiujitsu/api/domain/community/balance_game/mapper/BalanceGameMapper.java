@@ -19,6 +19,7 @@ public class BalanceGameMapper {
                                           BalanceGameOption myVote, LocalDateTime now) {
         return new BalanceGameResponse(
                 game.getContent().getId(),
+                game.getGameDate(),
                 game.getEndAt(),
                 now,                                    // serverTime (기기 시계 대체 기준점)
                 game.getEndAt().isBefore(now),          // closed
