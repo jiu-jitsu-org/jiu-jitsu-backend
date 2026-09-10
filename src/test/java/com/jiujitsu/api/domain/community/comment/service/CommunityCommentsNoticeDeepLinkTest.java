@@ -122,6 +122,8 @@ class CommunityCommentsNoticeDeepLinkTest {
         CommentNoticeEvent event = capturePublishedEvents(1).get(0);
         assertThat(event.pushType()).isEqualTo(FcmPushType.COMMENTS_LIKE);
         assertThat(event.pushData().get("type")).isEqualTo("BALANCE_DETAIL");
+        // 상세 진입에 쓰이는 data 는 commentId 가 아니라 contentId 여야 한다 (#136)
+        assertThat(event.pushData().get("data")).isEqualTo(CONTENT_ID.toString());
         // 알림 수신 설정 조회용 contentId 는 댓글이 속한 컨텐츠여야 한다
         assertThat(event.contentId()).isEqualTo(CONTENT_ID);
     }

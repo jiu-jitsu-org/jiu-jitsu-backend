@@ -216,14 +216,15 @@ public class CommunityCommentsService {
 
             if (!Objects.equals(user.getId(), comment.getCreatedBy().getId())) {
                 Content content = comment.getContent();
-                // FIXME: data 는 기존부터 contentId 가 아닌 commentId 라 BALANCE_DETAIL 상세 진입에 쓸 수 없다.
-                //  게시판 딥링크 규약도 함께 바뀌는 변경이라 클라이언트 합의(#136) 전까지 값은 유지한다.
+                // data 는 상세 화면을 여는 데 쓰이므로 commentId 가 아닌 contentId 를 보낸다.
+                // 나머지 3개 푸시와 동일한 규약이며, 밸런스 상세(GET /community/balance-game/{contentId})
+                // 진입에도 contentId 가 필요하다. (#136)
                 eventPublisher.publishEvent(new CommentNoticeEvent(
                         comment.getCreatedBy().getId(),
                         content.getId(),
                         FcmPushType.COMMENTS_LIKE,
                         Map.of("type", content.getContentType().getPushActionType().name(),
-                               "data", comment.getId().toString())
+                               "data", content.getId().toString())
                 ));
             }
         }
