@@ -9,7 +9,7 @@ import java.util.List;
 
 @Schema(description = "커뮤니티 게시글 응답")
 public record BoardResponse(
-        @Schema(description = "게시글 ID", example = "1") Long id,
+        @Schema(description = "컨텐츠 ID (게시글의 contentId)", example = "1") Long id,
         @Schema(description = "카테고리 ID", example = "1") Long categoryId,
         @Schema(description = "카테고리명", example = "자유게시판") String categoryName,
         @Schema(description = "제목", example = "타이틀입니다.") String title,
