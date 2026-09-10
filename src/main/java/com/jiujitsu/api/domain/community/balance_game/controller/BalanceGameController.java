@@ -35,6 +35,7 @@ public class BalanceGameController {
     @Operation(
             summary = "밸런스 게임 상세 조회",
             description = "밸런스 게임 상세 정보를 조회합니다. 마감된 게임도 조회 가능하며 결과만 노출됩니다. "
+                    + "호출할 때마다 조회수(viewCount)가 1 증가합니다. (메인의 '오늘의 게임' 조회는 미증가) "
                     + "댓글은 별도로 댓글 목록 API(/community/comments)를 contentId 로 호출합니다."
     )
     @ApiErrorCodeExamples({ErrorCode.BALANCE_GAME_NOT_FOUND})
