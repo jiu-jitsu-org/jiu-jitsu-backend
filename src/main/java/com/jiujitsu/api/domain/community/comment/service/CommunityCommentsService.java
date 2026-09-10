@@ -216,8 +216,8 @@ public class CommunityCommentsService {
 
             if (!Objects.equals(user.getId(), comment.getCreatedBy().getId())) {
                 Content content = comment.getContent();
-                // data 는 기존부터 contentId 가 아닌 commentId 다. 게시판 딥링크 규약이 함께 바뀌는 변경이라
-                // 클라이언트 합의 전까지 값은 유지한다. (#120 - 함께 확인이 필요한 부분)
+                // FIXME: data 는 기존부터 contentId 가 아닌 commentId 라 BALANCE_DETAIL 상세 진입에 쓸 수 없다.
+                //  게시판 딥링크 규약도 함께 바뀌는 변경이라 클라이언트 합의(#136) 전까지 값은 유지한다.
                 eventPublisher.publishEvent(new CommentNoticeEvent(
                         comment.getCreatedBy().getId(),
                         content.getId(),
