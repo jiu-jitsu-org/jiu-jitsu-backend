@@ -64,8 +64,9 @@ public class ContentService {
             if (!Objects.equals(user.getId(), content.getCreatedBy().getId())) {
                 FcmPushType pushType = FcmPushType.CONTENTS_LIKE;
 
+                // 딥링크 목적지는 푸시 종류가 아니라 대상 컨텐츠 타입이 결정한다 (게시글 / 밸런스 게임)
                 Map<String, String> pushData = new HashMap<>();
-                pushData.put("type", pushType.getActionType().toString());
+                pushData.put("type", content.getContentType().getPushActionType().name());
                 pushData.put("data", content.getId().toString());
 
                 Long contentOwnerId = content.getCreatedBy().getId();

@@ -25,6 +25,7 @@ import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
+import com.jiujitsu.api.global.fcm.entity.PushActionType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -160,13 +161,16 @@ public class CommunityCommentsService {
         // 알림 설정 (커밋 후 FCM 발송 + 알림 저장)
         User boardWriter = content.getCreatedBy();
 
+        // 딥링크 목적지는 푸시 종류가 아니라 대상 컨텐츠 타입이 결정한다 (게시글 / 밸런스 게임)
+        PushActionType actionType = content.getContentType().getPushActionType();
+
         // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
         if (!Objects.equals(user.getId(), boardWriter.getId())) {
             eventPublisher.publishEvent(new CommentNoticeEvent(
                     boardWriter.getId(),
                     content.getId(),
                     FcmPushType.NEW_COMMENTS,
-                    Map.of("type", FcmPushType.NEW_COMMENTS.getActionType().toString(),
+                    Map.of("type", actionType.name(),
                            "data", content.getId().toString())
             ));
         }
@@ -178,7 +182,7 @@ public class CommunityCommentsService {
                         parentComments.get().getCreatedBy().getId(),
                         content.getId(),
                         FcmPushType.NEW_CHILD_COMMENTS,
-                        Map.of("type", FcmPushType.NEW_CHILD_COMMENTS.getActionType().toString(),
+                        Map.of("type", actionType.name(),
                                "data", content.getId().toString())
                 ));
             }
@@ -211,11 +215,14 @@ public class CommunityCommentsService {
             commentLikeRepository.save(newLike);
 
             if (!Objects.equals(user.getId(), comment.getCreatedBy().getId())) {
+                Content content = comment.getContent();
+                // FIXME: data 는 기존부터 contentId 가 아닌 commentId 라 BALANCE_DETAIL 상세 진입에 쓸 수 없다.
+                //  게시판 딥링크 규약도 함께 바뀌는 변경이라 클라이언트 합의(#136) 전까지 값은 유지한다.
                 eventPublisher.publishEvent(new CommentNoticeEvent(
                         comment.getCreatedBy().getId(),
-                        comment.getContent().getId(),
+                        content.getId(),
                         FcmPushType.COMMENTS_LIKE,
-                        Map.of("type", FcmPushType.COMMENTS_LIKE.getActionType().toString(),
+                        Map.of("type", content.getContentType().getPushActionType().name(),
                                "data", comment.getId().toString())
                 ));
             }
