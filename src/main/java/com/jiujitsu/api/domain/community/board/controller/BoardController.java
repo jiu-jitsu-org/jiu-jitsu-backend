@@ -80,7 +80,7 @@ public class BoardController {
     @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND, ErrorCode.BOARD_CATEGORY_NOT_FOUND})
     @PutMapping("/{id}")
     public BoardResponse update(
-            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable Long id,
+            @Parameter(name = "id", description = "게시글 ID", required = true) @PathVariable(name = "id") Long id,
             @RequestBody BoardUpdateRequest request
     ) {
         return boardService.update(id, request);

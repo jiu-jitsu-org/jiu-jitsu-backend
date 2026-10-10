@@ -190,6 +190,10 @@ public class BoardService {
         content.getImageFiles().clear();
         content.addImageFiles(boardFactory.createImageFiles(request.getImageFileIdList()));
 
+        if (request.getTags() != null) {
+            boardFactory.replaceTags(board, request.getTags());
+        }
+
         // 수정여부 업데이트를 위한 flush 강제호출
         boardRepository.flush();
 
