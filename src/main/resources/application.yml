@@ -57,6 +57,10 @@ apple:
 kakao:
   adminKey: ${KAKAO_ADMIN_KEY} # Kakao Developers > 앱 설정 > 앱 키 > Admin 키
 
+# api_log 보관 기간 (단위: 일)
+api-log:
+  retention-days: 90 # 통신비밀보호법 기준 3개월. 정책 확정 시 변경.
+
 # fcm 공통
 fcm:
   file_path: resources/fcm/jiu-jitsu-lab-firebase-adminsdk-fbsvc-3955e0b618.json
