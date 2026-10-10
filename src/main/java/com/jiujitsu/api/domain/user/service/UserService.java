@@ -15,12 +15,15 @@ import com.jiujitsu.api.domain.user.mapper.AuthMapper;
 import com.jiujitsu.api.domain.user.mapper.UserMapper;
 import com.jiujitsu.api.domain.user.repository.UserAppInfoRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
+import com.jiujitsu.api.domain.user.service.sns.SnsClient;
+import com.jiujitsu.api.domain.user.service.sns.SnsClientFactory;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.security.JwtTokenProvider;
 import com.jiujitsu.api.global.security.TokenBlacklistService;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -44,6 +48,7 @@ public class UserService {
     private final TokenBlacklistService tokenBlacklistService;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationFacade authenticationFacade;
+    private final SnsClientFactory snsClientFactory;
     private final AuthMapper authMapper;
     private final UserFactory userFactory;
     private final UserMapper userMapper;
@@ -136,14 +141,26 @@ public class UserService {
 
     /**
      * 회원 비활성화
+     *
+     * @param authorizationCode Apple 전용: iOS Sign in with Apple 시 발급된 authorization_code.
+     *                          Kakao/Google은 null 전달.
      */
-    public void deactivateUser() {
+    public void deactivateUser(String authorizationCode) {
         // 사용자 조회
         User user = authenticationFacade.getCurrentUser();
 
         // 이미 탈퇴한 사용자인 경우
         if (user.getStatus() == UserStatus.DELETED) {
             throw new ErrorException(ErrorCode.USER_ALREADY_DEACTIVATED);
+        }
+
+        // SNS 연결 해제 (실패해도 탈퇴는 계속 진행)
+        try {
+            SnsClient snsClient = snsClientFactory.getClient(user.getSnsProvider());
+            snsClient.unlink(user.getSnsId(), authorizationCode);
+        } catch (Exception e) {
+            log.error("SNS 연결 해제 실패 (탈퇴는 계속 진행): userId={}, provider={}",
+                    user.getId(), user.getSnsProvider(), e);
         }
 
         // 현재 사용자의 JWT 토큰을 블랙리스트에 추가

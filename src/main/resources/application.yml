@@ -49,6 +49,13 @@ springdoc:
 # Apple Key 공통
 apple:
   filePath: ./jiujitsuLab_AuthKey_Z3HRNZG68M.p8
+  keyId: Z3HRNZG68M           # Apple Developer Console > Keys 에서 확인
+  teamId: ${APPLE_TEAM_ID}    # Apple Developer Console > Membership > Team ID
+  clientId: ${APPLE_CLIENT_ID} # 앱 번들 ID (예: kr.bjj-oss.app)
+
+# Kakao
+kakao:
+  adminKey: ${KAKAO_ADMIN_KEY} # Kakao Developers > 앱 설정 > 앱 키 > Admin 키
 
 # fcm 공통
 fcm:

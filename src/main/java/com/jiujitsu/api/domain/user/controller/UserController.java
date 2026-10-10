@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.user.controller;
 
 import com.jiujitsu.api.domain.user.dto.AuthResponse;
 import com.jiujitsu.api.domain.user.dto.CreateProfileRequest;
+import com.jiujitsu.api.domain.user.dto.DeactivateRequest;
 import com.jiujitsu.api.domain.user.dto.UserAppInfoRequest;
 import com.jiujitsu.api.domain.user.dto.UserProfileResponse;
 import com.jiujitsu.api.domain.user.service.UserService;
@@ -68,12 +69,14 @@ public class UserController {
 
     @Operation(
             summary = "회원 탈퇴",
-            description = "현재 로그인한 사용자의 계정을 비활성화합니다. 30일 이내에 로그인하면 계정을 복구할 수 있습니다."
+            description = "현재 로그인한 사용자의 계정을 비활성화합니다. 30일 이내에 로그인하면 계정을 복구할 수 있습니다. " +
+                    "Apple 계정은 App Store 심사 기준에 따라 authorization_code를 함께 전달해야 합니다."
     )
     @LoginErrorExamples
     @DeleteMapping
-    public Boolean deactivateUser() {
-        userService.deactivateUser();
+    public Boolean deactivateUser(@RequestBody(required = false) DeactivateRequest request) {
+        String authorizationCode = request != null ? request.authorizationCode() : null;
+        userService.deactivateUser(authorizationCode);
         return true;
     }
 
