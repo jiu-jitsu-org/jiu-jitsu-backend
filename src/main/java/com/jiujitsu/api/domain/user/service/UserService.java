@@ -67,9 +67,11 @@ public class UserService {
         String nickname = StringUtils.trimToEmpty(createProfileRequest.nickname());
         validateNickname(nickname);
 
+        // 마케팅 수신 동의 여부 (미전달 시 미동의로 처리)
+        boolean isMarketingAgreed = Boolean.TRUE.equals(createProfileRequest.isMarketingAgreed());
 
         // 회원정보 생성
-        User user = createNewUser(tempUserInfo, nickname);
+        User user = createNewUser(tempUserInfo, nickname, isMarketingAgreed);
 
         // 응답 생성(토큰 생성)
         return generateAuthResponse(user);
@@ -78,7 +80,7 @@ public class UserService {
     /**
      * 회원가입 - 신규 user 생성
      */
-    private User createNewUser(TempUserInfo tempUserInfo, String nickname) {
+    private User createNewUser(TempUserInfo tempUserInfo, String nickname, boolean isMarketingAgreed) {
         User user = userFactory.createNewUser(
                 tempUserInfo.snsProvider(),
                 new SnsUserInfo(
@@ -88,7 +90,8 @@ public class UserService {
                 )
         );
 
-        UserNoticeSetting userNoticeSetting = userNoticeSettingRepository.save(new UserNoticeSetting(user));
+        UserNoticeSetting userNoticeSetting = userNoticeSettingRepository.save(
+                new UserNoticeSetting(user, isMarketingAgreed));
         user.setUserNoticeSetting(userNoticeSetting);
         return userRepository.save(user);
     }
