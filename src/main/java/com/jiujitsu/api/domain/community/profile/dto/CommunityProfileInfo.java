@@ -9,11 +9,18 @@ public record CommunityProfileInfo(
         ImageInfo profileImage
 ) {
     public static CommunityProfileInfo from(User user) {
+        if (user == null) {
+            return withdrawn();
+        }
         return new CommunityProfileInfo(
                 user.getId(),
                 user.getNickname(),
                 ImageInfo.from(user.getProfileImageFile())
         );
+    }
+
+    public static CommunityProfileInfo withdrawn() {
+        return new CommunityProfileInfo(null, "탈퇴회원", null);
     }
 
     public static CommunityProfileInfo masked() {

@@ -3,6 +3,8 @@ package com.jiujitsu.api.global.entity;
 import com.jiujitsu.api.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -18,6 +20,7 @@ public abstract class BaseEntity {
     @CreatedBy
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private User createdBy;
 
     @CreatedDate
@@ -27,6 +30,7 @@ public abstract class BaseEntity {
     @LastModifiedBy
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updated_by")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private User updatedBy;
 
     @LastModifiedDate

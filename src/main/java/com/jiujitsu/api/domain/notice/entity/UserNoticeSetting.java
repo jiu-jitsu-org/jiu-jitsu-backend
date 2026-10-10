@@ -4,6 +4,8 @@ import com.jiujitsu.api.domain.notice.dto.NoticeSettingRequest;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.global.fcm.entity.NoticeGroupType;
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -33,6 +35,7 @@ public class UserNoticeSetting {
     private Boolean marketingEnabled;   // 마케팅정보알림
 
     @OneToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     public UserNoticeSetting(User user) {
