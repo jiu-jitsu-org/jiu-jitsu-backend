@@ -126,6 +126,16 @@ public class BoardController {
         return boardHideService.toggleHide(id);
     }
 
+    @Operation(summary = "특정 사용자가 쓴 글 목록", description = "특정 사용자가 작성한 글 목록을 조회합니다. 비로그인 가능. 차단 관계이면 404 반환.")
+    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND})
+    @GetMapping("/user/{userId}")
+    public Page<BoardListResponse> getUserBoardList(
+            @Parameter(name = "userId", description = "조회할 사용자 ID", required = true) @PathVariable Long userId,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return boardService.getUserBoardList(userId, pageable);
+    }
+
     @Operation(summary = "내가 작성한 글 조회", description = "내가 작성한 글 목록을 조회합니다.")
     @LoginErrorExamples
     @GetMapping("/write")

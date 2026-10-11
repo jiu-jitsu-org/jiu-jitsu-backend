@@ -17,4 +17,6 @@ public interface UserBlockRepository extends JpaRepository<UserBlock, Long> {
 
     @Query("SELECT ub.blocked.id FROM UserBlock ub WHERE ub.blocker.id = :blockerId")
     List<Long> findBlockedIdsByBlockerId(@Param("blockerId") Long blockerId);
+
+    boolean existsByBlockerIdAndBlockedId(Long blockerId, Long blockedId);
 }

@@ -1,9 +1,14 @@
 package com.jiujitsu.api.domain.community.comment.service;
 
+import com.jiujitsu.api.domain.community.board.entity.Board;
+import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
+import com.jiujitsu.api.domain.community.comment.dto.BoardSummaryInGroup;
+import com.jiujitsu.api.domain.community.comment.dto.CommentSummaryInGroup;
 import com.jiujitsu.api.domain.community.comment.dto.CommentsListRequest;
 import com.jiujitsu.api.domain.community.comment.dto.CommentsSortType;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest;
+import com.jiujitsu.api.domain.community.comment.dto.UserCommentGroupResponse;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeResponse;
 import com.jiujitsu.api.domain.community.comment.entity.CommentLike;
@@ -20,6 +25,7 @@ import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -28,6 +34,8 @@ import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -47,6 +55,8 @@ public class CommunityCommentsService {
     private final CommentLikeRepository commentLikeRepository;
     private final CommunityCommentsRepository communityCommentsRepository;
     private final ContentRepository contentRepository;
+    private final BoardRepository boardRepository;
+    private final UserRepository userRepository;
     private final AuthenticationFacade authenticationFacade;
     private final UserBlockService userBlockService;
     private final ReportService reportService;
@@ -242,6 +252,76 @@ public class CommunityCommentsService {
         comment.validateOwner(authenticationFacade.getCurrentUser());
 
         comment.softDelete();
+    }
+
+    /**
+     * 특정 사용자가 쓴 댓글 목록 — 원글 단위로 묶어서 반환 (비로그인 가능)
+     * - 차단 관계이면 404
+     * - 삭제된 댓글, 숨김 게시물 제외
+     * - 대댓글 포함
+     * - 묶음 정렬: 해당 원글에서 가장 최근에 댓글 단 시각 기준 최신순
+     * - 묶음 내 댓글 정렬: 최신순
+     */
+    @Transactional(readOnly = true)
+    public Page<UserCommentGroupResponse> getUserCommentGroups(Long userId, Pageable pageable) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        // 차단 확인
+        authenticationFacade.getCurrentUserOptional().ifPresent(viewer -> {
+            if (userBlockService.isBlockedBetween(viewer.getId(), userId)) {
+                throw new ErrorException(ErrorCode.USER_NOT_FOUND);
+            }
+        });
+
+        // 뷰어가 차단한 사용자의 게시물 제외
+        List<Long> blockedIds = userBlockService.getBlockedUserIds();
+        List<Long> excludedAuthorIds = blockedIds.isEmpty() ? List.of(-1L) : blockedIds;
+
+        // Step 1: 묶음 페이징 — boardId + latestCommentedAt
+        Page<Object[]> groupPage = communityCommentsRepository.findBoardsWithLatestCommentByUser(
+                userId, excludedAuthorIds, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+
+        List<Long> boardIds = groupPage.getContent().stream()
+                .map(row -> (Long) row[0])
+                .toList();
+
+        if (boardIds.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, groupPage.getTotalElements());
+        }
+
+        // Step 2: Board 조회 및 contentId 매핑
+        Map<Long, Board> boardById = boardRepository.findAllById(boardIds).stream()
+                .collect(Collectors.toMap(Board::getId, b -> b));
+
+        Map<Long, Long> contentIdByBoardId = boardById.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getContent().getId()));
+
+        // Step 3: 해당 contentId들에 달린 user 댓글 일괄 조회
+        List<Long> contentIds = new ArrayList<>(contentIdByBoardId.values());
+        Map<Long, List<CommunityComments>> commentsByContentId = communityCommentsRepository
+                .findByContentIdsAndUserId(contentIds, userId)
+                .stream()
+                .collect(Collectors.groupingBy(c -> c.getContent().getId()));
+
+        // Step 4: 묶음 조립 (Step 1의 순서 유지)
+        List<UserCommentGroupResponse> groups = groupPage.getContent().stream()
+                .filter(row -> boardById.containsKey((Long) row[0]))
+                .map(row -> {
+                    Long boardId = (Long) row[0];
+                    java.time.LocalDateTime latestAt = (java.time.LocalDateTime) row[1];
+                    Board board = boardById.get(boardId);
+                    Long contentId = contentIdByBoardId.get(boardId);
+                    List<CommentSummaryInGroup> comments = commentsByContentId
+                            .getOrDefault(contentId, List.of())
+                            .stream()
+                            .map(CommentSummaryInGroup::from)
+                            .toList();
+                    return new UserCommentGroupResponse(BoardSummaryInGroup.from(board), latestAt, comments);
+                })
+                .toList();
+
+        return new PageImpl<>(groups, pageable, groupPage.getTotalElements());
     }
 
     /**

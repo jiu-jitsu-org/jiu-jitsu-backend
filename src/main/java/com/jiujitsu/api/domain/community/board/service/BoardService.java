@@ -14,6 +14,7 @@ import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -34,6 +35,7 @@ import java.util.stream.Stream;
 public class BoardService {
 
     private final AuthenticationFacade authenticationFacade;
+    private final UserRepository userRepository;
     private final BoardRepository boardRepository;
     private final BoardFactory boardFactory;
     private final BoardMapper boardMapper;
@@ -222,6 +224,32 @@ public class BoardService {
         User user = authenticationFacade.getCurrentUser();
         Page<Board> page = boardRepository.findAllByCreatedByAndNotHidden(user, pageable);
 
+        return mapBoardsToResponse(page);
+    }
+
+    /**
+     * 특정 사용자가 쓴 글 목록 (비로그인 가능)
+     * - 차단 관계이면 404
+     * - 신고/숨김 콘텐츠 제외 (뷰어 기준)
+     */
+    @Transactional(readOnly = true)
+    public Page<BoardListResponse> getUserBoardList(Long userId, Pageable pageable) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        authenticationFacade.getCurrentUserOptional().ifPresent(viewer -> {
+            if (userBlockService.isBlockedBetween(viewer.getId(), userId)) {
+                throw new ErrorException(ErrorCode.USER_NOT_FOUND);
+            }
+        });
+
+        List<Long> reportedContentIds = reportService.getReportedTargetIds(ReportType.BOARD);
+        List<Long> hiddenContentIds = boardHideService.getHiddenContentIds();
+        List<Long> excludedContentIds = Stream.concat(reportedContentIds.stream(), hiddenContentIds.stream())
+                .distinct().toList();
+        List<Long> excludedContentIdsSentinel = excludedContentIds.isEmpty() ? List.of(-1L) : excludedContentIds;
+
+        Page<Board> page = boardRepository.findAllByUserFiltered(userId, excludedContentIdsSentinel, pageable);
         return mapBoardsToResponse(page);
     }
 

@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.community.comment.dto.CommentsListRequest;
 import com.jiujitsu.api.domain.community.comment.dto.CommentsSortType;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest;
+import com.jiujitsu.api.domain.community.comment.dto.UserCommentGroupResponse;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeResponse;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
@@ -15,7 +16,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -52,6 +57,22 @@ public class CommunityCommentsController {
             @RequestParam(name = "sortType", required = false) CommentsSortType sortType
     ) {
         return communityCommentsService.getReplies(commentId, page, sortType);
+    }
+
+    @Operation(
+            summary = "특정 사용자의 댓글 묶음 목록",
+            description = "특정 사용자가 쓴 댓글을 원글 단위로 묶어서 반환합니다. " +
+                    "비로그인 가능. 차단 관계이면 404 반환. " +
+                    "묶음끼리는 최근 댓글 시간 기준 최신순, 묶음 안은 최신순. " +
+                    "삭제된 댓글·숨김 게시물·차단 사용자 게시물은 제외."
+    )
+    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND})
+    @GetMapping("/user/{userId}")
+    public Page<UserCommentGroupResponse> getUserCommentGroups(
+            @Parameter(name = "userId", description = "조회할 사용자 ID", required = true) @PathVariable Long userId,
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        return communityCommentsService.getUserCommentGroups(userId, pageable);
     }
 
     @Operation(
