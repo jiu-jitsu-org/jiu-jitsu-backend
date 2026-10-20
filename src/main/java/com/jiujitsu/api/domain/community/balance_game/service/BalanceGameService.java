@@ -18,14 +18,21 @@ import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -105,6 +112,64 @@ public class BalanceGameService {
         }
 
         return toResponseWithVotes(game);
+    }
+
+    /**
+     * 내가 투표한 밸런스 게임 목록 (커뮤니티 활동 > 밸런스 게임 탭)
+     * - 마감된 게임 포함, gameDate 최신순 (쿼리에 고정)
+     * - 투표를 취소한 게임은 제외 (취소 = 투표 행 삭제)
+     * 항목은 상세 조회와 같은 응답이며, 목록 조회라 조회수는 올리지 않는다.
+     */
+    @Transactional(readOnly = true)
+    public Page<BalanceGameResponse> getParticipatedList(Pageable pageable) {
+        User user = authenticationFacade.getCurrentUser();
+
+        // 클라이언트가 sort 를 보내도 쿼리의 ORDER BY 에 덧붙지 않도록 정렬을 제거한다.
+        Pageable unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        Page<BalanceGameVote> votePage = balanceGameVoteRepository.findMyVotes(user, unsorted);
+
+        // 빈 페이지면 IN () 집계 쿼리를 보내지 않는다. (범위 밖 페이지여도 totalElements 는 유지)
+        if (votePage.isEmpty()) {
+            return new PageImpl<>(List.of(), unsorted, votePage.getTotalElements());
+        }
+
+        List<Long> balanceGameIds = votePage.getContent().stream()
+                .map(vote -> vote.getBalanceGame().getId())
+                .toList();
+        List<Long> contentIds = votePage.getContent().stream()
+                .map(vote -> vote.getBalanceGame().getContent().getId())
+                .toList();
+
+        // 득표수: balanceGameId -> (선택지 -> 득표수)
+        Map<Long, Map<BalanceGameOption, Long>> voteCountMap = new HashMap<>();
+        for (Object[] row : balanceGameVoteRepository.countByBalanceGameIdsGroupByOption(balanceGameIds)) {
+            voteCountMap.computeIfAbsent((Long) row[0], id -> new HashMap<>())
+                    .put((BalanceGameOption) row[1], ((Number) row[2]).longValue());
+        }
+
+        Map<Long, Long> commentCountMap = communityCommentsService.getContentsComments(contentIds);
+        Map<Long, Long> likeCountMap = contentService.getContentLikeCount(contentIds);
+        Set<Long> commentedContentIds = communityCommentsService.getUserCommentedContentIds(user.getId(), contentIds);
+        Set<Long> likedContentIds = contentService.getUserLikedContentIds(user.getId(), contentIds);
+        Set<Long> noticeDisabledContentIds = noticeService.getNoticeDisabledContentIds(user.getId(), contentIds);
+
+        LocalDateTime now = LocalDateTime.now();
+        return votePage.map(vote -> {
+            BalanceGame game = vote.getBalanceGame();
+            Long contentId = game.getContent().getId();
+            Map<BalanceGameOption, Long> voteCounts = voteCountMap.getOrDefault(game.getId(), Map.of());
+
+            return balanceGameMapper.toResponse(game,
+                    commentCountMap.getOrDefault(contentId, 0L),
+                    likeCountMap.getOrDefault(contentId, 0L),
+                    likedContentIds.contains(contentId),
+                    commentedContentIds.contains(contentId),
+                    !noticeDisabledContentIds.contains(contentId),
+                    voteCounts.getOrDefault(BalanceGameOption.A, 0L),
+                    voteCounts.getOrDefault(BalanceGameOption.B, 0L),
+                    vote.getOption(),       // 내 투표 = 조회 기준 행의 선택지
+                    now);
+        });
     }
 
     /**

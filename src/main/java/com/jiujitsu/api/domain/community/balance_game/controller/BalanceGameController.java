@@ -12,6 +12,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "balance-game-controller", description = "커뮤니티 밸런스 게임 API")
@@ -30,6 +33,18 @@ public class BalanceGameController {
     @GetMapping
     public BalanceGameResponse getCurrent() {
         return balanceGameService.getCurrent();
+    }
+
+    @Operation(
+            summary = "내가 투표한 밸런스 게임 목록 조회",
+            description = "내가 투표한 밸런스 게임 목록을 gameDate 최신순으로 조회합니다. 마감된 게임도 포함하며, "
+                    + "투표를 취소한 게임은 제외됩니다. 항목은 상세 조회와 같은 형태이며 조회수는 증가하지 않습니다. "
+                    + "정렬은 서버에서 고정하므로 sort 파라미터는 무시됩니다."
+    )
+    @LoginErrorExamples
+    @GetMapping("/participated")
+    public Page<BalanceGameResponse> participatedList(@PageableDefault(size = 20) Pageable pageable) {
+        return balanceGameService.getParticipatedList(pageable);
     }
 
     @Operation(
