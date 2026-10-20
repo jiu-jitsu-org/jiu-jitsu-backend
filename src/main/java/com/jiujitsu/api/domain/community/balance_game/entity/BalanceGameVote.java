@@ -13,7 +13,9 @@ import org.hibernate.annotations.OnDeleteAction;
 @Table(
         name = "balance_game_vote",
         indexes = {
-                @Index(name = "idx_balance_game_vote", columnList = "balance_game_id")
+                @Index(name = "idx_balance_game_vote", columnList = "balance_game_id"),
+                // 내가 투표한 게임 목록 (유니크 제약은 balance_game_id 선두라 투표자 단독 조회에 못 탄다)
+                @Index(name = "idx_balance_game_vote_created_by", columnList = "created_by")
         },
         // 1인 1표 보장 (투표자 = 감사 필드 created_by)
         uniqueConstraints = @UniqueConstraint(columnNames = {"balance_game_id", "created_by"})

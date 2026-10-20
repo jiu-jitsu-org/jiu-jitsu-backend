@@ -26,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -165,5 +167,19 @@ public class NoticeService {
         return contentNoticeSettingRepository.findByUserIdAndContentId(userId, contentId)
                 .map(ContentNoticeSetting::getEnabled)
                 .orElse(true);
+    }
+
+    /**
+     * 게시물 목록 > 알림을 끈 컨텐츠 ID 조회 (설정이 없으면 기본 활성화이므로 끈 것만 반환)
+     */
+    @Transactional(readOnly = true)
+    public Set<Long> getNoticeDisabledContentIds(Long userId, List<Long> contentIds) {
+        if (contentIds.isEmpty()) {
+            return Set.of();
+        }
+        return contentNoticeSettingRepository.findByUserIdAndContentIdIn(userId, contentIds).stream()
+                .filter(setting -> !setting.getEnabled())
+                .map(ContentNoticeSetting::getContentId)
+                .collect(Collectors.toSet());
     }
 }
