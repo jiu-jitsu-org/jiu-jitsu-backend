@@ -9,6 +9,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 대회 기록 한 줄 = 한 부문. 같은 (연도, 대회명) 행들이 한 대회로 묶여 응답된다.
+ */
 @Embeddable
 @Getter
 @NoArgsConstructor
@@ -19,12 +22,17 @@ public class CompetitionInfo {
     @Column(name = "competition_year")
     private Integer competitionYear;    // 대회출전년도
 
-    @Column(name = "competition_month")
-    private Integer competitionMonth;   // 대회출전 월
-
     @Column(name = "competition_name", length = 100)
     private String competitionName; // 대회명
 
     @Enumerated(EnumType.STRING)
     private CompetitionRank competitionRank;  // 수상정보
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "competition_uniform")
+    private CompetitionUniform uniform; // 도복/노기
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "competition_belt")
+    private BeltRank belt;  // 출전 띠
 }

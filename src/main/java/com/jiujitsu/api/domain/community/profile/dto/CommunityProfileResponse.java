@@ -28,7 +28,8 @@ public record CommunityProfileResponse(
         @Schema(description = "(관장/사범) 지도 철학") String teachingPhilosophy,
         @Schema(description = "(관장/사범) 경력 시작일") LocalDate teachingStartDate,
         @Schema(description = "(관장/사범) 경력 상세") String teachingDetail,
-        @Schema(description = "대회 정보") List<CompetitionInfoDto> competitions
+        @Schema(description = "대회 정보 (연도 최신순, 같은 연도는 최고 메달 순)") List<CompetitionDto> competitions,
+        @Schema(description = "메달 개수 합계") MedalCountDto medalCount
 ) {
     public static CommunityProfileResponse ofUserOnly(User user) {
         return new CommunityProfileResponse(
@@ -36,7 +37,7 @@ public record CommunityProfileResponse(
                 ImageInfo.from(user.getProfileImageFile()),
                 null, null, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null
         );
     }
 }

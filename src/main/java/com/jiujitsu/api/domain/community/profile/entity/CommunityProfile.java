@@ -1,6 +1,6 @@
 package com.jiujitsu.api.domain.community.profile.entity;
 
-import com.jiujitsu.api.domain.community.profile.dto.CompetitionInfoDto;
+import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
 import com.jiujitsu.api.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -155,10 +155,11 @@ public class CommunityProfile {
     /**
      * 대회정보 수정
      */
-    public void upsertCompetitions(List<CompetitionInfoDto> competitionInfos) {
-        this.competitions = competitionInfos.stream()
-                .map(CompetitionInfoDto::toEntity)
-                .toList();
+    public void upsertCompetitions(List<CompetitionDto> competitionDtos) {
+        // save(merge) 시 Hibernate가 이 목록을 clear()하므로 수정 가능한 리스트여야 한다 (Stream.toList() 불가)
+        this.competitions = competitionDtos.stream()
+                .flatMap(competition -> competition.toEntities().stream())
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**

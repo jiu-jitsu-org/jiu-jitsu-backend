@@ -74,7 +74,7 @@ public class CommunityProfileService {
             case POSITION -> profile.upsertPosition(request.bestPosition(), request.favoritePosition());
             case SUBMISSION -> profile.upsertSubmission(request.bestSubmission(), request.favoriteSubmission());
             case TECHNIQUE -> profile.upsertTechnique(request.bestTechnique(), request.favoriteTechnique());
-            case COMPETITION -> profile.upsertCompetitions(request.competitionInfoListOrEmpty());
+            case COMPETITION -> profile.upsertCompetitions(request.competitionsOrEmpty());
             case OWNER_INFO -> {
                 if (!Objects.equals(user.getRole(), UserRole.OWNER)) {
                     throw new ErrorException(ErrorCode.PERMISSION_DENIED);
