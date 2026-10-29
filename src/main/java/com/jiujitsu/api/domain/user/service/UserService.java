@@ -1,9 +1,5 @@
 package com.jiujitsu.api.domain.user.service;
 
-import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
-import com.jiujitsu.api.domain.community.profile.entity.OwnerProfile;
-import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepository;
-import com.jiujitsu.api.domain.community.profile.repository.OwnerProfileRepository;
 import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
 import com.jiujitsu.api.domain.notice.entity.UserNoticeSetting;
@@ -13,6 +9,7 @@ import com.jiujitsu.api.domain.user.entity.*;
 import com.jiujitsu.api.domain.user.factory.UserFactory;
 import com.jiujitsu.api.domain.user.mapper.AuthMapper;
 import com.jiujitsu.api.domain.user.mapper.UserMapper;
+import com.jiujitsu.api.domain.user.repository.OwnerVerificationRequestRepository;
 import com.jiujitsu.api.domain.user.repository.UserAppInfoRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -37,8 +34,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final ImageFileRepository imageFileRepository;
-    private final OwnerProfileRepository ownerProfileRepository;
-    private final CommunityProfileRepository communityProfileRepository;
+    private final OwnerVerificationRequestRepository ownerVerificationRequestRepository;
     private final UserAppInfoRepository userAppInfoRepository;
     private final UserNoticeSettingRepository userNoticeSettingRepository;
     private final TokenBlacklistService tokenBlacklistService;
@@ -105,7 +101,7 @@ public class UserService {
      */
     public UserProfileResponse getUserProfile() {
         // 사용자 조회
-        return userMapper.toUserProfileResponse(authenticationFacade.getCurrentUser());
+        return toUserProfileResponse(authenticationFacade.getCurrentUser());
     }
 
     /**
@@ -120,7 +116,7 @@ public class UserService {
         // 프로필 업데이트
         user.updateNickname(nickname);
 
-        return userMapper.toUserProfileResponse(user);
+        return toUserProfileResponse(user);
     }
 
     /**
@@ -131,7 +127,7 @@ public class UserService {
         ImageFile imageFile = imageFileRepository.findById(imageFileId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
         user.updateProfileImage(imageFile);
-        return userMapper.toUserProfileResponse(user);
+        return toUserProfileResponse(user);
     }
 
     /**
@@ -167,51 +163,10 @@ public class UserService {
         return false;
     }
 
-    /**
-     * 관장/사범 신청
-     */
-    public UserProfileResponse requestOwnerRole(Long imageFileId) {
-        User user = authenticationFacade.getCurrentUser();
-
-        if (!Objects.equals(user.getRole(), UserRole.USER)) {
-            throw new ErrorException(ErrorCode.PERMISSION_DENIED);
-        }
-
-        ImageFile imageFile = imageFileRepository.findById(imageFileId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
-        user.requestOwner(imageFile);
-
-        return userMapper.toUserProfileResponse(user);
-    }
-
-    /**
-     * 관장/사범 목록 조회
-     */
-    public List<UserProfileResponse> getRequestOwner() {
-        List<User> userList = userRepository.findByOwnerRequestedTrueAndOwnerRequestImageFileIsNotNullAndRole(UserRole.USER);
-        return userList.stream().map(userMapper::toUserProfileResponse).toList();
-    }
-
-    /**
-     * 관장/사범 권한 부여
-     */
-    public UserProfileResponse grantOwnerRole() {
-        // 사용자 조회
-        User user = authenticationFacade.getCurrentUser();
-
-        // 사용자 권한 변경
-        user.updateRole(UserRole.OWNER);
-
-        // 관장 프로필 생성
-        OwnerProfile ownerProfile = OwnerProfile.builder().build();
-        ownerProfileRepository.save(ownerProfile);
-
-        // 관장-커뮤 프로필 매핑
-        CommunityProfile communityProfile = communityProfileRepository.findByUser(user)
-                .orElseThrow(() -> new ErrorException(ErrorCode.REQUIRED_PROFILE));
-        communityProfile.insertOwnerProfile(ownerProfile);
-
-        return userMapper.toUserProfileResponse(user);
+    private UserProfileResponse toUserProfileResponse(User user) {
+        OwnerVerificationRequest latestOwnerRequest = ownerVerificationRequestRepository.findTopByUserOrderByIdDesc(user)
+                .orElse(null);
+        return userMapper.toUserProfileResponse(user, latestOwnerRequest);
     }
 
     /**

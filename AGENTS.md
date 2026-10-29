@@ -263,7 +263,7 @@ domain/community/board/
 
 | 도메인 | 주요 기능 |
 |--------|-----------|
-| user | SNS 로그인(Google/Apple), JWT 발급, 프로필, 탈퇴, 차단 |
+| user | SNS 로그인(Google/Apple), JWT 발급, 프로필, 탈퇴, 차단, 관장/사범 인증 신청·승인(관리자) |
 | admin | 관리자 회원가입/로그인, 신고 처리 |
 | boot_strap | OS별 앱 버전 정보 조회 |
 | community/board | 게시글 CRUD, 카테고리, 좋아요, 저장, 숨김 |

@@ -42,9 +42,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.appInfos WHERE u.id = :id")
     Optional<User> findByIdWithAppInfos(@Param("id") Long id);
 
-    List<User> findByOwnerRequestedTrueAndOwnerRequestImageFileIsNotNullAndRole(UserRole role);
-
     Optional<User> findByProfileImageFile(ImageFile imageFile);
-
-    Optional<User> findByOwnerRequestImageFile(ImageFile imageFile);
 }

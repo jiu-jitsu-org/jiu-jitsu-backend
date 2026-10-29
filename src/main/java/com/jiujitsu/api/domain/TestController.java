@@ -62,26 +62,6 @@ public class TestController {
         return userService.getUserAppInfoByNickname(nickname);
     }
 
-    @Operation(
-            summary = "(관리자로 옮길거임) 관장/사범 요청 목록 조회",
-            description = "관장/사범 요청한 유저의 목록을 조회합니다."
-    )
-    @GetMapping("/grant/owner-role")
-    public List<UserProfileResponse> getRequestOwner() {
-        return userService.getRequestOwner();
-    }
-
-
-    @Operation(
-            summary = "(관리자로 옮길거임) 관장/사범 권한 부여",
-            description = "사용자에게 관장/사범 권한을 부여합니다."
-    )
-    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND})
-    @PutMapping("/grant/owner-role")
-    public UserProfileResponse grantOwnerRole() {
-        return userService.grantOwnerRole();
-    }
-
     /**
      * 커뮤니티
      */
