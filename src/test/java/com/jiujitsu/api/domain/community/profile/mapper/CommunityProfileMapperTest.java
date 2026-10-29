@@ -41,13 +41,13 @@ class CommunityProfileMapperTest {
     }
 
     @Test
-    @DisplayName("같은 연도·대회명의 부문 2개는 한 대회로 묶이고 부문 정보가 유지된다")
+    @DisplayName("같은 연도·대회명의 부문 2개는 한 대회로 묶이고, 같은 메달끼리는 도복→노기 순으로 정렬된다")
     void groupDivisionsOfSameCompetition() {
         CommunityProfileResponse response = respond(
                 CompetitionInfo.builder().competitionYear(2025).competitionName("서울 오픈")
-                        .competitionRank(GOLD).uniform(CompetitionUniform.GI).belt(BeltRank.BLUE).build(),
+                        .competitionRank(GOLD).uniform(CompetitionUniform.NO_GI).build(),
                 CompetitionInfo.builder().competitionYear(2025).competitionName("서울 오픈")
-                        .competitionRank(GOLD).uniform(CompetitionUniform.NO_GI).build()
+                        .competitionRank(GOLD).uniform(CompetitionUniform.GI).belt(BeltRank.BLUE).build()
         );
 
         assertThat(response.competitions()).hasSize(1);

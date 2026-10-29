@@ -27,7 +27,7 @@ public record CommunityProfileRequest(
         @Size(max = 100)
         @Schema(description = "소속 도장명", example = "Gracie Barra Seoul")
                 String academyName,
-        @Schema(description = "대회정보 (목록 전체를 교체, 비우면 전체 삭제)")
+        @Schema(description = "대회정보 (COMPETITION 필수. 목록 전체를 교체, 빈 목록이면 전체 삭제)")
                 List<@Valid @NotNull CompetitionDto> competitions,
         @Schema(description = "특기 서브미션", example = "CHOKES")
                 SubmissionType bestSubmission,
@@ -50,9 +50,6 @@ public record CommunityProfileRequest(
         @Schema(description = "(관장/사범) 경력 상세")
                 String teachingDetail
 ) {
-        public List<CompetitionDto> competitionsOrEmpty() {
-                return competitions == null ? List.of() : competitions;
-        }
 }
 
 

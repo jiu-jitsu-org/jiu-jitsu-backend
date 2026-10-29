@@ -85,7 +85,10 @@ public class CommunityProfileMapper {
                         entry.getKey().year(),
                         entry.getKey().name(),
                         entry.getValue().stream()
-                                .sorted(Comparator.comparing(CompetitionInfo::getCompetitionRank, rankOrder))
+                                // 같은 메달끼리는 도복/노기 → 띠 순 (저장 순서가 보장되지 않아 고정)
+                                .sorted(Comparator.comparing(CompetitionInfo::getCompetitionRank, rankOrder)
+                                        .thenComparing(CompetitionInfo::getUniform, Comparator.nullsLast(Comparator.naturalOrder()))
+                                        .thenComparing(CompetitionInfo::getBelt, Comparator.nullsLast(Comparator.naturalOrder())))
                                 .map(CompetitionDivisionDto::from)
                                 .toList()
                 ))

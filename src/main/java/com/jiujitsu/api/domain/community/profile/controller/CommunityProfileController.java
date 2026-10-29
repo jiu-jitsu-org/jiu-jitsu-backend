@@ -37,7 +37,7 @@ public class CommunityProfileController {
             description = "현재 로그인한 사용자의 커뮤니티 프로필을 생성하거나 수정합니다."
     )
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.PERMISSION_DENIED})
+    @ApiErrorCodeExamples({ErrorCode.PERMISSION_DENIED, ErrorCode.REQUIRED_PARAMETER})
     @PostMapping
     public CommunityProfileResponse upsertMyProfile(
             @Valid @RequestBody CommunityProfileRequest request

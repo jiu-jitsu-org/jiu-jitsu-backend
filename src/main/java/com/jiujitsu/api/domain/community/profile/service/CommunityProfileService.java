@@ -74,7 +74,13 @@ public class CommunityProfileService {
             case POSITION -> profile.upsertPosition(request.bestPosition(), request.favoritePosition());
             case SUBMISSION -> profile.upsertSubmission(request.bestSubmission(), request.favoriteSubmission());
             case TECHNIQUE -> profile.upsertTechnique(request.bestTechnique(), request.favoriteTechnique());
-            case COMPETITION -> profile.upsertCompetitions(request.competitionsOrEmpty());
+            case COMPETITION -> {
+                // 필드가 없는 요청(이전 필드명 competitionInfoList 등)으로 기록이 통째로 지워지지 않게 막는다. 전체 삭제는 빈 목록으로
+                if (request.competitions() == null) {
+                    throw new ErrorException(ErrorCode.REQUIRED_PARAMETER);
+                }
+                profile.upsertCompetitions(request.competitions());
+            }
             case OWNER_INFO -> {
                 if (!Objects.equals(user.getRole(), UserRole.OWNER)) {
                     throw new ErrorException(ErrorCode.PERMISSION_DENIED);

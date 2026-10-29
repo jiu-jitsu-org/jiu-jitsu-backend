@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.community.profile.dto;
 
 import com.jiujitsu.api.domain.community.profile.entity.CompetitionRank;
+import com.jiujitsu.api.domain.community.profile.entity.ProfileRequestType;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.DisplayName;
@@ -56,5 +57,16 @@ class CompetitionDtoValidationTest {
         assertThat(isValid(new CompetitionDto(2025, "서울 오픈", Collections.singletonList(null)))).isFalse();
         assertThat(isValid(new CompetitionDto(2025, "서울 오픈",
                 List.of(new CompetitionDivisionDto(null, null, null))))).isFalse();
+    }
+
+    @Test
+    @DisplayName("프로필 요청 안의 대회 목록까지 검증이 이어진다")
+    void cascadeFromProfileRequest() {
+        CommunityProfileRequest request = new CommunityProfileRequest(ProfileRequestType.COMPETITION,
+                null, null, null, null, null,
+                List.of(new CompetitionDto(2025, "서울 오픈", List.of())),
+                null, null, null, null, null, null, null, null, null, null);
+
+        assertThat(validator.validate(request)).isNotEmpty();
     }
 }
