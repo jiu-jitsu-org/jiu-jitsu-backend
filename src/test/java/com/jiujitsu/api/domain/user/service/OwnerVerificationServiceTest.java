@@ -280,7 +280,7 @@ class OwnerVerificationServiceTest {
         }
 
         @Test
-        @DisplayName("신청자가 이미 관장/사범이면(중복 신청) 승인할 수 없다")
+        @DisplayName("신청자 role 이 USER 가 아니면(비정상 상태) 승인할 수 없다")
         void applicantAlreadyOwner() {
             User applicant = user(7L, UserRole.OWNER);
             given(authenticationFacade.getCurrentUser()).willReturn(user(1L, UserRole.ADMIN));

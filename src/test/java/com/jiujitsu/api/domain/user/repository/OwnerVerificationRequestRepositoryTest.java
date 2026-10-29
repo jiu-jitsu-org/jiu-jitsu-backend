@@ -9,6 +9,7 @@ import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
+import jakarta.persistence.PersistenceUnitUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,10 +81,15 @@ class OwnerVerificationRequestRepositoryTest {
         assertThat(page.getTotalElements()).isEqualTo(3);
         assertThat(page.getContent()).extracting(OwnerVerificationRequest::getId)
                 .containsExactly(third.getId(), second.getId());
-        assertThat(page.getContent().get(0).getUser().getId()).isNotNull();
+        // 목록 응답에 쓰는 연관은 fetch join 으로 한 번에 로드 (N+1 방지)
+        PersistenceUnitUtil util = em.getEntityManager().getEntityManagerFactory().getPersistenceUnitUtil();
+        OwnerVerificationRequest top = page.getContent().get(0);
+        assertThat(util.isLoaded(top, "user")).isTrue();
+        assertThat(util.isLoaded(top, "documentImageFile")).isTrue();
+        assertThat(util.isLoaded(top.getUser(), "profileImageFile")).isTrue();
         assertThat(rejectedPage.getContent()).extracting(OwnerVerificationRequest::getId)
                 .containsExactly(rejected.getId());
-        assertThat(first.getId()).isNotNull();
+        assertThat(page.getContent()).extracting(OwnerVerificationRequest::getId).doesNotContain(first.getId());
     }
 
     @Test
@@ -129,7 +135,7 @@ class OwnerVerificationRequestRepositoryTest {
     }
 
     @Test
-    @DisplayName("잠금 조회(FOR UPDATE)로 신청·유저를 읽고, 잠금 순서용 신청자 id 를 조회한다")
+    @DisplayName("잠금 조회 메서드가 신청·유저를 반환하고, 잠금 순서용 신청자 id 를 조회한다 (잠금 자체는 H2 로 검증하지 않음)")
     void findByIdForUpdate() {
         User me = saveUser(UserRole.USER);
         OwnerVerificationRequest request = saveRequest(me);

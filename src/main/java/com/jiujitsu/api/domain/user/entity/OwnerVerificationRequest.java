@@ -63,7 +63,7 @@ public class OwnerVerificationRequest {
     private LocalDateTime reviewedAt;
 
     @Version
-    private Long version;    // 잠금 밖 경로(이미지 삭제 등)의 덮어쓰기 방지
+    private Long version;    // 잠금 밖 경로(이미지 삭제 등)의 덮어쓰기 방지. 승인·거절과 겹치면 그쪽 요청이 충돌 예외로 실패
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

@@ -106,7 +106,7 @@ public class OwnerVerificationService {
         OwnerVerificationRequest request = findRequestForUpdate(requestId);
         User applicant = request.getUser();
 
-        // 처리된 신청이거나, 같은 유저의 다른 신청이 먼저 승인된 경우
+        // 처리된 신청 (role 검사는 DB 수동 변경 등 비정상 상태 방어)
         if (!request.isPending() || applicant.getRole() != UserRole.USER) {
             throw new ErrorException(ErrorCode.OWNER_REQUEST_NOT_PENDING);
         }
