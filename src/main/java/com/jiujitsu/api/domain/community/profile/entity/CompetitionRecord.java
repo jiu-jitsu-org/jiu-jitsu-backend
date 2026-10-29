@@ -17,7 +17,10 @@ import java.util.List;
  */
 @Builder
 @Entity
-@Table(name = "community_profile_competition_records")
+@Table(
+        name = "community_profile_competition_records",
+        indexes = @Index(name = "idx_competition_record_profile", columnList = "community_profile_id")
+)
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -38,14 +41,15 @@ public class CompetitionRecord {
     @Column(name = "competition_name", nullable = false, length = 100)
     private String competitionName; // 대회명 (없으면 빈 값 - 나만 보기)
 
-    @Column(name = "is_pinned", nullable = false)
+    @Column(name = "competition_pinned", nullable = false)
     private boolean competitionPinned;  // 대표 기록 고정 여부
 
-    @Column(name = "display_order")
+    @Column(name = "competition_display_order")
     private Integer competitionDisplayOrder;    // 회원이 정한 순서 (고정한 것끼리, 안 한 것끼리 각각 0이 맨 위)
 
     @Builder.Default
     @OneToMany(mappedBy = "competitionRecord", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id")
     @BatchSize(size = 100)
     private List<CompetitionDivision> divisions = new ArrayList<>(); // 출전 부문
 

@@ -13,7 +13,10 @@ import org.hibernate.annotations.OnDeleteAction;
  */
 @Builder
 @Entity
-@Table(name = "community_profile_competition_divisions")
+@Table(
+        name = "community_profile_competition_divisions",
+        indexes = @Index(name = "idx_competition_division_record", columnList = "competition_record_id")
+)
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -41,13 +44,13 @@ public class CompetitionDivision {
     @Column(name = "competition_belt")
     private BeltRank competitionBelt;  // 출전 띠
 
-    @Column(name = "weight_limit")
+    @Column(name = "competition_weight_limit")
     private Double competitionWeightLimit; // 체급 kg (소수 1자리)
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "weight_bound")
+    @Column(name = "competition_weight_bound")
     private CompetitionWeightBound competitionWeightBound; // 체급 이하/초과
 
-    @Column(name = "is_absolute", nullable = false)
+    @Column(name = "competition_absolute", nullable = false)
     private boolean competitionAbsolute; // 앱솔루트 여부 (체급과 함께 오지 않음)
 }

@@ -101,6 +101,10 @@ class CommunityProfileCompetitionsTest {
                         tuple(2025, "서울 오픈", true, 0),
                         tuple(2024, "", false, null)
                 );
+        // 앱솔루트 키를 보내지 않은 부문은 false로 저장된다
+        CompetitionRecord nameless = records.stream().filter(record -> !record.isNamed()).findFirst().orElseThrow();
+        assertThat(nameless.getDivisions()).extracting(CompetitionDivision::isCompetitionAbsolute).containsExactly(false);
+
         CompetitionRecord seoul = records.stream().filter(CompetitionRecord::isNamed).findFirst().orElseThrow();
         assertThat(seoul.getDivisions())
                 .extracting(CompetitionDivision::getCompetitionRank, CompetitionDivision::getCompetitionUniform,
@@ -138,6 +142,23 @@ class CommunityProfileCompetitionsTest {
         again.upsertCompetitions(List.of());
         communityProfileRepository.save(again);
         assertThat(reloadCompetitions(user)).isEmpty();
+        assertThat(countRows("community_profile_competition_records")).isZero();
+        assertThat(countRows("community_profile_competition_divisions")).isZero();
+    }
+
+    @Test
+    @DisplayName("회원 행을 지우면(UserCleanupService의 실삭제) DB에서 프로필·대회·부문이 함께 지워진다")
+    void cascadeOnUserDelete() {
+        User user = saveUser();
+        CommunityProfile profile = new CommunityProfile(user);
+        profile.upsertCompetitions(List.of(competition("A", CompetitionRank.GOLD), competition("B", CompetitionRank.SILVER)));
+        communityProfileRepository.save(profile);
+        em.flush();
+        em.clear();
+
+        em.getEntityManager().createNativeQuery("delete from users where id = " + user.getId()).executeUpdate();
+
+        assertThat(countRows("community_profiles")).isZero();
         assertThat(countRows("community_profile_competition_records")).isZero();
         assertThat(countRows("community_profile_competition_divisions")).isZero();
     }

@@ -81,7 +81,7 @@ public class CommunityProfileService {
             case SUBMISSION -> profile.upsertSubmission(request.bestSubmission(), request.favoriteSubmission());
             case TECHNIQUE -> profile.upsertTechnique(request.bestTechnique(), request.favoriteTechnique());
             case COMPETITION -> {
-                // 필드가 없는 요청(이전 필드명 competitionInfoList 등)으로 기록이 통째로 지워지지 않게 막는다. 전체 삭제는 빈 목록으로
+                // 필드가 빠진 요청으로 기록이 통째로 지워지지 않게 막는다. 전체 삭제는 빈 목록으로
                 if (request.competitions() == null) {
                     throw new ErrorException(ErrorCode.REQUIRED_PARAMETER);
                 }
@@ -101,7 +101,7 @@ public class CommunityProfileService {
     private void validateCompetitions(List<CompetitionDto> competitions) {
         Set<String> competitionKeys = new HashSet<>();
         boolean duplicated = competitions.stream()
-                .filter(competition -> !competition.trimmedName().isEmpty())
+                .filter(CompetitionDto::named)
                 .anyMatch(competition -> !competitionKeys.add(competition.competitionYear() + "|" + competition.trimmedName()));
         if (duplicated) {
             throw new ErrorException(ErrorCode.COMPETITION_DUPLICATED);

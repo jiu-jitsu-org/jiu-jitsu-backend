@@ -83,19 +83,23 @@ public class CommunityProfileMapper {
         return profile.getCompetitions().stream()
                 .sorted(Comparator.comparing(CompetitionRecord::isCompetitionPinned).reversed()
                         .thenComparing(CompetitionRecord::getCompetitionDisplayOrder, Comparator.nullsLast(Comparator.naturalOrder()))
-                        .thenComparing(CompetitionRecord::getCompetitionYear, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(CompetitionRecord::getCompetitionYear, Comparator.reverseOrder())
                         .thenComparing(this::bestRank, RANK_ORDER)
-                        .thenComparing(CompetitionRecord::getCompetitionName, Comparator.nullsLast(Comparator.naturalOrder())))
+                        .thenComparing(CompetitionRecord::getCompetitionName)
+                        .thenComparing(CompetitionRecord::getId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(record -> CompetitionDto.from(record, mapDivisions(record)))
                 .toList();
     }
 
-    // 부문 - 메달 → 도복/노기 → 띠 (저장 순서가 보장되지 않아 고정)
+    // 부문 - 메달 → 도복/노기 → 띠 → 체급(앱솔루트는 마지막) → 저장 순서
     private List<CompetitionDivisionDto> mapDivisions(CompetitionRecord record) {
         return record.getDivisions().stream()
                 .sorted(Comparator.comparing(CompetitionDivision::getCompetitionRank, RANK_ORDER)
                         .thenComparing(CompetitionDivision::getCompetitionUniform, Comparator.nullsLast(Comparator.naturalOrder()))
-                        .thenComparing(CompetitionDivision::getCompetitionBelt, Comparator.nullsLast(Comparator.naturalOrder())))
+                        .thenComparing(CompetitionDivision::getCompetitionBelt, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(CompetitionDivision::isCompetitionAbsolute)
+                        .thenComparing(CompetitionDivision::getCompetitionWeightLimit, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(CompetitionDivision::getId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(CompetitionDivisionDto::from)
                 .toList();
     }

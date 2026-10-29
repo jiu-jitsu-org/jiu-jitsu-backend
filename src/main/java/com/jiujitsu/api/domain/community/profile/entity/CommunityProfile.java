@@ -55,6 +55,7 @@ public class CommunityProfile {
 
     @Builder.Default
     @OneToMany(mappedBy = "communityProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id")
     private List<CompetitionRecord> competitions = new ArrayList<>(); // 대회 정보
 
     @Enumerated(EnumType.STRING)
@@ -102,6 +103,7 @@ public class CommunityProfile {
      */
     public CommunityProfile(User user) {
         this.user = user;
+        this.competitions = new ArrayList<>();  // @Builder.Default는 builder 경로에만 적용된다
     }
 
     /**
@@ -151,10 +153,7 @@ public class CommunityProfile {
      * 대회정보 수정
      */
     public void upsertCompetitions(List<CompetitionDto> competitionDtos) {
-        // orphanRemoval 컬렉션은 교체하지 않고 비운 뒤 채운다. CommunityProfile(User)로 만든 신규 프로필은 목록이 null
-        if (this.competitions == null) {
-            this.competitions = new ArrayList<>();
-        }
+        // orphanRemoval 컬렉션은 교체하지 않고 비운 뒤 채운다
         this.competitions.clear();
         competitionDtos.forEach(competition -> this.competitions.add(competition.toEntity(this)));
     }

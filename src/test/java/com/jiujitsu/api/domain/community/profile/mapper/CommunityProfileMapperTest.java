@@ -137,4 +137,26 @@ class CommunityProfileMapperTest {
         assertThat(response.competitions()).isEmpty();
         assertThat(response.medalCount()).isEqualTo(new MedalCountDto(0, 0, 0));
     }
+
+    @Test
+    @DisplayName("메달·도복·띠가 같은 부문은 체급 → 앱솔루트 순으로, 입력 순서와 상관없이 같은 순서로 내려간다")
+    void tieBreakDivisions() {
+        CompetitionDivision weight = CompetitionDivision.builder().competitionRank(GOLD)
+                .competitionUniform(CompetitionUniform.GI).competitionBelt(BeltRank.BLUE)
+                .competitionWeightLimit(76.0).competitionWeightBound(CompetitionWeightBound.UNDER).build();
+        CompetitionDivision absolute = CompetitionDivision.builder().competitionRank(GOLD)
+                .competitionUniform(CompetitionUniform.GI).competitionBelt(BeltRank.BLUE)
+                .competitionAbsolute(true).build();
+
+        for (List<CompetitionDivision> input : List.of(List.of(weight, absolute), List.of(absolute, weight))) {
+            CompetitionRecord seoul = CompetitionRecord.builder()
+                    .competitionYear(2025).competitionName("서울 오픈")
+                    .divisions(new ArrayList<>(input))
+                    .build();
+
+            assertThat(respond(seoul).competitions().get(0).divisions())
+                    .extracting(CompetitionDivisionDto::competitionAbsolute)
+                    .containsExactly(false, true);
+        }
+    }
 }

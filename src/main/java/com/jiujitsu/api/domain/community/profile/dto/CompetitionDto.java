@@ -37,7 +37,7 @@ public record CompetitionDto(
     @Schema(hidden = true)
     @AssertTrue(message = "대회명이 없는 기록은 고정할 수 없습니다.")
     public boolean isNamedIfPinned() {
-        return !pinnedOrFalse() || StringUtils.isNotBlank(competitionName);
+        return !pinnedOrFalse() || named();
     }
 
     public boolean pinnedOrFalse() {
@@ -46,6 +46,11 @@ public record CompetitionDto(
 
     public String trimmedName() {
         return StringUtils.trimToEmpty(competitionName);
+    }
+
+    // 대회명이 있는 기록인지 - 없으면 나만 보이고 고정·중복 검사·메달 합계에서 빠진다 (저장 후에는 CompetitionRecord.isNamed)
+    public boolean named() {
+        return !trimmedName().isEmpty();
     }
 
     public static CompetitionDto from(CompetitionRecord record, List<CompetitionDivisionDto> divisions) {

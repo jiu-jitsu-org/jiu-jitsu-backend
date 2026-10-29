@@ -190,7 +190,7 @@ src/main/java/com/jiujitsu/api/
 ### Community Profile
 - 벨트 등급 (`BeltRank`) / 스트라이프 (`BeltStripe`)
 - 선호 포지션 (`PositionType`) / 기술 (`TechniqueType`) / 서브미션 (`SubmissionType`)
-- 대회 출전 이력 (`CompetitionInfo`: 년도, 월, 대회명, 수상 정보)
+- 대회 출전 이력 (`CompetitionRecord`: 연도, 대회명, 대표 고정·순서 / `CompetitionDivision`: 출전 부문별 메달, 도복/노기, 띠, 체급 또는 앱솔루트)
 
 ### Board / Content
 - 게시글(`Board`)은 컨텐츠(`Content`)와 1:1 관계
