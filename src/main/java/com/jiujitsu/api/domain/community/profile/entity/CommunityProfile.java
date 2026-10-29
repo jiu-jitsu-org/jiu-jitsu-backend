@@ -17,7 +17,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Builder
 @Entity
@@ -55,12 +54,8 @@ public class CommunityProfile {
     private String academyName; // 도장명
 
     @Builder.Default
-    @ElementCollection
-    @CollectionTable(
-            name = "community_profile_competitions",
-            joinColumns = @JoinColumn(name = "community_profile_id")
-    )
-    private List<CompetitionInfo> competitions = new ArrayList<>(); // 대회 정보
+    @OneToMany(mappedBy = "communityProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CompetitionRecord> competitions = new ArrayList<>(); // 대회 정보
 
     @Enumerated(EnumType.STRING)
     @Column(length = 100)
@@ -156,10 +151,12 @@ public class CommunityProfile {
      * 대회정보 수정
      */
     public void upsertCompetitions(List<CompetitionDto> competitionDtos) {
-        // save(merge) 시 Hibernate가 이 목록을 clear()하므로 수정 가능한 리스트여야 한다 (Stream.toList() 불가)
-        this.competitions = competitionDtos.stream()
-                .flatMap(competition -> competition.toEntities().stream())
-                .collect(Collectors.toCollection(ArrayList::new));
+        // orphanRemoval 컬렉션은 교체하지 않고 비운 뒤 채운다. CommunityProfile(User)로 만든 신규 프로필은 목록이 null
+        if (this.competitions == null) {
+            this.competitions = new ArrayList<>();
+        }
+        this.competitions.clear();
+        competitionDtos.forEach(competition -> this.competitions.add(competition.toEntity(this)));
     }
 
     /**

@@ -26,6 +26,8 @@ public enum ErrorCode {
     CONTENT_SAVE_NOT_SUPPORTED(400, "C0008", "저장할 수 없는 게시물입니다."),
     BALANCE_GAME_END_AT_MUST_BE_FUTURE(400, "C0009", "마감 일시는 미래 시간이어야 합니다."),
     EMAIL_DUPLICATED(400, "R0006", "이미 사용중인 이메일입니다."),
+    COMPETITION_PIN_LIMIT_EXCEEDED(400, "R0007", "대표 기록은 3개까지 고정할 수 있습니다."),
+    COMPETITION_DUPLICATED(400, "R0008", "같은 연도에 같은 이름의 대회가 중복되었습니다."),
 
 
     /**

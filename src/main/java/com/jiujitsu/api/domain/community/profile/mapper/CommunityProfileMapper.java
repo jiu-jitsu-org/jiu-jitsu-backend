@@ -5,13 +5,13 @@ import com.jiujitsu.api.domain.community.profile.dto.CompetitionDivisionDto;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
 import com.jiujitsu.api.domain.community.profile.dto.MedalCountDto;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
-import com.jiujitsu.api.domain.community.profile.entity.CompetitionInfo;
+import com.jiujitsu.api.domain.community.profile.entity.CompetitionDivision;
+import com.jiujitsu.api.domain.community.profile.entity.CompetitionRecord;
 import com.jiujitsu.api.domain.community.profile.entity.CompetitionRank;
 import com.jiujitsu.api.domain.community.profile.entity.OwnerProfile;
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -20,6 +20,10 @@ import java.util.stream.Collectors;
 
 @Component
 public class CommunityProfileMapper {
+
+    // 메달 높은 순 (GOLD → PARTICIPATION)
+    private static final Comparator<CompetitionRank> RANK_ORDER = Comparator.nullsLast(Comparator.naturalOrder());
+
     /**
      * 프로필 응답 생성
      */
@@ -70,55 +74,53 @@ public class CommunityProfileMapper {
         return ownerProfile != null ? ownerProfile.getTeachingDetail() : null;
     }
 
-    // 대회정보 가져오기 - 한 줄(부문)씩 저장된 기록을 (연도, 대회명)으로 묶는다
+    // 대회정보 가져오기 - 고정 → 회원이 정한 순서 → 연도 최신순 → 최고 메달 → 대회명
     private List<CompetitionDto> mapCompetitions(CommunityProfile profile) {
         if (profile.getCompetitions() == null) {
             return Collections.emptyList();
         }
 
-        Comparator<CompetitionRank> rankOrder = Comparator.nullsLast(Comparator.naturalOrder());
-        Map<CompetitionKey, List<CompetitionInfo>> grouped = profile.getCompetitions().stream()
-                .collect(Collectors.groupingBy(CompetitionKey::from, LinkedHashMap::new, Collectors.toList()));
-
-        return grouped.entrySet().stream()
-                .map(entry -> new CompetitionDto(
-                        entry.getKey().year(),
-                        entry.getKey().name(),
-                        entry.getValue().stream()
-                                // 같은 메달끼리는 도복/노기 → 띠 순 (저장 순서가 보장되지 않아 고정)
-                                .sorted(Comparator.comparing(CompetitionInfo::getCompetitionRank, rankOrder)
-                                        .thenComparing(CompetitionInfo::getUniform, Comparator.nullsLast(Comparator.naturalOrder()))
-                                        .thenComparing(CompetitionInfo::getBelt, Comparator.nullsLast(Comparator.naturalOrder())))
-                                .map(CompetitionDivisionDto::from)
-                                .toList()
-                ))
-                // 연도 최신순 → 같은 연도는 최고 메달 순 → 대회명
-                .sorted(Comparator.comparing(CompetitionDto::competitionYear, Comparator.nullsLast(Comparator.reverseOrder()))
-                        .thenComparing(competition -> competition.divisions().get(0).competitionRank(), rankOrder)
-                        .thenComparing(CompetitionDto::competitionName, Comparator.nullsLast(Comparator.naturalOrder())))
+        return profile.getCompetitions().stream()
+                .sorted(Comparator.comparing(CompetitionRecord::isCompetitionPinned).reversed()
+                        .thenComparing(CompetitionRecord::getCompetitionDisplayOrder, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(CompetitionRecord::getCompetitionYear, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(this::bestRank, RANK_ORDER)
+                        .thenComparing(CompetitionRecord::getCompetitionName, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(record -> CompetitionDto.from(record, mapDivisions(record)))
                 .toList();
     }
 
-    // 메달 개수 합계 - 부문 기준, 참가 제외
+    // 부문 - 메달 → 도복/노기 → 띠 (저장 순서가 보장되지 않아 고정)
+    private List<CompetitionDivisionDto> mapDivisions(CompetitionRecord record) {
+        return record.getDivisions().stream()
+                .sorted(Comparator.comparing(CompetitionDivision::getCompetitionRank, RANK_ORDER)
+                        .thenComparing(CompetitionDivision::getCompetitionUniform, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(CompetitionDivision::getCompetitionBelt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(CompetitionDivisionDto::from)
+                .toList();
+    }
+
+    private CompetitionRank bestRank(CompetitionRecord record) {
+        return record.getDivisions().stream()
+                .map(CompetitionDivision::getCompetitionRank)
+                .min(RANK_ORDER)
+                .orElse(null);
+    }
+
+    // 메달 개수 합계 - 부문 기준, 참가·대회명 없는 기록 제외
     private MedalCountDto countMedals(CommunityProfile profile) {
         if (profile.getCompetitions() == null) {
             return new MedalCountDto(0, 0, 0);
         }
 
         Map<CompetitionRank, Long> counts = profile.getCompetitions().stream()
-                .filter(competition -> competition.getCompetitionRank() != null)
-                .collect(Collectors.groupingBy(CompetitionInfo::getCompetitionRank, Collectors.counting()));
+                .filter(CompetitionRecord::isNamed)
+                .flatMap(record -> record.getDivisions().stream())
+                .collect(Collectors.groupingBy(CompetitionDivision::getCompetitionRank, Collectors.counting()));
         return new MedalCountDto(
                 counts.getOrDefault(CompetitionRank.GOLD, 0L).intValue(),
                 counts.getOrDefault(CompetitionRank.SILVER, 0L).intValue(),
                 counts.getOrDefault(CompetitionRank.BRONZE, 0L).intValue()
         );
-    }
-
-    // 한 대회로 묶는 기준 - 대회명은 앞뒤 공백 무시
-    private record CompetitionKey(Integer year, String name) {
-        static CompetitionKey from(CompetitionInfo competition) {
-            return new CompetitionKey(competition.getCompetitionYear(), StringUtils.trim(competition.getCompetitionName()));
-        }
     }
 }

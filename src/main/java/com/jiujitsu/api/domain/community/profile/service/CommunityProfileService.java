@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.profile.service;
 
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileRequest;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
+import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.mapper.CommunityProfileMapper;
 import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepository;
@@ -15,7 +16,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.Optional;
 
 @Service
@@ -26,6 +30,8 @@ public class CommunityProfileService {
     private final CommunityProfileRepository communityProfileRepository;
     private final AuthenticationFacade authenticationFacade;
     private final CommunityProfileMapper communityProfileMapper;
+
+    private static final int MAX_PINNED_COMPETITIONS = 3;
 
     /**
      * 커뮤니티 프로필 조회
@@ -79,6 +85,7 @@ public class CommunityProfileService {
                 if (request.competitions() == null) {
                     throw new ErrorException(ErrorCode.REQUIRED_PARAMETER);
                 }
+                validateCompetitions(request.competitions());
                 profile.upsertCompetitions(request.competitions());
             }
             case OWNER_INFO -> {
@@ -87,6 +94,22 @@ public class CommunityProfileService {
                 }
                 profile.upsertOwnerInfo(request.teachingPhilosophy(), request.teachingStartDate(), request.teachingDetail());
             }
+        }
+    }
+
+    // 대표 고정은 최대 3개, 이름 있는 같은 대회(연도+대회명)는 한 번만 - 대회명 없는 기록은 각각 별개
+    private void validateCompetitions(List<CompetitionDto> competitions) {
+        Set<String> competitionKeys = new HashSet<>();
+        boolean duplicated = competitions.stream()
+                .filter(competition -> !competition.trimmedName().isEmpty())
+                .anyMatch(competition -> !competitionKeys.add(competition.competitionYear() + "|" + competition.trimmedName()));
+        if (duplicated) {
+            throw new ErrorException(ErrorCode.COMPETITION_DUPLICATED);
+        }
+
+        long pinnedCount = competitions.stream().filter(CompetitionDto::pinnedOrFalse).count();
+        if (pinnedCount > MAX_PINNED_COMPETITIONS) {
+            throw new ErrorException(ErrorCode.COMPETITION_PIN_LIMIT_EXCEEDED);
         }
     }
 }

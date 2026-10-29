@@ -34,7 +34,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 /**
- * 대회 정보 저장(COMPETITION) — competitions 가 없는 요청(예: 이전 필드명 competitionInfoList)으로 기록이 지워지지 않아야 한다.
+ * 대회 정보 저장(COMPETITION) — 목록 누락·중복 대회·고정 개수 검사.
  */
 @ExtendWith(MockitoExtension.class)
 class CommunityProfileServiceCompetitionTest {
@@ -60,10 +60,14 @@ class CommunityProfileServiceCompetitionTest {
                 .user(user)
                 .competitions(new ArrayList<>())
                 .build();
-        profile.upsertCompetitions(List.of(new CompetitionDto(2025, "서울 오픈",
-                List.of(new CompetitionDivisionDto(CompetitionRank.GOLD, null, null)))));
+        profile.upsertCompetitions(List.of(competition(2025, "서울 오픈", false)));
         given(authenticationFacade.getCurrentUser()).willReturn(user);
         given(communityProfileRepository.findByUser(user)).willReturn(Optional.of(profile));
+    }
+
+    private CompetitionDto competition(int year, String name, boolean pinned) {
+        return new CompetitionDto(year, name, pinned, null,
+                List.of(new CompetitionDivisionDto(CompetitionRank.GOLD, null, null, null, null, null)));
     }
 
     private CommunityProfileRequest competitionRequest(List<CompetitionDto> competitions) {
@@ -90,5 +94,49 @@ class CommunityProfileServiceCompetitionTest {
         communityProfileService.upsertMyProfile(competitionRequest(List.of()));
 
         assertThat(profile.getCompetitions()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("이름 있는 같은 대회(연도+대회명, 앞뒤 공백 무시)가 두 번 오면 R0008")
+    void rejectDuplicatedCompetition() {
+        assertThatThrownBy(() -> communityProfileService.upsertMyProfile(competitionRequest(List.of(
+                competition(2025, "서울 오픈", false),
+                competition(2025, " 서울 오픈 ", false)))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.COMPETITION_DUPLICATED);
+        assertThat(profile.getCompetitions()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("대회명이 같아도 연도가 다르면, 대회명 없는 기록은 여러 개여도 저장된다")
+    void allowDifferentYearAndNameless() {
+        communityProfileService.upsertMyProfile(competitionRequest(List.of(
+                competition(2025, "서울 오픈", false),
+                competition(2024, "서울 오픈", false),
+                competition(2024, "", false),
+                competition(2024, "", false))));
+
+        assertThat(profile.getCompetitions()).hasSize(4);
+    }
+
+    @Test
+    @DisplayName("고정은 3개까지, 4개면 R0007")
+    void pinLimit() {
+        communityProfileService.upsertMyProfile(competitionRequest(List.of(
+                competition(2025, "A", true),
+                competition(2025, "B", true),
+                competition(2025, "C", true),
+                competition(2025, "D", false))));
+        assertThat(profile.getCompetitions()).hasSize(4);
+
+        assertThatThrownBy(() -> communityProfileService.upsertMyProfile(competitionRequest(List.of(
+                competition(2025, "A", true),
+                competition(2025, "B", true),
+                competition(2025, "C", true),
+                competition(2025, "D", true)))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.COMPETITION_PIN_LIMIT_EXCEEDED);
     }
 }
