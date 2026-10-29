@@ -37,7 +37,8 @@ public record CommunityProfileResponse(
                 ImageInfo.from(user.getProfileImageFile()),
                 null, null, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null, null
+                null, null, null, null, null, null,
+                List.of(), new MedalCountDto(0, 0, 0)   // 대회는 프로필이 있고 기록이 없을 때와 같은 모양으로
         );
     }
 }

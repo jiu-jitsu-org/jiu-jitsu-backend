@@ -138,4 +138,14 @@ class CommunityProfileMapperTest {
         assertThat(response.competitions()).isEmpty();
         assertThat(response.medalCount()).isEqualTo(new MedalCountDto(0, 0, 0));
     }
+
+    @Test
+    @DisplayName("프로필이 없는 사용자도 대회는 빈 목록·0개 합계로 내려간다")
+    void userWithoutProfile() {
+        CommunityProfileResponse response = mapper.getCommunityProfileResponseUser(
+                User.builder().nickname("tester").role(UserRole.USER).build());
+
+        assertThat(response.competitions()).isEmpty();
+        assertThat(response.medalCount()).isEqualTo(new MedalCountDto(0, 0, 0));
+    }
 }
