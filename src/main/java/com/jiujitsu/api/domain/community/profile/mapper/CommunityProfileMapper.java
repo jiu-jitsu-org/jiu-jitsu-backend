@@ -76,7 +76,7 @@ public class CommunityProfileMapper {
                 user.getId(),
                 user.getNickname(),
                 ImageInfo.from(user.getProfileImageFile()),
-                profile.getAcademyName(),
+                StringUtils.trimToNull(profile.getAcademyName()),
                 profile.getBeltRank(),
                 profile.getBeltStripe(),
                 isOwner,

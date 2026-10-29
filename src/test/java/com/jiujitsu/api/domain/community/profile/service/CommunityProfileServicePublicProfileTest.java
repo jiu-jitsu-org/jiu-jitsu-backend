@@ -112,6 +112,21 @@ class CommunityProfileServicePublicProfileTest {
     }
 
     @Test
+    @DisplayName("도장명을 빈 값으로 저장한 회원은 미입력과 같이 null 로 내린다")
+    void getPublicProfile_blankAcademyIsNull() {
+        // given
+        User user = stubUser(UserRole.USER, UserStatus.ACTIVE);
+        CommunityProfile profile = profileBuilder(user).academyName("").build();
+        given(communityProfileRepository.findByUser(user)).willReturn(Optional.of(profile));
+
+        // when
+        CommunityPublicProfileResponse response = communityProfileService.getPublicProfile(USER_ID);
+
+        // then
+        assertThat(response.academyName()).isNull();
+    }
+
+    @Test
     @DisplayName("커뮤니티 프로필이 없으면 닉네임·사진·인증 여부만 내리고 나머지는 비운다")
     void getPublicProfile_withoutCommunityProfile() {
         // given
@@ -133,25 +148,25 @@ class CommunityProfileServicePublicProfileTest {
     }
 
     @Test
-    @DisplayName("없는 회원이면 PROFILE_NOT_FOUND")
+    @DisplayName("없는 회원이면 MEMBER_NOT_FOUND")
     void getPublicProfile_notFound() {
         given(userRepository.findById(USER_ID)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> communityProfileService.getPublicProfile(USER_ID))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.PROFILE_NOT_FOUND);
+                .isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
     }
 
     @Test
-    @DisplayName("탈퇴한 회원이면 PROFILE_NOT_FOUND")
+    @DisplayName("탈퇴한 회원이면 MEMBER_NOT_FOUND")
     void getPublicProfile_deletedUser() {
         stubUser(UserRole.USER, UserStatus.DELETED);
 
         assertThatThrownBy(() -> communityProfileService.getPublicProfile(USER_ID))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.PROFILE_NOT_FOUND);
+                .isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
     }
 
     @Test

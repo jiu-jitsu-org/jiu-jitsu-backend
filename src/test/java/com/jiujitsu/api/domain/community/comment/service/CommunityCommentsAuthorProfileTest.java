@@ -38,6 +38,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -125,6 +126,56 @@ class CommunityCommentsAuthorProfileTest {
         assertThat(author.beltRank()).isNull();
         assertThat(author.beltStripe()).isNull();
         assertThat(author.isOwner()).isNull();
+    }
+
+    @Test
+    @DisplayName("대댓글 추가 조회도 페이지 작성자 프로필을 한 번에 조회해 author 에 담는다")
+    void getReplies_fillsAuthorBelt() {
+        // given
+        Content content = mock(Content.class);
+        lenient().when(content.getId()).thenReturn(CONTENT_ID);
+        CommunityComments parent = comment(100L, 0L, noProfile, content, 1);
+        CommunityComments reply = comment(101L, 100L, owner, content, 2);
+        given(communityCommentsRepository.findById(100L)).willReturn(Optional.of(parent));
+        given(communityCommentsRepository.findRepliesByParentId(eq(100L), any())).willReturn(List.of(reply));
+        CommunityProfile ownerProfile = CommunityProfile.builder()
+                .user(owner).beltRank(BeltRank.BLACK).beltStripe(BeltStripe.STRIPE_1).build();
+        given(communityProfileService.getProfilesByUserIds(Set.of(1L))).willReturn(Map.of(1L, ownerProfile));
+
+        // when
+        List<CommunityCommentsResponse> result = communityCommentsService.getReplies(100L, 0, CommentsSortType.CREATE_ASC).getContent();
+
+        // then
+        verify(communityProfileService, times(1)).getProfilesByUserIds(any());
+        assertThat(result.get(0).author().beltRank()).isEqualTo(BeltRank.BLACK);
+        assertThat(result.get(0).author().isOwner()).isTrue();
+    }
+
+    @Test
+    @DisplayName("댓글 작성 직후 응답 author 에 작성자(본인) 띠·인증 여부를 담는다")
+    void createComment_fillsAuthorBelt() {
+        // given
+        Content content = mock(Content.class);
+        lenient().when(content.getId()).thenReturn(CONTENT_ID);
+        lenient().when(content.getCreatedBy()).thenReturn(owner);
+        lenient().when(content.getContentType()).thenReturn(com.jiujitsu.api.domain.community.content.entity.ContentType.BOARD);
+        CommunityComments created = comment(100L, 0L, owner, content, 1);
+        given(authenticationFacade.getCurrentUser()).willReturn(owner);
+        given(contentRepository.findById(CONTENT_ID)).willReturn(Optional.of(content));
+        given(commentFactory.createComments(any(), any(), any())).willReturn(created);
+        CommunityProfile ownerProfile = CommunityProfile.builder()
+                .user(owner).beltRank(BeltRank.BLACK).beltStripe(BeltStripe.STRIPE_1).build();
+        given(communityProfileService.findProfile(owner)).willReturn(Optional.of(ownerProfile));
+
+        // when
+        CommunityCommentsResponse response = communityCommentsService.createComment(
+                new com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest(CONTENT_ID, null, "댓글"));
+
+        // then
+        assertThat(response.author().id()).isEqualTo(1L);
+        assertThat(response.author().beltRank()).isEqualTo(BeltRank.BLACK);
+        assertThat(response.author().beltStripe()).isEqualTo(BeltStripe.STRIPE_1);
+        assertThat(response.author().isOwner()).isTrue();
     }
 
     private CommunityComments comment(Long id, Long parentId, User author, Content content, int minute) {

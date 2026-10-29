@@ -289,7 +289,7 @@ public class BoardService {
 
                     return boardMapper.toBoardListResponse(
                             board,
-                            authorProfileMap.get(board.getCreatedBy().getId()),
+                            board.getCreatedBy() == null ? null : authorProfileMap.get(board.getCreatedBy().getId()),
                             commentCountMap.getOrDefault(contentId, 0L),
                             contentLikeMap.getOrDefault(contentId, 0L),
                             contentSaveMap.getOrDefault(contentId, 0L),
@@ -304,7 +304,6 @@ public class BoardService {
 
     // 작성자 커뮤니티 프로필 (미작성 시 null)
     private CommunityProfile getAuthorProfile(Board board) {
-        Long authorId = board.getCreatedBy().getId();
-        return communityProfileService.getProfilesByUserIds(List.of(authorId)).get(authorId);
+        return communityProfileService.findProfile(board.getCreatedBy()).orElse(null);
     }
 }

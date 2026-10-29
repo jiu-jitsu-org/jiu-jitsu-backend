@@ -1,5 +1,7 @@
 package com.jiujitsu.api.domain.community.board.service;
 
+import com.jiujitsu.api.domain.community.board.dto.BoardCreateRequest;
+import com.jiujitsu.api.domain.community.board.dto.BoardUpdateRequest;
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
@@ -93,13 +95,47 @@ class BoardServiceAuthorProfileTest {
         Board board = board(100L, author);
         CommunityProfile profile = CommunityProfile.builder().user(author).build();
         given(boardRepository.findByContent_Id(100L)).willReturn(Optional.of(board));
-        given(communityProfileService.getProfilesByUserIds(List.of(2L))).willReturn(Map.of(2L, profile));
+        given(communityProfileService.findProfile(author)).willReturn(Optional.of(profile));
 
         // when
         boardService.getById(100L);
 
         // then
         verify(boardMapper).toResponse(eq(board), eq(profile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), any(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("작성 직후 응답도 작성자 프로필을 author 에 넘긴다")
+    void create_passesAuthorProfile() {
+        // given
+        User author = user(2L);
+        Board board = board(100L, author);
+        CommunityProfile profile = CommunityProfile.builder().user(author).build();
+        given(boardFactory.createBoard(any(), any(), any(), any(), any())).willReturn(board);
+        given(boardRepository.save(board)).willReturn(board);
+        given(communityProfileService.findProfile(author)).willReturn(Optional.of(profile));
+
+        // when
+        boardService.create(new BoardCreateRequest(1L, "제목", "본문", null, null));
+
+        // then
+        verify(boardMapper).toResponse(board, profile);
+    }
+
+    @Test
+    @DisplayName("수정 직후 응답도 작성자 프로필을 author 에 넘기고, 프로필이 없으면 null")
+    void update_passesAuthorProfile() {
+        // given
+        User author = user(2L);
+        Board board = board(100L, author);
+        given(boardRepository.findByContent_Id(100L)).willReturn(Optional.of(board));
+        given(communityProfileService.findProfile(author)).willReturn(Optional.empty());
+
+        // when
+        boardService.update(100L, new BoardUpdateRequest());
+
+        // then
+        verify(boardMapper).toResponse(board, null);
     }
 
     private User user(Long id) {

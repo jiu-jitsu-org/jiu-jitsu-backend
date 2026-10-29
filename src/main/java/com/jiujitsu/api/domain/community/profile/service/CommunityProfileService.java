@@ -53,7 +53,7 @@ public class CommunityProfileService {
     public CommunityPublicProfileResponse getPublicProfile(Long userId) {
         User user = userRepository.findById(userId)
                 .filter(found -> found.getStatus() != UserStatus.DELETED)
-                .orElseThrow(() -> new ErrorException(ErrorCode.PROFILE_NOT_FOUND));
+                .orElseThrow(() -> new ErrorException(ErrorCode.MEMBER_NOT_FOUND));
 
         // 프로필 없으면 user 정보만 return
         CommunityProfile communityProfile = communityProfileRepository.findByUser(user).orElse(null);
@@ -70,7 +70,15 @@ public class CommunityProfileService {
             return Map.of();
         }
         return communityProfileRepository.findAllByUserIdIn(userIds).stream()
-                .collect(Collectors.toMap(profile -> profile.getUser().getId(), Function.identity()));
+                .collect(Collectors.toMap(profile -> profile.getUser().getId(), Function.identity(), (first, duplicate) -> first));
+    }
+
+    /**
+     * 작성자 커뮤니티 프로필 단건 조회 (미작성 시 empty)
+     */
+    @Transactional(readOnly = true)
+    public Optional<CommunityProfile> findProfile(User user) {
+        return communityProfileRepository.findByUser(user);
     }
 
     /**
