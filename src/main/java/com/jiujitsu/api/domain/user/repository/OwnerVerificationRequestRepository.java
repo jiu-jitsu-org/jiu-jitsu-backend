@@ -6,7 +6,9 @@ import com.jiujitsu.api.domain.user.entity.OwnerVerificationStatus;
 import com.jiujitsu.api.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -35,4 +37,11 @@ public interface OwnerVerificationRequestRepository extends JpaRepository<OwnerV
     Page<OwnerVerificationRequest> findByStatusWithUser(@Param("status") OwnerVerificationStatus status, Pageable pageable);
 
     List<OwnerVerificationRequest> findByDocumentImageFile(ImageFile imageFile);
+
+    /**
+     * 승인·거절 동시 처리 방지용 행 잠금
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM OwnerVerificationRequest r WHERE r.id = :id")
+    Optional<OwnerVerificationRequest> findByIdForUpdate(@Param("id") Long id);
 }

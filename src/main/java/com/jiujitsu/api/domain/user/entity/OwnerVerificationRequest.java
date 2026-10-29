@@ -20,7 +20,10 @@ import java.time.LocalDateTime;
  * 관장/사범 인증 신청. 재신청은 새 row 로 쌓아 이력을 남긴다.
  */
 @Entity
-@Table(name = "owner_verification_request")
+@Table(name = "owner_verification_request", indexes = {
+        @Index(name = "idx_owner_verification_request_user", columnList = "user_id"),
+        @Index(name = "idx_owner_verification_request_status", columnList = "status, created_at")
+})
 @Getter
 @Builder
 @NoArgsConstructor

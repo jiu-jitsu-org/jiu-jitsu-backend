@@ -15,6 +15,7 @@ import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.mapper.UserMapper;
 import com.jiujitsu.api.domain.user.repository.OwnerVerificationRequestRepository;
+import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ import java.util.Set;
 public class OwnerVerificationService {
 
     private final OwnerVerificationRequestRepository ownerVerificationRequestRepository;
+    private final UserRepository userRepository;
     private final ImageFileRepository imageFileRepository;
     private final CommunityProfileRepository communityProfileRepository;
     private final OwnerProfileRepository ownerProfileRepository;
@@ -45,7 +47,9 @@ public class OwnerVerificationService {
      * 관장/사범 인증 신청 (심사 대기 중이면 서류만 교체)
      */
     public UserProfileResponse request(Long imageFileId) {
-        User user = authenticationFacade.getCurrentUser();
+        // 동시 신청으로 PENDING 이 2건 생기지 않도록 유저 행을 잠근 뒤 확인
+        User user = userRepository.findByIdForUpdate(authenticationFacade.getCurrentUser().getId())
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         if (user.getRole() != UserRole.USER) {
             throw new ErrorException(ErrorCode.PERMISSION_DENIED);
@@ -92,7 +96,7 @@ public class OwnerVerificationService {
      */
     public void approve(Long requestId) {
         User admin = authenticationFacade.getCurrentUser();
-        OwnerVerificationRequest request = findRequest(requestId);
+        OwnerVerificationRequest request = findRequestForUpdate(requestId);
         User applicant = request.getUser();
 
         // 처리된 신청이거나, 같은 유저의 다른 신청이 먼저 승인된 경우
@@ -117,12 +121,12 @@ public class OwnerVerificationService {
      */
     public void reject(Long requestId, String reason) {
         User admin = authenticationFacade.getCurrentUser();
-        OwnerVerificationRequest request = findRequest(requestId);
+        OwnerVerificationRequest request = findRequestForUpdate(requestId);
         request.reject(admin, StringUtils.trimToNull(reason));
     }
 
-    private OwnerVerificationRequest findRequest(Long requestId) {
-        return ownerVerificationRequestRepository.findById(requestId)
+    private OwnerVerificationRequest findRequestForUpdate(Long requestId) {
+        return ownerVerificationRequestRepository.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.OWNER_REQUEST_NOT_FOUND));
     }
 

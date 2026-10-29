@@ -32,6 +32,9 @@ class OwnerVerificationRequestRepositoryTest {
     private CommunityProfileRepository communityProfileRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private TestEntityManager em;
 
     private User saveUser(UserRole role) {
@@ -123,5 +126,20 @@ class OwnerVerificationRequestRepositoryTest {
                 List.of(withProfile.getId(), withoutProfile.getId()));
 
         assertThat(userIds).containsExactly(withProfile.getId());
+    }
+
+    @Test
+    @DisplayName("잠금 조회(FOR UPDATE)로 신청·유저를 읽는다")
+    void findByIdForUpdate() {
+        User me = saveUser(UserRole.USER);
+        OwnerVerificationRequest request = saveRequest(me);
+        em.flush();
+        em.clear();
+
+        assertThat(ownerVerificationRequestRepository.findByIdForUpdate(request.getId()))
+                .get().extracting(OwnerVerificationRequest::getId).isEqualTo(request.getId());
+        assertThat(userRepository.findByIdForUpdate(me.getId()))
+                .get().extracting(User::getId).isEqualTo(me.getId());
+        assertThat(ownerVerificationRequestRepository.findByIdForUpdate(-1L)).isEmpty();
     }
 }
