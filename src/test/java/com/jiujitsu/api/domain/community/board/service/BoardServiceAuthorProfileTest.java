@@ -105,12 +105,14 @@ class BoardServiceAuthorProfileTest {
     }
 
     @Test
-    @DisplayName("작성 직후 응답도 작성자 프로필을 author 에 넘긴다")
+    @DisplayName("작성 직후 응답은 감사용 createdBy 대신 로그인 회원과 그 프로필을 author 에 넘긴다")
     void create_passesAuthorProfile() {
         // given
         User author = user(2L);
-        Board board = board(100L, author);
+        // 저장 직후 createdBy 는 감사(AuditorAware)가 넣은 id 만 있는 User
+        Board board = board(100L, User.builder().id(2L).build());
         CommunityProfile profile = CommunityProfile.builder().user(author).build();
+        given(authenticationFacade.getCurrentUser()).willReturn(author);
         given(boardFactory.createBoard(any(), any(), any(), any(), any())).willReturn(board);
         given(boardRepository.save(board)).willReturn(board);
         given(communityProfileService.findProfile(author)).willReturn(Optional.of(profile));
@@ -119,7 +121,7 @@ class BoardServiceAuthorProfileTest {
         boardService.create(new BoardCreateRequest(1L, "제목", "본문", null, null));
 
         // then
-        verify(boardMapper).toResponse(board, profile);
+        verify(boardMapper).toResponse(board, author, profile);
     }
 
     @Test
@@ -135,7 +137,7 @@ class BoardServiceAuthorProfileTest {
         boardService.update(100L, new BoardUpdateRequest());
 
         // then
-        verify(boardMapper).toResponse(board, null);
+        verify(boardMapper).toResponse(board, author, null);
     }
 
     private User user(Long id) {

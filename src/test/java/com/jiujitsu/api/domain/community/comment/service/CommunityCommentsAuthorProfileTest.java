@@ -159,7 +159,8 @@ class CommunityCommentsAuthorProfileTest {
         lenient().when(content.getId()).thenReturn(CONTENT_ID);
         lenient().when(content.getCreatedBy()).thenReturn(owner);
         lenient().when(content.getContentType()).thenReturn(com.jiujitsu.api.domain.community.content.entity.ContentType.BOARD);
-        CommunityComments created = comment(100L, 0L, owner, content, 1);
+        // 저장 직후 createdBy 는 감사(AuditorAware)가 넣은 id 만 있는 User
+        CommunityComments created = comment(100L, 0L, User.builder().id(1L).build(), content, 1);
         given(authenticationFacade.getCurrentUser()).willReturn(owner);
         given(contentRepository.findById(CONTENT_ID)).willReturn(Optional.of(content));
         given(commentFactory.createComments(any(), any(), any())).willReturn(created);
@@ -173,6 +174,7 @@ class CommunityCommentsAuthorProfileTest {
 
         // then
         assertThat(response.author().id()).isEqualTo(1L);
+        assertThat(response.author().nickname()).isEqualTo("김관장");
         assertThat(response.author().beltRank()).isEqualTo(BeltRank.BLACK);
         assertThat(response.author().beltStripe()).isEqualTo(BeltStripe.STRIPE_1);
         assertThat(response.author().isOwner()).isTrue();

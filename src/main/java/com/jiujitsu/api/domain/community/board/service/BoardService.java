@@ -153,8 +153,8 @@ public class BoardService {
      * 게시물 작성
      */
     public BoardResponse create(BoardCreateRequest request) {
-        // 로그인 유저 체크
-        authenticationFacade.checkCurrentUser();
+        // 로그인 유저 조회
+        User user = authenticationFacade.getCurrentUser();
 
         // 등록 카테고리 조회
         BoardCategory category = boardCategoryService.findActiveCategory(request.categoryId());
@@ -167,7 +167,7 @@ public class BoardService {
         board = boardRepository.save(board);
 
         // dto 생성
-        return boardMapper.toResponse(board, getAuthorProfile(board));
+        return boardMapper.toResponse(board, user, communityProfileService.findProfile(user).orElse(null));
     }
 
     /**
@@ -200,7 +200,7 @@ public class BoardService {
         boardRepository.flush();
 
         // dto 생성
-        return boardMapper.toResponse(board, getAuthorProfile(board));
+        return boardMapper.toResponse(board, board.getCreatedBy(), getAuthorProfile(board));
     }
 
     /**

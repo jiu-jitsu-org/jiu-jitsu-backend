@@ -194,7 +194,7 @@ public class CommunityCommentsService {
         // 작성자 프로필 조회
         CommunityProfile authorProfile = communityProfileService.findProfile(user).orElse(null);
 
-        return commentMapper.toCommunityCommentsResponse(communityComments, authorProfile, new ArrayList<>());
+        return commentMapper.toCommunityCommentsResponse(communityComments, user, authorProfile, new ArrayList<>());
     }
 
     /**
