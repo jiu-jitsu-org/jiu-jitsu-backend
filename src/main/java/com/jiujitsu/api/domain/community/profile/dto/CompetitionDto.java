@@ -6,7 +6,6 @@ import com.jiujitsu.api.domain.community.profile.entity.CompetitionRecord;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
-import org.apache.commons.lang3.StringUtils;
 
 import java.time.Year;
 import java.util.List;
@@ -44,8 +43,9 @@ public record CompetitionDto(
         return Boolean.TRUE.equals(competitionPinned);
     }
 
+    // strip: 전각 공백(U+3000)까지 지운다 (trim은 U+0020 이하만). 엔티티 isNamed(isBlank)와 같은 기준
     public String trimmedName() {
-        return StringUtils.trimToEmpty(competitionName);
+        return competitionName == null ? "" : competitionName.strip();
     }
 
     // 대회명이 있는 기록인지 - 없으면 나만 보이고 고정·중복 검사·메달 합계에서 빠진다 (저장 후에는 CompetitionRecord.isNamed)

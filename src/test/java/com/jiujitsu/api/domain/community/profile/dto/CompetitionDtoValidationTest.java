@@ -101,6 +101,22 @@ class CompetitionDtoValidationTest {
         assertThat(isValid(new CompetitionDto(2025, "서울 오픈", false, -1, GOLD))).isFalse();
         assertThat(isValid(new CompetitionDto(2025, " ", true, null, GOLD))).isFalse();
         assertThat(isValid(new CompetitionDto(2025, null, true, null, GOLD))).isFalse();
+        // 전각 공백(U+3000)만 있는 대회명도 대회명 없음
+        assertThat(isValid(new CompetitionDto(2025, "\u3000", true, null, GOLD))).isFalse();
+    }
+
+    @Test
+    @DisplayName("대회명 유무 판단은 요청(DTO)과 저장 후(엔티티)가 같고, 저장되는 대회명은 앞뒤 공백(전각 포함)을 뺀다")
+    void namedConsistency() {
+        for (String name : new String[]{"서울 오픈", " 서울 오픈\u3000", "", " ", "\u3000", null}) {
+            CompetitionDto dto = new CompetitionDto(2025, name, false, null, GOLD);
+            var record = dto.toEntity(null);
+            assertThat(record.isNamed()).as("name=[%s]", name).isEqualTo(dto.named());
+        }
+        assertThat(new CompetitionDto(2025, " 서울 오픈\u3000", false, null, GOLD).toEntity(null).getCompetitionName())
+                .isEqualTo("서울 오픈");
+        assertThat(new CompetitionDto(2025, "\u3000", false, null, GOLD).toEntity(null).getCompetitionName())
+                .isEmpty();
     }
 
     @Test

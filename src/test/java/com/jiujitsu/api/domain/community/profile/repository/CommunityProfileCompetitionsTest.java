@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.profile.repository;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDivisionDto;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
 import com.jiujitsu.api.domain.community.profile.entity.*;
+import com.jiujitsu.api.domain.community.profile.mapper.CommunityProfileMapper;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
@@ -161,5 +162,26 @@ class CommunityProfileCompetitionsTest {
         assertThat(countRows("community_profiles")).isZero();
         assertThat(countRows("community_profile_competition_records")).isZero();
         assertThat(countRows("community_profile_competition_divisions")).isZero();
+    }
+
+    @Test
+    @DisplayName("연도·메달까지 같은 대회명 없는 기록은 저장 순서(id)대로 내려간다")
+    void tieBreakByIdAfterSave() {
+        User user = saveUser();
+        CommunityProfile profile = new CommunityProfile(user);
+        profile.upsertCompetitions(List.of(
+                new CompetitionDto(2021, "", null, null,
+                        List.of(new CompetitionDivisionDto(CompetitionRank.GOLD, CompetitionUniform.GI, null, null, null, null))),
+                new CompetitionDto(2021, "", null, null,
+                        List.of(new CompetitionDivisionDto(CompetitionRank.GOLD, CompetitionUniform.NO_GI, null, null, null, null)))
+        ));
+        communityProfileRepository.save(profile);
+        em.flush();
+        em.clear();
+
+        CommunityProfile reloaded = communityProfileRepository.findByUser(user).orElseThrow();
+        assertThat(new CommunityProfileMapper().getCommunityProfileResponse(reloaded).competitions())
+                .extracting(competition -> competition.divisions().get(0).competitionUniform())
+                .containsExactly(CompetitionUniform.GI, CompetitionUniform.NO_GI);
     }
 }
