@@ -156,9 +156,10 @@ public class CommunityProfile {
      * 대회정보 수정
      */
     public void upsertCompetitions(List<CompetitionInfoDto> competitionInfos) {
+        // save(merge) 시 Hibernate가 이 목록을 clear()하므로 수정 가능한 리스트여야 한다 (Stream.toList() 불가)
         this.competitions = competitionInfos.stream()
                 .map(CompetitionInfoDto::toEntity)
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
