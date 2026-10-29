@@ -47,9 +47,8 @@ public class OwnerVerificationService {
      * 관장/사범 인증 신청 (심사 대기 중이면 서류만 교체)
      */
     public UserProfileResponse request(Long imageFileId) {
-        // 동시 신청으로 PENDING 이 2건 생기지 않도록 유저 행을 잠근 뒤 확인
-        User user = userRepository.findByIdForUpdate(authenticationFacade.getCurrentUser().getId())
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        // 동시 신청으로 PENDING 이 2건 생기지 않도록 유저 행을 잠근 뒤 확인 (잠금 순서: users → 신청)
+        User user = authenticationFacade.getCurrentUserForUpdate();
 
         if (user.getRole() != UserRole.USER) {
             throw new ErrorException(ErrorCode.PERMISSION_DENIED);
@@ -70,6 +69,14 @@ public class OwnerVerificationService {
                         .build()));
 
         return userMapper.toUserProfileResponse(user, request);
+    }
+
+    /**
+     * 유저의 최신 신청 (프로필 응답의 ownerVerification 기준)
+     */
+    @Transactional(readOnly = true)
+    public OwnerVerificationRequest findLatest(User user) {
+        return ownerVerificationRequestRepository.findTopByUserOrderByIdDesc(user).orElse(null);
     }
 
     /**
@@ -125,7 +132,14 @@ public class OwnerVerificationService {
         request.reject(admin, StringUtils.trimToNull(reason));
     }
 
+    /**
+     * 잠금 순서를 신청 API 와 같게(신청자 users → 신청) 맞춰 교착을 막는다.
+     * 둘 다 이 트랜잭션의 첫 로드라 잠금 후 최신 값을 읽는다.
+     */
     private OwnerVerificationRequest findRequestForUpdate(Long requestId) {
+        Long applicantId = ownerVerificationRequestRepository.findUserIdById(requestId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.OWNER_REQUEST_NOT_FOUND));
+        userRepository.findByIdForUpdate(applicantId);
         return ownerVerificationRequestRepository.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.OWNER_REQUEST_NOT_FOUND));
     }

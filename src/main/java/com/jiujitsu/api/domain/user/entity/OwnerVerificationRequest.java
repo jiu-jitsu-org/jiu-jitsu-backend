@@ -62,6 +62,9 @@ public class OwnerVerificationRequest {
     @Column
     private LocalDateTime reviewedAt;
 
+    @Version
+    private Long version;    // 잠금 밖 경로(이미지 삭제 등)의 덮어쓰기 방지
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;    // 신청 시각

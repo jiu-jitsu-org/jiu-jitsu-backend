@@ -27,7 +27,6 @@ public class AdminOwnerRequestController {
     private final OwnerVerificationService ownerVerificationService;
 
     @Operation(summary = "인증 신청 목록 조회", description = "상태별 관장/사범 인증 신청 목록을 신청 최신순으로 페이징 조회합니다. (sort 파라미터는 무시)")
-    @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER})
     @GetMapping
     public Page<AdminOwnerRequestResponse> getRequests(
             @Parameter(description = "신청 상태 (기본 PENDING)")
@@ -48,7 +47,7 @@ public class AdminOwnerRequestController {
     }
 
     @Operation(summary = "인증 신청 거절", description = "신청을 거절합니다. 신청자는 다시 신청할 수 있습니다.")
-    @ApiErrorCodeExamples({ErrorCode.OWNER_REQUEST_NOT_FOUND, ErrorCode.OWNER_REQUEST_NOT_PENDING, ErrorCode.WRONG_PARAMETER})
+    @ApiErrorCodeExamples({ErrorCode.OWNER_REQUEST_NOT_FOUND, ErrorCode.OWNER_REQUEST_NOT_PENDING})
     @PatchMapping("/{requestId}/reject")
     public void reject(
             @Parameter(name = "requestId", description = "신청 ID", required = true)

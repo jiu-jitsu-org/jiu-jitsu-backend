@@ -77,10 +77,16 @@ class OwnerVerificationServiceTest {
                 .build();
     }
 
-    // 신청은 현재 유저를 잠금 조회로 다시 읽는다
+    // 신청은 현재 유저를 잠금 조회로 읽는다
     private void givenCurrentUser(User user) {
-        given(authenticationFacade.getCurrentUser()).willReturn(user);
-        given(userRepository.findByIdForUpdate(user.getId())).willReturn(Optional.of(user));
+        given(authenticationFacade.getCurrentUserForUpdate()).willReturn(user);
+    }
+
+    // 승인·거절은 신청자 users → 신청 순서로 잠근다
+    private void givenLockedRequest(OwnerVerificationRequest request) {
+        given(ownerVerificationRequestRepository.findUserIdById(REQUEST_ID)).willReturn(Optional.of(request.getUser().getId()));
+        given(userRepository.findByIdForUpdate(request.getUser().getId())).willReturn(Optional.of(request.getUser()));
+        given(ownerVerificationRequestRepository.findByIdForUpdate(REQUEST_ID)).willReturn(Optional.of(request));
     }
 
     private void assertErrorCode(Runnable call, ErrorCode errorCode) {
@@ -218,7 +224,7 @@ class OwnerVerificationServiceTest {
             OwnerVerificationRequest request = pendingOf(applicant);
             CommunityProfile profile = CommunityProfile.builder().user(applicant).build();
             given(authenticationFacade.getCurrentUser()).willReturn(admin);
-            given(ownerVerificationRequestRepository.findByIdForUpdate(REQUEST_ID)).willReturn(Optional.of(request));
+            givenLockedRequest(request);
             given(communityProfileRepository.findByUser(applicant)).willReturn(Optional.of(profile));
             given(ownerProfileRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
@@ -237,7 +243,7 @@ class OwnerVerificationServiceTest {
             OwnerProfile existing = OwnerProfile.builder().id(5L).build();
             CommunityProfile profile = CommunityProfile.builder().user(applicant).ownerProfile(existing).build();
             given(authenticationFacade.getCurrentUser()).willReturn(user(1L, UserRole.ADMIN));
-            given(ownerVerificationRequestRepository.findByIdForUpdate(REQUEST_ID)).willReturn(Optional.of(pendingOf(applicant)));
+            givenLockedRequest(pendingOf(applicant));
             given(communityProfileRepository.findByUser(applicant)).willReturn(Optional.of(profile));
 
             ownerVerificationService.approve(REQUEST_ID);
@@ -252,7 +258,7 @@ class OwnerVerificationServiceTest {
             User applicant = user(7L, UserRole.USER);
             OwnerVerificationRequest request = pendingOf(applicant);
             given(authenticationFacade.getCurrentUser()).willReturn(user(1L, UserRole.ADMIN));
-            given(ownerVerificationRequestRepository.findByIdForUpdate(REQUEST_ID)).willReturn(Optional.of(request));
+            givenLockedRequest(request);
             given(communityProfileRepository.findByUser(applicant)).willReturn(Optional.empty());
 
             assertErrorCode(() -> ownerVerificationService.approve(REQUEST_ID), ErrorCode.REQUIRED_PROFILE);
@@ -267,7 +273,7 @@ class OwnerVerificationServiceTest {
             OwnerVerificationRequest request = pendingOf(applicant);
             request.reject(user(1L, UserRole.ADMIN), null);
             given(authenticationFacade.getCurrentUser()).willReturn(user(1L, UserRole.ADMIN));
-            given(ownerVerificationRequestRepository.findByIdForUpdate(REQUEST_ID)).willReturn(Optional.of(request));
+            givenLockedRequest(request);
 
             assertErrorCode(() -> ownerVerificationService.approve(REQUEST_ID), ErrorCode.OWNER_REQUEST_NOT_PENDING);
             assertThat(applicant.getRole()).isEqualTo(UserRole.USER);
@@ -278,7 +284,7 @@ class OwnerVerificationServiceTest {
         void applicantAlreadyOwner() {
             User applicant = user(7L, UserRole.OWNER);
             given(authenticationFacade.getCurrentUser()).willReturn(user(1L, UserRole.ADMIN));
-            given(ownerVerificationRequestRepository.findByIdForUpdate(REQUEST_ID)).willReturn(Optional.of(pendingOf(applicant)));
+            givenLockedRequest(pendingOf(applicant));
 
             assertErrorCode(() -> ownerVerificationService.approve(REQUEST_ID), ErrorCode.OWNER_REQUEST_NOT_PENDING);
         }
@@ -287,7 +293,7 @@ class OwnerVerificationServiceTest {
         @DisplayName("없는 신청은 승인할 수 없다")
         void notFound() {
             given(authenticationFacade.getCurrentUser()).willReturn(user(1L, UserRole.ADMIN));
-            given(ownerVerificationRequestRepository.findByIdForUpdate(REQUEST_ID)).willReturn(Optional.empty());
+            given(ownerVerificationRequestRepository.findUserIdById(REQUEST_ID)).willReturn(Optional.empty());
 
             assertErrorCode(() -> ownerVerificationService.approve(REQUEST_ID), ErrorCode.OWNER_REQUEST_NOT_FOUND);
         }
@@ -304,7 +310,7 @@ class OwnerVerificationServiceTest {
             User applicant = user(7L, UserRole.USER);
             OwnerVerificationRequest request = pendingOf(applicant);
             given(authenticationFacade.getCurrentUser()).willReturn(admin);
-            given(ownerVerificationRequestRepository.findByIdForUpdate(REQUEST_ID)).willReturn(Optional.of(request));
+            givenLockedRequest(request);
 
             ownerVerificationService.reject(REQUEST_ID, "  서류 불명확  ");
 
@@ -319,7 +325,7 @@ class OwnerVerificationServiceTest {
         void blankReason() {
             OwnerVerificationRequest request = pendingOf(user(7L, UserRole.USER));
             given(authenticationFacade.getCurrentUser()).willReturn(user(1L, UserRole.ADMIN));
-            given(ownerVerificationRequestRepository.findByIdForUpdate(REQUEST_ID)).willReturn(Optional.of(request));
+            givenLockedRequest(request);
 
             ownerVerificationService.reject(REQUEST_ID, "   ");
 
@@ -332,7 +338,7 @@ class OwnerVerificationServiceTest {
             OwnerVerificationRequest request = pendingOf(user(7L, UserRole.USER));
             request.approve(user(1L, UserRole.ADMIN));
             given(authenticationFacade.getCurrentUser()).willReturn(user(1L, UserRole.ADMIN));
-            given(ownerVerificationRequestRepository.findByIdForUpdate(REQUEST_ID)).willReturn(Optional.of(request));
+            givenLockedRequest(request);
 
             assertErrorCode(() -> ownerVerificationService.reject(REQUEST_ID, null), ErrorCode.OWNER_REQUEST_NOT_PENDING);
         }

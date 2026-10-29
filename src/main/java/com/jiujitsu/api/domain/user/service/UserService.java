@@ -9,7 +9,6 @@ import com.jiujitsu.api.domain.user.entity.*;
 import com.jiujitsu.api.domain.user.factory.UserFactory;
 import com.jiujitsu.api.domain.user.mapper.AuthMapper;
 import com.jiujitsu.api.domain.user.mapper.UserMapper;
-import com.jiujitsu.api.domain.user.repository.OwnerVerificationRequestRepository;
 import com.jiujitsu.api.domain.user.repository.UserAppInfoRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -34,7 +33,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final ImageFileRepository imageFileRepository;
-    private final OwnerVerificationRequestRepository ownerVerificationRequestRepository;
+    private final OwnerVerificationService ownerVerificationService;
     private final UserAppInfoRepository userAppInfoRepository;
     private final UserNoticeSettingRepository userNoticeSettingRepository;
     private final TokenBlacklistService tokenBlacklistService;
@@ -164,9 +163,7 @@ public class UserService {
     }
 
     private UserProfileResponse toUserProfileResponse(User user) {
-        OwnerVerificationRequest latestOwnerRequest = ownerVerificationRequestRepository.findTopByUserOrderByIdDesc(user)
-                .orElse(null);
-        return userMapper.toUserProfileResponse(user, latestOwnerRequest);
+        return userMapper.toUserProfileResponse(user, ownerVerificationService.findLatest(user));
     }
 
     /**

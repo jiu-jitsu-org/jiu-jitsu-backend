@@ -129,7 +129,7 @@ class OwnerVerificationRequestRepositoryTest {
     }
 
     @Test
-    @DisplayName("잠금 조회(FOR UPDATE)로 신청·유저를 읽는다")
+    @DisplayName("잠금 조회(FOR UPDATE)로 신청·유저를 읽고, 잠금 순서용 신청자 id 를 조회한다")
     void findByIdForUpdate() {
         User me = saveUser(UserRole.USER);
         OwnerVerificationRequest request = saveRequest(me);
@@ -141,5 +141,7 @@ class OwnerVerificationRequestRepositoryTest {
         assertThat(userRepository.findByIdForUpdate(me.getId()))
                 .get().extracting(User::getId).isEqualTo(me.getId());
         assertThat(ownerVerificationRequestRepository.findByIdForUpdate(-1L)).isEmpty();
+        assertThat(ownerVerificationRequestRepository.findUserIdById(request.getId())).contains(me.getId());
+        assertThat(ownerVerificationRequestRepository.findUserIdById(-1L)).isEmpty();
     }
 }
