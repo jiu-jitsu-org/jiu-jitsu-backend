@@ -1,12 +1,14 @@
 package com.jiujitsu.api.domain.community.profile.mapper;
 
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
+import com.jiujitsu.api.domain.community.profile.dto.CommunityPublicProfileResponse;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionInfoDto;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.entity.OwnerProfile;
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -53,6 +55,38 @@ public class CommunityProfileMapper {
         return CommunityProfileResponse.ofUserOnly(user);
     }
 
+    /**
+     * 공개 프로필 응답 생성 - profile 은 커뮤니티 프로필 미작성 시 null
+     */
+    public CommunityPublicProfileResponse getCommunityPublicProfileResponse(User user, CommunityProfile profile) {
+        boolean isOwner = user.getRole() == UserRole.OWNER;
+        if (profile == null) {
+            return new CommunityPublicProfileResponse(
+                    user.getId(),
+                    user.getNickname(),
+                    ImageInfo.from(user.getProfileImageFile()),
+                    null, null, null,
+                    isOwner,
+                    null, null, null,
+                    Collections.emptyList()
+            );
+        }
+
+        return new CommunityPublicProfileResponse(
+                user.getId(),
+                user.getNickname(),
+                ImageInfo.from(user.getProfileImageFile()),
+                profile.getAcademyName(),
+                profile.getBeltRank(),
+                profile.getBeltStripe(),
+                isOwner,
+                profile.getFavoritePosition(),
+                profile.getFavoriteTechnique(),
+                profile.getFavoriteSubmission(),
+                mapPublicCompetitions(profile)
+        );
+    }
+
     //Owner 프로필 가져오기
     private String getTeachingPhilosophy(OwnerProfile ownerProfile) {
         return ownerProfile != null ? ownerProfile.getTeachingPhilosophy() : null;
@@ -72,6 +106,13 @@ public class CommunityProfileMapper {
 
         return profile.getCompetitions().stream()
                 .map(CompetitionInfoDto::new)
+                .toList();
+    }
+
+    // 공개 대회정보 가져오기 - 대회명 없는 기록은 제외
+    private List<CompetitionInfoDto> mapPublicCompetitions(CommunityProfile profile) {
+        return mapCompetitions(profile).stream()
+                .filter(competition -> StringUtils.isNotBlank(competition.getCompetitionName()))
                 .toList();
     }
 }

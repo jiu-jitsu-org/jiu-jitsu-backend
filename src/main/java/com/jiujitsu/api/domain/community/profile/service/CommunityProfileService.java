@@ -2,11 +2,14 @@ package com.jiujitsu.api.domain.community.profile.service;
 
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileRequest;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
+import com.jiujitsu.api.domain.community.profile.dto.CommunityPublicProfileResponse;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.mapper.CommunityProfileMapper;
 import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
+import com.jiujitsu.api.domain.user.entity.UserStatus;
+import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -15,8 +18,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +28,7 @@ import java.util.Optional;
 public class CommunityProfileService {
 
     private final CommunityProfileRepository communityProfileRepository;
+    private final UserRepository userRepository;
     private final AuthenticationFacade authenticationFacade;
     private final CommunityProfileMapper communityProfileMapper;
 
@@ -39,6 +44,33 @@ public class CommunityProfileService {
         return communityProfile
                 .map(communityProfileMapper::getCommunityProfileResponse)
                 .orElseGet(() -> communityProfileMapper.getCommunityProfileResponseUser(user));
+    }
+
+    /**
+     * 다른 회원 공개 프로필 조회 (비로그인 허용, 차단 관계 무관)
+     */
+    @Transactional(readOnly = true)
+    public CommunityPublicProfileResponse getPublicProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .filter(found -> found.getStatus() != UserStatus.DELETED)
+                .orElseThrow(() -> new ErrorException(ErrorCode.PROFILE_NOT_FOUND));
+
+        // 프로필 없으면 user 정보만 return
+        CommunityProfile communityProfile = communityProfileRepository.findByUser(user).orElse(null);
+        return communityProfileMapper.getCommunityPublicProfileResponse(user, communityProfile);
+    }
+
+    /**
+     * 작성자 커뮤니티 프로필 일괄 조회 (userId → 프로필, 미작성 유저는 key 없음)
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, CommunityProfile> getProfilesByUserIds(Collection<Long> userIds) {
+        // 빈 리스트일 때 IN 절 오류 방지
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        return communityProfileRepository.findAllByUserIdIn(userIds).stream()
+                .collect(Collectors.toMap(profile -> profile.getUser().getId(), Function.identity()));
     }
 
     /**
