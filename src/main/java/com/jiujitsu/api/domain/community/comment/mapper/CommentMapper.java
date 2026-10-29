@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileInfo;
+import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.global.util.TimeAgoUtil;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,7 @@ public class CommentMapper {
      * 댓글 response
      */
     public CommunityCommentsResponse toCommunityCommentsResponse(CommunityComments comments,
+                                                                 CommunityProfile authorProfile,
                                                                  List<CommunityCommentsResponse> childrenList,
                                                                  Long likeCount,
                                                                  Boolean liked,
@@ -37,7 +39,7 @@ public class CommentMapper {
                 comments.getIsReported() || isReportedByMe,
                 isBlocked,
                 isReplied,
-                isBlocked ? CommunityProfileInfo.masked() : CommunityProfileInfo.from(comments.getCreatedBy()),
+                isBlocked ? CommunityProfileInfo.masked() : CommunityProfileInfo.from(comments.getCreatedBy(), authorProfile),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
                 TimeAgoUtil.format(comments.getCreatedAt()),
@@ -50,6 +52,7 @@ public class CommentMapper {
      * 댓글 response - 좋아요 없는 버전 (댓글 작성 직후 응답)
      */
     public CommunityCommentsResponse toCommunityCommentsResponse(CommunityComments comments,
+                                                                 CommunityProfile authorProfile,
                                                                  List<CommunityCommentsResponse> childrenList) {
         Content content = comments.getContent();
 
@@ -65,7 +68,7 @@ public class CommentMapper {
                 comments.getIsReported(),
                 false,
                 false,
-                CommunityProfileInfo.from(comments.getCreatedBy()),
+                CommunityProfileInfo.from(comments.getCreatedBy(), authorProfile),
                 comments.getCreatedAt(),
                 comments.getUpdatedAt(),
                 TimeAgoUtil.format(comments.getCreatedAt()),

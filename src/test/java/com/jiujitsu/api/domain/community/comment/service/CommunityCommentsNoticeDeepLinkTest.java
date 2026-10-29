@@ -13,6 +13,7 @@ import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRep
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
+import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -56,6 +57,7 @@ class CommunityCommentsNoticeDeepLinkTest {
     @Mock private CommentMapper commentMapper;
     @Mock private CommentLikeFactory commentLikeFactory;
     @Mock private CommentLikeMapper commentLikeMapper;
+    @Mock private CommunityProfileService communityProfileService;
 
     private static final Long CONTENT_ID = 10L;
     private static final Long ME_ID = 1L;

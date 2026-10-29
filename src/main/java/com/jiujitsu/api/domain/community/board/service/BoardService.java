@@ -10,6 +10,8 @@ import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
+import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
+import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -44,6 +47,7 @@ public class BoardService {
     private final NoticeService noticeService;
     private final ReportService reportService;
     private final BoardHideService boardHideService;
+    private final CommunityProfileService communityProfileService;
 
     /**
      * 게시물 목록 조회
@@ -127,9 +131,13 @@ public class BoardService {
             noticeEnabled = noticeService.isContentNoticeEnabled(currentUser.get().getId(), contentId);
         }
 
+        // 작성자 프로필 조회
+        CommunityProfile authorProfile = getAuthorProfile(board);
+
         // dto 생성
         return boardMapper.toResponse(
                 board,
+                authorProfile,
                 commentCount,
                 likeCount,
                 saveCount,
@@ -159,7 +167,7 @@ public class BoardService {
         board = boardRepository.save(board);
 
         // dto 생성
-        return boardMapper.toResponse(board);
+        return boardMapper.toResponse(board, getAuthorProfile(board));
     }
 
     /**
@@ -192,7 +200,7 @@ public class BoardService {
         boardRepository.flush();
 
         // dto 생성
-        return boardMapper.toResponse(board);
+        return boardMapper.toResponse(board, getAuthorProfile(board));
     }
 
     /**
@@ -264,6 +272,15 @@ public class BoardService {
             savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), contentIds);
         }
 
+        // 작성자 프로필 일괄 조회
+        Map<Long, CommunityProfile> authorProfileMap = communityProfileService.getProfilesByUserIds(
+                boardPage.getContent().stream()
+                        .map(Board::getCreatedBy)
+                        .filter(Objects::nonNull)
+                        .map(User::getId)
+                        .collect(Collectors.toSet())
+        );
+
         Set<Long> finalCommentedContentIds = commentedContentIds;
         Set<Long> finalLikedContentIds = likedContentIds;
         Set<Long> finalSavedContentIds = savedContentIds;
@@ -272,6 +289,7 @@ public class BoardService {
 
                     return boardMapper.toBoardListResponse(
                             board,
+                            authorProfileMap.get(board.getCreatedBy().getId()),
                             commentCountMap.getOrDefault(contentId, 0L),
                             contentLikeMap.getOrDefault(contentId, 0L),
                             contentSaveMap.getOrDefault(contentId, 0L),
@@ -284,4 +302,9 @@ public class BoardService {
         );
     }
 
+    // 작성자 커뮤니티 프로필 (미작성 시 null)
+    private CommunityProfile getAuthorProfile(Board board) {
+        Long authorId = board.getCreatedBy().getId();
+        return communityProfileService.getProfilesByUserIds(List.of(authorId)).get(authorId);
+    }
 }

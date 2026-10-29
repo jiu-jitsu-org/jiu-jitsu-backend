@@ -17,6 +17,8 @@ import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepositor
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
+import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
+import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -56,6 +58,7 @@ public class CommunityCommentsService {
     private final CommentMapper commentMapper;
     private final CommentLikeFactory commentLikeFactory;
     private final CommentLikeMapper commentLikeMapper;
+    private final CommunityProfileService communityProfileService;
 
 
     private static final int INITIAL_CHILD_LIMIT = 3;
@@ -188,7 +191,10 @@ public class CommunityCommentsService {
             }
         }
 
-        return commentMapper.toCommunityCommentsResponse(communityComments, new ArrayList<>());
+        // 작성자 프로필 조회
+        CommunityProfile authorProfile = communityProfileService.getProfilesByUserIds(List.of(user.getId())).get(user.getId());
+
+        return commentMapper.toCommunityCommentsResponse(communityComments, authorProfile, new ArrayList<>());
     }
 
     /**
@@ -325,7 +331,16 @@ public class CommunityCommentsService {
                 ? Set.of()
                 : communityCommentsRepository.findRepliedParentIds(user.getId(), commentIds);
 
-        return new CommentViewContext(likeCountMap, likedCommentIds, user, blockedUserIds, reportedCommentIdSet, repliedParentIds);
+        // 작성자 프로필 일괄 조회
+        Map<Long, CommunityProfile> authorProfileMap = communityProfileService.getProfilesByUserIds(
+                comments.stream()
+                        .map(CommunityComments::getCreatedBy)
+                        .filter(Objects::nonNull)
+                        .map(User::getId)
+                        .collect(Collectors.toSet())
+        );
+
+        return new CommentViewContext(likeCountMap, likedCommentIds, user, blockedUserIds, reportedCommentIdSet, repliedParentIds, authorProfileMap);
     }
 
     private CommunityCommentsResponse toResponse(CommunityComments comment,
@@ -334,6 +349,7 @@ public class CommunityCommentsService {
                                                  CommentViewContext viewContext) {
         return commentMapper.toCommunityCommentsResponse(
                 comment,
+                comment.getCreatedBy() == null ? null : viewContext.authorProfileMap().get(comment.getCreatedBy().getId()),
                 childrenList,
                 viewContext.likeCountMap().getOrDefault(comment.getId(), 0L),
                 viewContext.likedCommentIds().contains(comment.getId()),
@@ -351,7 +367,8 @@ public class CommunityCommentsService {
             User user,
             Set<Long> blockedUserIds,
             Set<Long> reportedCommentIdSet,
-            Set<Long> repliedParentIds
+            Set<Long> repliedParentIds,
+            Map<Long, CommunityProfile> authorProfileMap
     ) {
     }
 
