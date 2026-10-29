@@ -21,7 +21,7 @@ public record CompetitionDto(
     // 올해 이후 연도는 받지 않는다 (@Max는 상수만 받아서 메서드로 검증)
     @JsonIgnore
     @Schema(hidden = true)
-    @AssertTrue(message = "대회출전 년도는 올해 이전이어야 합니다.")
+    @AssertTrue(message = "대회출전 년도는 올해까지 입력할 수 있습니다.")
     public boolean isCompetitionYearNotFuture() {
         return competitionYear == null || competitionYear <= Year.now().getValue();
     }
