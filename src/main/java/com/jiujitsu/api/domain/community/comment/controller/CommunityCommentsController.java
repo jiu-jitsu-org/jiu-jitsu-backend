@@ -109,4 +109,18 @@ public class CommunityCommentsController {
     ) {
         communityCommentsService.deleteComment(commentId);
     }
+
+    @Operation(
+            summary = "댓글 삭제 되돌리기",
+            description = "삭제한 댓글을 복구합니다. 삭제 후 30초 이내에만 가능합니다. " +
+                    "시간이 만료된 경우 C0008(COMMENT_RESTORE_EXPIRED)을 반환하므로 프론트에서 '복구할 수 없습니다' 안내로 분기하세요."
+    )
+    @LoginErrorExamples
+    @ApiErrorCodeExamples({ErrorCode.COMMENT_NOT_FOUND, ErrorCode.COMMENT_RESTORE_EXPIRED})
+    @PutMapping("/{id}/restore")
+    public CommunityCommentsResponse restoreComment(
+            @Parameter(name = "id", description = "댓글 ID", required = true) @PathVariable(name = "id") Long commentId
+    ) {
+        return communityCommentsService.restoreComment(commentId);
+    }
 }

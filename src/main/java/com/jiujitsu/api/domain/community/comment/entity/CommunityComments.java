@@ -89,6 +89,11 @@ public class CommunityComments extends BaseEntity implements Hideable {
         return this.deletedAt != null;
     }
 
+    // 삭제 되돌리기 (deletedAt 초기화)
+    public void restore() {
+        this.deletedAt = null;
+    }
+
     @Override
     public boolean isHidden() {
         return this.hiddenAt != null || this.isReported;

@@ -44,6 +44,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -252,6 +253,30 @@ public class CommunityCommentsService {
         comment.validateOwner(authenticationFacade.getCurrentUser());
 
         comment.softDelete();
+    }
+
+    /**
+     * 댓글 삭제 되돌리기
+     * - 삭제 후 {@value RESTORE_LIMIT_SECONDS}초 이내에만 가능
+     * - 시간 초과 시 COMMENT_RESTORE_EXPIRED 반환 (프론트 분기용)
+     * - 알림 재발송 없음
+     */
+    private static final int RESTORE_LIMIT_SECONDS = 30;
+
+    public CommunityCommentsResponse restoreComment(Long commentId) {
+        CommunityComments comment = communityCommentsRepository.findById(commentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
+
+        comment.validateOwner(authenticationFacade.getCurrentUser());
+
+        if (comment.getDeletedAt() == null ||
+                comment.getDeletedAt().plusSeconds(RESTORE_LIMIT_SECONDS).isBefore(LocalDateTime.now())) {
+            throw new ErrorException(ErrorCode.COMMENT_RESTORE_EXPIRED);
+        }
+
+        comment.restore();
+
+        return commentMapper.toCommunityCommentsResponse(comment, new ArrayList<>());
     }
 
     /**
