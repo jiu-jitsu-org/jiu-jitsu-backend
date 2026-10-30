@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.user.dto.AuthResponse;
 import com.jiujitsu.api.domain.user.dto.CreateProfileRequest;
 import com.jiujitsu.api.domain.user.dto.UserAppInfoRequest;
 import com.jiujitsu.api.domain.user.dto.UserProfileResponse;
+import com.jiujitsu.api.domain.user.service.OwnerVerificationService;
 import com.jiujitsu.api.domain.user.service.UserService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final OwnerVerificationService ownerVerificationService;
 
     @Operation(
             summary = "회원 가입",
@@ -101,12 +103,12 @@ public class UserController {
 
     @Operation(
             summary = "관장/사범 인증 요청",
-            description = "관장/사범 인증 이미지를 업로드하고 권한 요청합니다."
+            description = "관장/사범 인증 이미지를 업로드하고 권한 요청합니다. 심사 대기 중이면 서류만 교체합니다."
     )
     @LoginErrorExamples
     @ApiErrorCodeExamples({ErrorCode.PERMISSION_DENIED, ErrorCode.IMAGE_FILE_NOT_FOUND})
     @PutMapping("/owner")
     public UserProfileResponse requestOwner(@RequestParam(name = "imageFileId") Long imageFileId) {
-        return userService.requestOwnerRole(imageFileId);
+        return ownerVerificationService.request(imageFileId);
     }
 }

@@ -1,12 +1,14 @@
 package com.jiujitsu.api.domain.community.profile.entity;
 
-import com.jiujitsu.api.domain.community.profile.dto.CompetitionInfoDto;
+import com.jiujitsu.api.domain.community.competition.entity.Competition;
+import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
 import com.jiujitsu.api.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.data.annotation.CreatedDate;
@@ -17,7 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @Builder
 @Entity
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
+@DynamicUpdate  // 바뀐 컬럼만 UPDATE — 관리자 승인(owner_id)과 본인 프로필 저장이 겹쳐도 서로 덮어쓰지 않게
 public class CommunityProfile {
 
     @Id
@@ -55,12 +58,9 @@ public class CommunityProfile {
     private String academyName; // 도장명
 
     @Builder.Default
-    @ElementCollection
-    @CollectionTable(
-            name = "community_profile_competitions",
-            joinColumns = @JoinColumn(name = "community_profile_id")
-    )
-    private List<CompetitionInfo> competitions = new ArrayList<>(); // 대회 정보
+    @OneToMany(mappedBy = "communityProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id")
+    private List<CompetitionRecord> competitions = new ArrayList<>(); // 대회 정보
 
     @Enumerated(EnumType.STRING)
     @Column(length = 100)
@@ -107,6 +107,7 @@ public class CommunityProfile {
      */
     public CommunityProfile(User user) {
         this.user = user;
+        this.competitions = new ArrayList<>();  // @Builder.Default는 builder 경로에만 적용된다
     }
 
     /**
@@ -125,6 +126,14 @@ public class CommunityProfile {
         this.gender = gender;
         this.weightKg = weightKg;
         this.weightHidden = weightHidden;
+    }
+
+    /**
+     * 벨트만 수정 - 성별·체급·체급 숨김은 그대로 둔다
+     */
+    public void upsertBelt(BeltRank beltRank, BeltStripe beltStripe) {
+        this.beltRank = beltRank;
+        this.beltStripe = beltStripe;
     }
 
     /**
@@ -155,10 +164,18 @@ public class CommunityProfile {
     /**
      * 대회정보 수정
      */
-    public void upsertCompetitions(List<CompetitionInfoDto> competitionInfos) {
-        this.competitions = competitionInfos.stream()
-                .map(CompetitionInfoDto::toEntity)
-                .toList();
+    public void upsertCompetitions(List<CompetitionDto> competitionDtos) {
+        upsertCompetitions(competitionDtos, Map.of());
+    }
+
+    /**
+     * 대회정보 수정 - registered 는 competitionId → 등록 대회 (연결한 기록만)
+     */
+    public void upsertCompetitions(List<CompetitionDto> competitionDtos, Map<Long, Competition> registered) {
+        // orphanRemoval 컬렉션은 교체하지 않고 비운 뒤 채운다
+        this.competitions.clear();
+        competitionDtos.forEach(competition -> this.competitions.add(
+                competition.toEntity(this, competition.competitionId() == null ? null : registered.get(competition.competitionId()))));
     }
 
     /**

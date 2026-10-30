@@ -17,7 +17,6 @@ public class UserFactory {
                 .nickname(snsUserInfo.getNickname())
                 .snsProvider(snsProvider)
                 .snsId(snsUserInfo.getSnsId())
-                .ownerRequested(false)
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
                 .build();

@@ -25,7 +25,10 @@ public enum ErrorCode {
     BALANCE_GAME_CLOSED(400, "C0007", "이미 마감된 밸런스 게임입니다."),
     CONTENT_SAVE_NOT_SUPPORTED(400, "C0008", "저장할 수 없는 게시물입니다."),
     BALANCE_GAME_END_AT_MUST_BE_FUTURE(400, "C0009", "마감 일시는 미래 시간이어야 합니다."),
+    COMPETITION_NOT_FOUND(404, "C0010", "존재하지 않는 등록 대회입니다."),
     EMAIL_DUPLICATED(400, "R0006", "이미 사용중인 이메일입니다."),
+    COMPETITION_PIN_LIMIT_EXCEEDED(400, "R0007", "대표 기록은 3개까지 고정할 수 있습니다."),
+    COMPETITION_DUPLICATED(400, "R0008", "같은 연도에 같은 이름의 대회가 중복되었습니다."),
 
 
     /**
@@ -49,6 +52,9 @@ public enum ErrorCode {
     ALREADY_REPORTED(400, "U0008", "이미 신고한 게시물/댓글입니다."),
     REPORT_NOT_FOUND(404, "U0009", "존재하지 않는 신고입니다."),
     SELF_HIDE_NOT_ALLOWED(400, "U0010", "자신의 게시물은 숨길 수 없습니다."),
+    MEMBER_NOT_FOUND(404, "U0011", "존재하지 않는 회원입니다."),
+    OWNER_REQUEST_NOT_FOUND(404, "U0012", "존재하지 않는 관장/사범 인증 신청입니다."),
+    OWNER_REQUEST_NOT_PENDING(400, "U0013", "이미 처리된 관장/사범 인증 신청입니다."),
 
     /**
      * 인증 에러
