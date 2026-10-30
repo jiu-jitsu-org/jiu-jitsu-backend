@@ -49,7 +49,8 @@ public class CommunityProfileController {
     )
     @LoginErrorExamples
     @ApiErrorCodeExamples({ErrorCode.PERMISSION_DENIED, ErrorCode.REQUIRED_PARAMETER,
-            ErrorCode.COMPETITION_PIN_LIMIT_EXCEEDED, ErrorCode.COMPETITION_DUPLICATED})
+            ErrorCode.COMPETITION_PIN_LIMIT_EXCEEDED, ErrorCode.COMPETITION_DUPLICATED,
+            ErrorCode.COMPETITION_NOT_FOUND})
     @PostMapping
     public CommunityProfileResponse upsertMyProfile(
             @Valid @RequestBody CommunityProfileRequest request

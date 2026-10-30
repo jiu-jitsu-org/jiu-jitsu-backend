@@ -103,6 +103,8 @@ class CompetitionDtoValidationTest {
         assertThat(isValid(new CompetitionDto(2025, null, true, null, GOLD))).isFalse();
         // 전각 공백(U+3000)만 있는 대회명도 대회명 없음
         assertThat(isValid(new CompetitionDto(2025, "\u3000", true, null, GOLD))).isFalse();
+        // 등록 대회를 고른 기록은 서버가 이름을 채우므로 대회명 없이 고정 가능
+        assertThat(isValid(new CompetitionDto(2025, "", true, null, GOLD, 12L))).isTrue();
     }
 
     @Test

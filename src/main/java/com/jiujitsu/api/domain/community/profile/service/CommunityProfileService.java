@@ -1,5 +1,7 @@
 package com.jiujitsu.api.domain.community.profile.service;
 
+import com.jiujitsu.api.domain.community.competition.entity.Competition;
+import com.jiujitsu.api.domain.community.competition.service.CompetitionService;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileRequest;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityPublicProfileResponse;
@@ -19,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Year;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -32,6 +35,7 @@ public class CommunityProfileService {
     private final UserRepository userRepository;
     private final AuthenticationFacade authenticationFacade;
     private final CommunityProfileMapper communityProfileMapper;
+    private final CompetitionService competitionService;
 
     private static final int MAX_PINNED_COMPETITIONS = 3;
 
@@ -114,6 +118,7 @@ public class CommunityProfileService {
                     request.weightKg(),
                     request.isWeightHidden()
             );
+            case BELT -> profile.upsertBelt(request.beltRank(), request.beltStripe());
             case POSITION -> profile.upsertPosition(request.bestPosition(), request.favoritePosition());
             case SUBMISSION -> profile.upsertSubmission(request.bestSubmission(), request.favoriteSubmission());
             case TECHNIQUE -> profile.upsertTechnique(request.bestTechnique(), request.favoriteTechnique());
@@ -122,8 +127,21 @@ public class CommunityProfileService {
                 if (request.competitions() == null) {
                     throw new ErrorException(ErrorCode.REQUIRED_PARAMETER);
                 }
-                validateCompetitions(request.competitions());
-                profile.upsertCompetitions(request.competitions());
+                // 등록 대회를 고른 기록은 대회명·연도를 등록 대회 값으로 맞춘 뒤 검사한다 (중복·고정 규칙이 같은 기준으로 걸리게)
+                Set<Long> competitionIds = request.competitions().stream()
+                        .map(CompetitionDto::competitionId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+                Map<Long, Competition> registered = competitionIds.isEmpty()
+                        ? Map.of()
+                        : competitionService.getCompetitionsByIds(competitionIds);
+                List<CompetitionDto> competitions = request.competitions().stream()
+                        .map(competition -> competition.competitionId() == null
+                                ? competition
+                                : competition.withRegistered(registered.get(competition.competitionId())))
+                        .toList();
+                validateCompetitions(competitions);
+                profile.upsertCompetitions(competitions, registered);
             }
             case OWNER_INFO -> {
                 if (!Objects.equals(user.getRole(), UserRole.OWNER)) {
@@ -142,6 +160,11 @@ public class CommunityProfileService {
                 .anyMatch(competition -> !competitionKeys.add(competition.competitionYear() + "|" + competition.trimmedName()));
         if (duplicated) {
             throw new ErrorException(ErrorCode.COMPETITION_DUPLICATED);
+        }
+
+        // 등록 대회 연도가 올해 이후면(예정 대회) 기록으로 받지 않는다 - 요청 연도는 DTO 에서 이미 검사
+        if (competitions.stream().anyMatch(competition -> competition.competitionYear() > Year.now().getValue())) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
         }
 
         long pinnedCount = competitions.stream().filter(CompetitionDto::pinnedOrFalse).count();

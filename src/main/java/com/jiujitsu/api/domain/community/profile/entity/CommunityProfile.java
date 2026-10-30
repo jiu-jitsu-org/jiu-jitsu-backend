@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.profile.entity;
 
+import com.jiujitsu.api.domain.community.competition.entity.Competition;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
 import com.jiujitsu.api.domain.user.entity.User;
 import jakarta.persistence.*;
@@ -18,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Builder
 @Entity
@@ -127,6 +129,14 @@ public class CommunityProfile {
     }
 
     /**
+     * 벨트만 수정 - 성별·체급·체급 숨김은 그대로 둔다
+     */
+    public void upsertBelt(BeltRank beltRank, BeltStripe beltStripe) {
+        this.beltRank = beltRank;
+        this.beltStripe = beltStripe;
+    }
+
+    /**
      * 포지션 수정
      */
     public void upsertPosition(PositionType bestPosition, PositionType favoritePosition) {
@@ -155,9 +165,17 @@ public class CommunityProfile {
      * 대회정보 수정
      */
     public void upsertCompetitions(List<CompetitionDto> competitionDtos) {
+        upsertCompetitions(competitionDtos, Map.of());
+    }
+
+    /**
+     * 대회정보 수정 - registered 는 competitionId → 등록 대회 (연결한 기록만)
+     */
+    public void upsertCompetitions(List<CompetitionDto> competitionDtos, Map<Long, Competition> registered) {
         // orphanRemoval 컬렉션은 교체하지 않고 비운 뒤 채운다
         this.competitions.clear();
-        competitionDtos.forEach(competition -> this.competitions.add(competition.toEntity(this)));
+        competitionDtos.forEach(competition -> this.competitions.add(
+                competition.toEntity(this, competition.competitionId() == null ? null : registered.get(competition.competitionId()))));
     }
 
     /**

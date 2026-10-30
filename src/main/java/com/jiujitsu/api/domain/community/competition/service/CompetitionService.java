@@ -8,12 +8,16 @@ import com.jiujitsu.api.domain.community.competition.entity.Competition;
 import com.jiujitsu.api.domain.community.competition.mapper.CompetitionMapper;
 import com.jiujitsu.api.domain.community.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +29,22 @@ public class CompetitionService {
     private final CompetitionRepository competitionRepository;
     private final AuthenticationFacade authenticationFacade;
     private final CompetitionMapper competitionMapper;
+
+    /**
+     * 등록 대회 일괄 조회 (대회 기록 연결용). 없는 ID가 하나라도 있으면 COMPETITION_NOT_FOUND
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, Competition> getCompetitionsByIds(Collection<Long> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, Competition> found = competitionRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Competition::getId, Function.identity()));
+        if (!found.keySet().containsAll(ids)) {
+            throw new ErrorException(ErrorCode.COMPETITION_NOT_FOUND);
+        }
+        return found;
+    }
 
     /**
      * 등록 대회 검색 (대회명 자동완성)

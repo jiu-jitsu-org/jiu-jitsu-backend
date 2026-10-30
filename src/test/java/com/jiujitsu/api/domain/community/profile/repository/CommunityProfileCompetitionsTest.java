@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.community.profile.repository;
 
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDivisionDto;
+import com.jiujitsu.api.domain.community.competition.entity.Competition;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
 import com.jiujitsu.api.domain.community.profile.entity.*;
 import com.jiujitsu.api.domain.community.profile.mapper.CommunityProfileMapper;
@@ -17,6 +18,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -182,5 +184,29 @@ class CommunityProfileCompetitionsTest {
         assertThat(new CommunityProfileMapper().getCommunityProfileResponse(reloaded).competitions())
                 .extracting(competition -> competition.divisions().get(0).competitionUniform())
                 .containsExactly(CompetitionUniform.GI, CompetitionUniform.NO_GI);
+    }
+
+    @Test
+    @DisplayName("등록 대회와 연결해 저장하면 competition_id 가 남고, 등록 대회가 지워지면 연결만 끊긴다(ON DELETE SET NULL)")
+    void linkedCompetition_setNullOnRegisteredDelete() {
+        User user = saveUser();
+        Competition registered = em.persist(Competition.of("서울 오픈", 2024));
+        CommunityProfile profile = new CommunityProfile(user);
+        profile.upsertCompetitions(
+                List.of(new CompetitionDto(2024, "서울 오픈", null, null,
+                        List.of(new CompetitionDivisionDto(CompetitionRank.GOLD, null, null, null, null, null)), registered.getId())),
+                Map.of(registered.getId(), registered));
+        communityProfileRepository.save(profile);
+
+        assertThat(reloadCompetitions(user).get(0).getCompetition().getId()).isEqualTo(registered.getId());
+
+        em.getEntityManager().createQuery("delete from Competition c where c.id = :id")
+                .setParameter("id", registered.getId())
+                .executeUpdate();
+
+        List<CompetitionRecord> after = reloadCompetitions(user);
+        assertThat(after).hasSize(1);
+        assertThat(after.get(0).getCompetition()).isNull();
+        assertThat(after.get(0).getCompetitionName()).isEqualTo("서울 오픈");
     }
 }

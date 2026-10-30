@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.community.profile.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.jiujitsu.api.domain.community.competition.entity.Competition;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.entity.CompetitionRecord;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,8 +22,16 @@ public record CompetitionDto(
         @Schema(description = "회원이 정한 순서 (고정한 것끼리, 안 한 것끼리 각각 0이 맨 위. 정한 적 없으면 null)", example = "0") @Min(0L)
                 Integer competitionDisplayOrder,
         @Schema(description = "출전 부문") @NotEmpty
-                List<@Valid @NotNull CompetitionDivisionDto> divisions
+                List<@Valid @NotNull CompetitionDivisionDto> divisions,
+        @Schema(description = "등록 대회 ID (자동완성에서 고른 경우. 직접 입력이면 null). 있으면 대회명·연도는 등록 대회 값으로 저장 (등록 대회 연도가 없으면 보낸 연도)", example = "12")
+                Long competitionId
 ) {
+    // 등록 대회 연결 없이 만드는 경우 (직접 입력)
+    public CompetitionDto(Integer competitionYear, String competitionName, Boolean competitionPinned,
+                          Integer competitionDisplayOrder, List<CompetitionDivisionDto> divisions) {
+        this(competitionYear, competitionName, competitionPinned, competitionDisplayOrder, divisions, null);
+    }
+
     // 올해 이후 연도는 받지 않는다 (@Max는 상수만 받아서 메서드로 검증)
     @JsonIgnore
     @Schema(hidden = true)
@@ -36,7 +45,8 @@ public record CompetitionDto(
     @Schema(hidden = true)
     @AssertTrue(message = "대회명이 없는 기록은 고정할 수 없습니다.")
     public boolean isNamedIfPinned() {
-        return !pinnedOrFalse() || named();
+        // 등록 대회를 고른 기록은 서버가 등록된 이름으로 채운다
+        return !pinnedOrFalse() || named() || competitionId != null;
     }
 
     public boolean pinnedOrFalse() {
@@ -53,19 +63,39 @@ public record CompetitionDto(
         return !trimmedName().isEmpty();
     }
 
+    /**
+     * 등록 대회 값으로 맞춘 사본 - 대회명은 등록된 이름, 연도는 등록 대회 연도가 있으면 그 연도
+     */
+    public CompetitionDto withRegistered(Competition registered) {
+        return new CompetitionDto(
+                registered.getCompetitionYear() != null ? registered.getCompetitionYear() : competitionYear,
+                registered.getName(),
+                competitionPinned,
+                competitionDisplayOrder,
+                divisions,
+                registered.getId()
+        );
+    }
+
     public static CompetitionDto from(CompetitionRecord record, List<CompetitionDivisionDto> divisions) {
         return new CompetitionDto(
                 record.getCompetitionYear(),
                 record.getCompetitionName(),
                 record.isCompetitionPinned(),
                 record.getCompetitionDisplayOrder(),
-                divisions
+                divisions,
+                record.getCompetition() != null ? record.getCompetition().getId() : null
         );
     }
 
     public CompetitionRecord toEntity(CommunityProfile profile) {
+        return toEntity(profile, null);
+    }
+
+    public CompetitionRecord toEntity(CommunityProfile profile, Competition registered) {
         CompetitionRecord record = CompetitionRecord.builder()
                 .communityProfile(profile)
+                .competition(registered)
                 .competitionYear(competitionYear)
                 .competitionName(trimmedName())
                 .competitionPinned(pinnedOrFalse())

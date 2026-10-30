@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.profile.entity;
 
+import com.jiujitsu.api.domain.community.competition.entity.Competition;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +20,10 @@ import java.util.List;
 @Entity
 @Table(
         name = "community_profile_competition_records",
-        indexes = @Index(name = "idx_competition_record_profile", columnList = "community_profile_id")
+        indexes = {
+                @Index(name = "idx_competition_record_profile", columnList = "community_profile_id"),
+                @Index(name = "idx_competition_record_competition", columnList = "competition_id")
+        }
 )
 @Getter
 @NoArgsConstructor
@@ -34,6 +38,12 @@ public class CompetitionRecord {
     @JoinColumn(name = "community_profile_id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     private CommunityProfile communityProfile;
+
+    // 등록 대회에서 고른 기록이면 연결 (직접 입력이면 null). 등록 대회가 지워지면 연결만 끊는다
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "competition_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private Competition competition;
 
     @Column(name = "competition_year", nullable = false)
     private Integer competitionYear;    // 대회출전년도

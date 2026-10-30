@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.competition.service;
 
+import java.util.Set;
 import com.jiujitsu.api.domain.community.competition.dto.CompetitionCreateRequest;
 import com.jiujitsu.api.domain.community.competition.dto.CompetitionCreateResponse;
 import com.jiujitsu.api.domain.community.competition.dto.CompetitionCreateResponse.SkipReason;
@@ -134,5 +135,19 @@ class CompetitionServiceTest {
         assertThat(response.created()).extracting(CompetitionResponse::name).containsExactly("서울 오픈");
         assertThat(response.skipped()).containsExactly(
                 new CompetitionCreateResponse.Skipped("\u00A0\u200B", 2026, SkipReason.INVALID_NAME));
+    }
+
+    @Test
+    @DisplayName("등록 대회 일괄 조회 - 모두 있으면 ID별 Map, 하나라도 없으면 COMPETITION_NOT_FOUND, 빈 입력은 조회 없이 빈 Map")
+    void getCompetitionsByIds() {
+        Competition seoul = Competition.builder().id(1L).name("서울 오픈").searchName("서울오픈").competitionYear(2024).build();
+        given(competitionRepository.findAllById(Set.of(1L))).willReturn(List.of(seoul));
+        given(competitionRepository.findAllById(Set.of(1L, 2L))).willReturn(List.of(seoul));
+
+        assertThat(competitionService.getCompetitionsByIds(Set.of(1L))).containsEntry(1L, seoul);
+        assertThatThrownBy(() -> competitionService.getCompetitionsByIds(Set.of(1L, 2L)))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+        assertThat(competitionService.getCompetitionsByIds(Set.of())).isEmpty();
     }
 }
