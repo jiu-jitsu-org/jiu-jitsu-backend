@@ -10,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Set;
 
@@ -33,6 +34,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.valueOf(errorCode.getStatus()))
                 .body(ApiResponse.error(errorCode));
+    }
+
+    /**
+     * 쿼리·경로 파라미터 타입 불일치 (예: enum 에 없는 값) → 500 대신 400
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Object>> handleTypeMismatchException(MethodArgumentTypeMismatchException e, HttpServletRequest request) {
+        request.setAttribute("api.error.type", e.getClass().getSimpleName());
+        request.setAttribute("api.error.message", "Wrong parameter: " + e.getName());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ErrorCode.WRONG_PARAMETER));
     }
 
     @ExceptionHandler(RuntimeException.class)

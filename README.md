@@ -82,7 +82,7 @@ src/main/java/com/jiujitsu/api/
 | PUT | `/user/profile` | 프로필 수정 (닉네임, 이미지) |
 | DELETE | `/user` | 회원 탈퇴 (30일 유예기간) |
 | GET | `/user/check/nickname` | 닉네임 중복/유효성 확인 |
-| PUT | `/user/grant/owner-role` | 관장/사범 권한 부여 |
+| PUT | `/user/owner` | 관장/사범 인증 신청 (심사 대기 중이면 서류 교체) |
 | POST | `/user/appInfo` | 앱 정보 등록 (FCM 토큰 등) |
 | POST | `/user/block/{id}` | 유저 차단/차단해제 (toggle) |
 
@@ -136,6 +136,14 @@ src/main/java/com/jiujitsu/api/
 | GET | `/admin/reports` | 신고 목록 조회 (페이징) |
 | PATCH | `/admin/reports/board/{contentId}/unhide` | 게시글 숨김 해제 |
 | PATCH | `/admin/reports/comment/{commentId}/unhide` | 댓글 숨김 해제 |
+
+### 관리자 관장/사범 인증 (`/api/admin/owner-requests`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/admin/owner-requests?status=PENDING` | 인증 신청 목록 조회 (페이징, 신청 최신순) |
+| PATCH | `/admin/owner-requests/{requestId}/approve` | 승인 (관장/사범 권한 부여, 커뮤니티 프로필 필요) |
+| PATCH | `/admin/owner-requests/{requestId}/reject` | 거절 (사유 선택, 재신청 가능) |
 
 ### 알림 (`/api/notice`)
 

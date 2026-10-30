@@ -40,7 +40,6 @@ class CommunityProfileCompetitionsTest {
         return em.persist(User.builder()
                 .snsProvider(SnsProvider.KAKAO)
                 .snsId(UUID.randomUUID().toString())
-                .ownerRequested(false)
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
                 .build());

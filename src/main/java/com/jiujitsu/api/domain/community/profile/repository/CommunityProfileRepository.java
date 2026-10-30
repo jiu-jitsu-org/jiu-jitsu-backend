@@ -17,4 +17,7 @@ public interface CommunityProfileRepository extends JpaRepository<CommunityProfi
 
     @Query("SELECT cp FROM CommunityProfile cp WHERE cp.user.id IN :userIds")
     List<CommunityProfile> findAllByUserIdIn(@Param("userIds") Collection<Long> userIds);
+
+    @Query("SELECT cp.user.id FROM CommunityProfile cp WHERE cp.user.id IN :userIds")
+    List<Long> findUserIdsByUserIdIn(@Param("userIds") Collection<Long> userIds);
 }

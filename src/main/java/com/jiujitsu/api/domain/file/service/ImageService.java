@@ -11,7 +11,8 @@ import com.jiujitsu.api.domain.file.dto.ImageFileResponse;
 import com.jiujitsu.api.domain.file.event.ImageFileDeletedEvent;
 import com.jiujitsu.api.global.properties.ImageKitProperties;
 import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
-import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.OwnerVerificationRequest;
+import com.jiujitsu.api.domain.user.repository.OwnerVerificationRequestRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -35,6 +36,7 @@ public class ImageService {
     private final ContentRepository contentRepository;
     private final UserRepository userRepository;
     private final OwnerProfileRepository ownerProfileRepository;
+    private final OwnerVerificationRequestRepository ownerVerificationRequestRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -57,9 +59,9 @@ public class ImageService {
         userRepository.findByProfileImageFile(imageFile)
                 .ifPresent(user -> user.updateProfileImage(null));
 
-        // User 관장 신청 이미지 참조 제거
-        userRepository.findByOwnerRequestImageFile(imageFile)
-                .ifPresent(User::clearOwnerRequestImageFile);
+        // 관장/사범 인증 신청 서류 이미지 참조 제거
+        ownerVerificationRequestRepository.findByDocumentImageFile(imageFile)
+                .forEach(OwnerVerificationRequest::clearDocumentImageFile);
 
         // OwnerProfile 서류 이미지 참조 제거
         ownerProfileRepository.findByDocumentImageFile(imageFile)

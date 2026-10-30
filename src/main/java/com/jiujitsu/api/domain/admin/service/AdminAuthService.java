@@ -38,7 +38,6 @@ public class AdminAuthService {
                 .password(passwordEncoder.encode(request.password()))
                 .snsProvider(SnsProvider.NONE)
                 .snsId("ADMIN_" + request.email())
-                .ownerRequested(false)
                 .role(UserRole.ADMIN)
                 .status(UserStatus.ACTIVE)
                 .build();
