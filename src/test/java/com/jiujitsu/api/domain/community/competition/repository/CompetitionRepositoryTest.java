@@ -35,7 +35,7 @@ class CompetitionRepositoryTest {
     private List<Competition> searchAll(String keyword, int limit) {
         String normalized = Competition.normalize(keyword);
         String escaped = CompetitionService.escapeLike(normalized);
-        return competitionRepository.search(normalized, escaped + "%", "%" + escaped + "%", PageRequest.of(0, limit));
+        return competitionRepository.search(normalized, escaped + "%", "%" + escaped + "%", 2026, PageRequest.of(0, limit));
     }
 
     @Test
@@ -106,5 +106,17 @@ class CompetitionRepositoryTest {
         assertThat(searchAll("서울오픈", 20)).extracting(Competition::getCompetitionYear).containsExactly(2026, 2025);
         assertThatThrownBy(() -> competitionRepository.saveAndFlush(Competition.of("서울오픈", 2026)))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("maxYear 이후 예정 대회는 빼고, 연도 모르는 대회는 남긴다")
+    void searchExcludesFutureCompetitions() {
+        save("서울 오픈", 2027);
+        save("서울 오픈", 2026);
+        save("서울 컵", null);
+
+        assertThat(searchAll("서울", 20)).extracting(Competition::getName, Competition::getCompetitionYear)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("서울 오픈", 2026),
+                        org.assertj.core.groups.Tuple.tuple("서울 컵", null));
     }
 }

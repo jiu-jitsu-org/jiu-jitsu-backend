@@ -26,6 +26,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -48,13 +49,13 @@ class CompetitionServiceTest {
     @Test
     @DisplayName("검색어를 공백 제거·소문자로 정규화하고 LIKE 특수문자를 이스케이프해 20개까지 조회한다")
     void search_normalizesKeyword() {
-        given(competitionRepository.search(anyString(), anyString(), anyString(), any(Pageable.class)))
+        given(competitionRepository.search(anyString(), anyString(), anyString(), anyInt(), any(Pageable.class)))
                 .willReturn(List.of(Competition.of("Seoul Open 100%", 2026)));
 
         List<CompetitionResponse> result = competitionService.search("  SEOUL open 100% ");
 
         ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
-        verify(competitionRepository).search(eq("seoulopen100%"), eq("seoulopen100\\%%"), eq("%seoulopen100\\%%"), pageable.capture());
+        verify(competitionRepository).search(eq("seoulopen100%"), eq("seoulopen100\\%%"), eq("%seoulopen100\\%%"), eq(java.time.Year.now().getValue()), pageable.capture());
         assertThat(pageable.getValue().getPageSize()).isEqualTo(CompetitionService.SEARCH_LIMIT);
         assertThat(result).extracting(CompetitionResponse::name, CompetitionResponse::year)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple("Seoul Open 100%", 2026));
@@ -67,7 +68,7 @@ class CompetitionServiceTest {
         assertThat(competitionService.search(" \u00A0 ")).isEmpty();
         assertThat(competitionService.search("가".repeat(Competition.NAME_MAX_LENGTH + 1))).isEmpty();
 
-        verify(competitionRepository, never()).search(anyString(), anyString(), anyString(), any(Pageable.class));
+        verify(competitionRepository, never()).search(anyString(), anyString(), anyString(), anyInt(), any(Pageable.class));
     }
 
     @Test
@@ -78,7 +79,7 @@ class CompetitionServiceTest {
         assertThatThrownBy(() -> competitionService.search("서울"))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_NOT_ACCESS);
-        verify(competitionRepository, never()).search(anyString(), anyString(), anyString(), any(Pageable.class));
+        verify(competitionRepository, never()).search(anyString(), anyString(), anyString(), anyInt(), any(Pageable.class));
     }
 
     @Test

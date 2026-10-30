@@ -118,7 +118,13 @@ public class CommunityProfileService {
                     request.weightKg(),
                     request.isWeightHidden()
             );
-            case BELT -> profile.upsertBelt(request.beltRank(), request.beltStripe());
+            case BELT -> {
+                // 띠만 저장하는 유형이라 빈 값으로 띠가 지워지지 않게 막는다
+                if (request.beltRank() == null || request.beltStripe() == null) {
+                    throw new ErrorException(ErrorCode.REQUIRED_PARAMETER);
+                }
+                profile.upsertBelt(request.beltRank(), request.beltStripe());
+            }
             case POSITION -> profile.upsertPosition(request.bestPosition(), request.favoritePosition());
             case SUBMISSION -> profile.upsertSubmission(request.bestSubmission(), request.favoriteSubmission());
             case TECHNIQUE -> profile.upsertTechnique(request.bestTechnique(), request.favoriteTechnique());

@@ -179,4 +179,17 @@ class CommunityProfileServiceLinkAndBeltTest {
         assertThat(response.weightKg()).isEqualTo(76.5);
         assertThat(response.isWeightHidden()).isTrue();
     }
+
+    @Test
+    @DisplayName("BELT 에 띠나 그랄이 없으면 400(REQUIRED_PARAMETER)이고 기존 띠는 그대로다")
+    void belt_requiresRankAndStripe() {
+        CommunityProfileRequest request = new CommunityProfileRequest(ProfileRequestType.BELT,
+                null, BeltStripe.STRIPE_2, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null);
+
+        assertThatThrownBy(() -> communityProfileService.upsertMyProfile(request))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.REQUIRED_PARAMETER);
+        assertThat(profile.getBeltRank()).isEqualTo(BeltRank.BLUE);
+    }
 }

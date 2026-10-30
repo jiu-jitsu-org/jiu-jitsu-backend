@@ -23,7 +23,7 @@ public record CompetitionDto(
                 Integer competitionDisplayOrder,
         @Schema(description = "출전 부문") @NotEmpty
                 List<@Valid @NotNull CompetitionDivisionDto> divisions,
-        @Schema(description = "등록 대회 ID (자동완성에서 고른 경우. 직접 입력이면 null). 있으면 대회명·연도는 등록 대회 값으로 저장 (등록 대회 연도가 없으면 보낸 연도)", example = "12")
+        @Schema(description = "등록 대회 ID (자동완성에서 고른 경우. 직접 입력이면 null). 있으면 대회명·연도는 등록 대회 값으로 저장 (등록 대회 연도가 없으면 보낸 연도). 연도는 항상 보내야 함. 직접 입력으로 바꾸려면 null로 보냄", example = "12")
                 Long competitionId
 ) {
     // 등록 대회 연결 없이 만드는 경우 (직접 입력)
