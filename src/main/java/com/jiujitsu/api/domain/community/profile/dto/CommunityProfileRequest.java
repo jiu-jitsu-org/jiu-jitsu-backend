@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.profile.dto;
 
 import com.jiujitsu.api.domain.community.profile.entity.*;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
@@ -26,8 +27,8 @@ public record CommunityProfileRequest(
         @Size(max = 100)
         @Schema(description = "소속 도장명", example = "Gracie Barra Seoul")
                 String academyName,
-        @Schema(description = "대회정보")
-                List<CompetitionInfoDto> competitionInfoList,
+        @Schema(description = "대회정보 (COMPETITION 필수. 목록 전체를 교체, 빈 목록이면 전체 삭제)")
+                List<@Valid @NotNull CompetitionDto> competitions,
         @Schema(description = "특기 서브미션", example = "CHOKES")
                 SubmissionType bestSubmission,
         @Schema(description = "최애 서브미션", example = "ARM_LOCKS")
@@ -49,9 +50,6 @@ public record CommunityProfileRequest(
         @Schema(description = "(관장/사범) 경력 상세")
                 String teachingDetail
 ) {
-        public List<CompetitionInfoDto> competitionInfoListOrEmpty() {
-                return competitionInfoList == null ? List.of() : competitionInfoList;
-        }
 }
 
 

@@ -1,6 +1,6 @@
 package com.jiujitsu.api.domain.community.profile.entity;
 
-import com.jiujitsu.api.domain.community.profile.dto.CompetitionInfoDto;
+import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
 import com.jiujitsu.api.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -17,7 +17,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Builder
 @Entity
@@ -55,12 +54,9 @@ public class CommunityProfile {
     private String academyName; // 도장명
 
     @Builder.Default
-    @ElementCollection
-    @CollectionTable(
-            name = "community_profile_competitions",
-            joinColumns = @JoinColumn(name = "community_profile_id")
-    )
-    private List<CompetitionInfo> competitions = new ArrayList<>(); // 대회 정보
+    @OneToMany(mappedBy = "communityProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id")
+    private List<CompetitionRecord> competitions = new ArrayList<>(); // 대회 정보
 
     @Enumerated(EnumType.STRING)
     @Column(length = 100)
@@ -107,6 +103,7 @@ public class CommunityProfile {
      */
     public CommunityProfile(User user) {
         this.user = user;
+        this.competitions = new ArrayList<>();  // @Builder.Default는 builder 경로에만 적용된다
     }
 
     /**
@@ -155,10 +152,10 @@ public class CommunityProfile {
     /**
      * 대회정보 수정
      */
-    public void upsertCompetitions(List<CompetitionInfoDto> competitionInfos) {
-        this.competitions = competitionInfos.stream()
-                .map(CompetitionInfoDto::toEntity)
-                .toList();
+    public void upsertCompetitions(List<CompetitionDto> competitionDtos) {
+        // orphanRemoval 컬렉션은 교체하지 않고 비운 뒤 채운다
+        this.competitions.clear();
+        competitionDtos.forEach(competition -> this.competitions.add(competition.toEntity(this)));
     }
 
     /**
