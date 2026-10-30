@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
-@Schema(description = "다른 회원 공개 프로필 응답 (체급·성별·특기·지도 정보 제외)")
+@Schema(description = "다른 회원 공개 프로필 응답 (현재 체급·성별·특기·지도 정보 제외. 대회 부문의 출전 체급은 포함)")
 public record CommunityPublicProfileResponse(
         @Schema(description = "회원 ID", example = "1") Long userId,
         @Schema(description = "닉네임", example = "홍길동") String nickname,

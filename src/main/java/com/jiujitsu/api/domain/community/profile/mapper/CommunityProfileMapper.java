@@ -129,10 +129,6 @@ public class CommunityProfileMapper {
 
     // 공개 대회정보 가져오기 - 대회명 없는 기록은 제외 (메달 합계와 같은 기준)
     private List<CompetitionDto> mapPublicCompetitions(CommunityProfile profile) {
-        if (profile.getCompetitions() == null) {
-            return Collections.emptyList();
-        }
-
         return mapCompetitions(profile).stream()
                 .filter(CompetitionDto::named)
                 .toList();

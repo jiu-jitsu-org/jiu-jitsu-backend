@@ -115,6 +115,39 @@ class CommunityProfileServicePublicProfileTest {
     }
 
     @Test
+    @DisplayName("공개 대회 기록도 내 프로필과 같은 정렬(고정 먼저)이고, 한 대회의 부문 여러 개는 한 대회로 묶여 메달마다 센다")
+    void getPublicProfile_pinnedFirstAndDivisionsGrouped() {
+        // given
+        User user = stubUser(UserRole.USER, UserStatus.ACTIVE);
+        CompetitionRecord pinned = CompetitionRecord.builder()
+                .competitionYear(2023)
+                .competitionName("전국 선수권")
+                .competitionPinned(true)
+                .build();
+        pinned.addDivision(CompetitionDivision.builder().competitionRecord(pinned).competitionRank(CompetitionRank.GOLD).build());
+        CompetitionRecord seoul = competition(2026, "서울 오픈", CompetitionRank.SILVER);
+        seoul.addDivision(CompetitionDivision.builder()
+                .competitionRecord(seoul)
+                .competitionRank(CompetitionRank.GOLD)
+                .competitionAbsolute(true)
+                .build());
+        CommunityProfile profile = profileBuilder(user)
+                .competitions(new ArrayList<>(List.of(seoul, pinned)))
+                .build();
+        given(communityProfileRepository.findByUser(user)).willReturn(Optional.of(profile));
+
+        // when
+        CommunityPublicProfileResponse response = communityProfileService.getPublicProfile(USER_ID);
+
+        // then
+        assertThat(response.competitions())
+                .extracting(CompetitionDto::competitionName)
+                .containsExactly("전국 선수권", "서울 오픈");
+        assertThat(response.competitions().get(1).divisions()).hasSize(2);
+        assertThat(response.medalCount()).isEqualTo(new MedalCountDto(2, 1, 0));
+    }
+
+    @Test
     @DisplayName("도장명을 빈 값으로 저장한 회원은 미입력과 같이 null 로 내린다")
     void getPublicProfile_blankAcademyIsNull() {
         // given
