@@ -16,11 +16,11 @@ public record CommunityProfileInfo(
         @Schema(description = "그랄 (미입력 시 null)", example = "STRIPE_2") BeltStripe beltStripe,
         @Schema(description = "관장/사범 인증 여부") Boolean isOwner
 ) {
+
     /**
      * 작성자 정보 - profile 은 커뮤니티 프로필 미작성 시 null
      */
     public static CommunityProfileInfo from(User user, CommunityProfile profile) {
-    public static CommunityProfileInfo from(User user) {
         if (user == null) {
             return withdrawn();
         }
@@ -35,7 +35,7 @@ public record CommunityProfileInfo(
     }
 
     public static CommunityProfileInfo withdrawn() {
-        return new CommunityProfileInfo(null, "탈퇴회원", null);
+        return new CommunityProfileInfo(null, "탈퇴회원", null, null, null, null);
     }
 
     public static CommunityProfileInfo masked() {

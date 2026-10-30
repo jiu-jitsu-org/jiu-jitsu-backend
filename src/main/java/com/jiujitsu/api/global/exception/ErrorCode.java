@@ -56,7 +56,7 @@ public enum ErrorCode {
     MEMBER_NOT_FOUND(404, "U0011", "존재하지 않는 회원입니다."),
     OWNER_REQUEST_NOT_FOUND(404, "U0012", "존재하지 않는 관장/사범 인증 신청입니다."),
     OWNER_REQUEST_NOT_PENDING(400, "U0013", "이미 처리된 관장/사범 인증 신청입니다."),
-
+    PROFILE_NOT_FOUND(404, "U0011", "존재하지 않는 회원입니다."),
     /**
      * 인증 에러
      */

@@ -1,10 +1,6 @@
 package com.jiujitsu.api.domain.community.comment.controller;
 
-import com.jiujitsu.api.domain.community.comment.dto.CommentsListRequest;
-import com.jiujitsu.api.domain.community.comment.dto.CommentsSortType;
-import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
-import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest;
-import com.jiujitsu.api.domain.community.comment.dto.UserCommentGroupResponse;
+import com.jiujitsu.api.domain.community.comment.dto.*;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeResponse;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
@@ -18,7 +14,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;

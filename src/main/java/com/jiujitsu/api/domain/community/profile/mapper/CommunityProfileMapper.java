@@ -86,7 +86,8 @@ public class CommunityProfileMapper {
                 getTeachingPhilosophy(ownerProfile),
                 getTeachingStartDate(ownerProfile),
                 getTeachingDetail(ownerProfile),
-                mapCompetitions(profile)
+                mapCompetitions(profile),
+                countMedals(profile)
         );
     }
 

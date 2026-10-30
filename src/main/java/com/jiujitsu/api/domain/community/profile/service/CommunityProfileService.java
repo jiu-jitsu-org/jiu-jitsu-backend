@@ -11,11 +11,9 @@ import com.jiujitsu.api.domain.community.profile.mapper.CommunityProfileMapper;
 import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
-import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
-import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
@@ -37,29 +35,6 @@ public class CommunityProfileService {
     private final UserRepository userRepository;
     private final AuthenticationFacade authenticationFacade;
     private final CommunityProfileMapper communityProfileMapper;
-    private final UserRepository userRepository;
-    private final UserBlockService userBlockService;
-
-    /**
-     * 다른 사용자 선수 카드 조회 (비로그인 가능)
-     * - 차단 관계(내가 차단 / 나를 차단) 이면 404
-     * - weightHidden=true 이면 체급 마스킹
-     */
-    @Transactional(readOnly = true)
-    public CommunityProfileResponse getProfile(Long userId) {
-        User target = userRepository.findById(userId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
-
-        authenticationFacade.getCurrentUserOptional().ifPresent(viewer -> {
-            if (userBlockService.isBlockedBetween(viewer.getId(), userId)) {
-                throw new ErrorException(ErrorCode.USER_NOT_FOUND);
-            }
-        });
-
-        return communityProfileRepository.findByUser(target)
-                .map(communityProfileMapper::getCommunityProfileResponseForOther)
-                .orElseGet(() -> communityProfileMapper.getCommunityProfileResponseUser(target));
-    }
     private final CompetitionService competitionService;
 
     private static final int MAX_PINNED_COMPETITIONS = 3;

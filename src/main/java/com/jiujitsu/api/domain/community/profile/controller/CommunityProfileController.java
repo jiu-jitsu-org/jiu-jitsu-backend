@@ -8,8 +8,8 @@ import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
 import com.jiujitsu.api.global.exception.annotation.LoginErrorExamples;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,16 +35,13 @@ public class CommunityProfileController {
     }
 
     @Operation(
-            summary = "다른 사용자 선수 카드 조회",
-            description = "특정 사용자의 선수 카드를 조회합니다. 비로그인 가능. 차단 관계이면 404 반환. isWeightHidden=true 인 사용자의 체급은 null로 마스킹됩니다."
+            summary = "다른 회원 공개 프로필 조회",
+            description = "회원 ID로 공개 프로필을 조회합니다. 비로그인도 조회 가능하며, 체급·성별·특기·지도 정보는 내려가지 않습니다. 대회 정보는 대회명이 있는 기록만 내려갑니다."
     )
-    @ApiErrorCodeExamples({ErrorCode.USER_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.PROFILE_NOT_FOUND})
     @GetMapping("/{userId}")
-    public CommunityProfileResponse getProfile(
-            @Parameter(name = "userId", description = "조회할 사용자 ID", required = true)
-            @PathVariable Long userId
-    ) {
-        return communityProfileService.getProfile(userId);
+    public CommunityPublicProfileResponse getPublicProfile(@PathVariable Long userId) {
+        return communityProfileService.getPublicProfile(userId);
     }
 
     @Operation(

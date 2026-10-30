@@ -290,7 +290,9 @@ public class CommunityCommentsService {
 
         comment.restore();
 
-        return commentMapper.toCommunityCommentsResponse(comment, new ArrayList<>());
+        User user = authenticationFacade.getCurrentUser();
+        CommunityProfile authorProfile = communityProfileService.findProfile(user).orElse(null);
+        return commentMapper.toCommunityCommentsResponse(comment, user, authorProfile, new ArrayList<>());
     }
 
     /**
