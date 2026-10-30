@@ -7,6 +7,8 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import java.util.TimeZone;
+
 @EnableScheduling
 @EnableJpaAuditing
 @EnableFeignClients
@@ -15,6 +17,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class ApiApplication {
 
 	public static void main(String[] args) {
+		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
 		SpringApplication.run(ApiApplication.class, args);
 	}
 

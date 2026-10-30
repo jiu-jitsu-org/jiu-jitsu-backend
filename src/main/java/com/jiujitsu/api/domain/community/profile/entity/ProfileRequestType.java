@@ -8,6 +8,7 @@ import lombok.Getter;
 public enum ProfileRequestType {
     ACADEMY("도장정보(도장명)"),
     BELT_WEIGHT("벨트/성별/체급"),
+    BELT("벨트(띠·그랄만)"),
     POSITION("포지션"),
     SUBMISSION("서브미션"),
     TECHNIQUE("기술"),

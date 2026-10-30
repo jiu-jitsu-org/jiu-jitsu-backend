@@ -28,7 +28,8 @@ public record CommunityProfileResponse(
         @Schema(description = "(관장/사범) 지도 철학") String teachingPhilosophy,
         @Schema(description = "(관장/사범) 경력 시작일") LocalDate teachingStartDate,
         @Schema(description = "(관장/사범) 경력 상세") String teachingDetail,
-        @Schema(description = "대회 정보") List<CompetitionInfoDto> competitions
+        @Schema(description = "대회 정보 (고정한 대회 먼저 → 회원이 정한 순서 → 연도 최신순 → 최고 메달 → 대회명)") List<CompetitionDto> competitions,
+        @Schema(description = "메달 개수 합계 (부문 기준, 참가·대회명 없는 기록 제외)") MedalCountDto medalCount
 ) {
     public static CommunityProfileResponse ofUserOnly(User user) {
         return new CommunityProfileResponse(
@@ -36,7 +37,8 @@ public record CommunityProfileResponse(
                 ImageInfo.from(user.getProfileImageFile()),
                 null, null, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null
+                null, null, null, null, null, null,
+                List.of(), new MedalCountDto(0, 0, 0)   // 대회는 프로필이 있고 기록이 없을 때와 같은 모양으로
         );
     }
 }

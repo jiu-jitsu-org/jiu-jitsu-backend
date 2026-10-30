@@ -46,13 +46,6 @@ public class User {
     @Column(nullable = false, unique = true)
     private String snsId;
 
-    @Column(nullable = false)
-    private Boolean ownerRequested;
-
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_request_image_file_id")
-    private ImageFile ownerRequestImageFile;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
@@ -117,12 +110,4 @@ public class User {
         return deletedAt != null && LocalDateTime.now().isAfter(deletedAt.plusDays(30));
     }
 
-    public void requestOwner(ImageFile ownerRequestImageFile) {
-        this.ownerRequested = true;
-        this.ownerRequestImageFile = ownerRequestImageFile;
-    }
-
-    public void clearOwnerRequestImageFile() {
-        this.ownerRequestImageFile = null;
-    }
 }

@@ -13,10 +13,13 @@ import java.time.LocalDateTime;
 public class BalanceGameMapper {
 
     public BalanceGameResponse toResponse(BalanceGame game, long commentCount,
+                                          long likeCount, boolean isLiked,
+                                          boolean isCommented, Boolean noticeEnabled,
                                           long voteCountA, long voteCountB,
                                           BalanceGameOption myVote, LocalDateTime now) {
         return new BalanceGameResponse(
                 game.getContent().getId(),
+                game.getGameDate(),
                 game.getEndAt(),
                 now,                                    // serverTime (기기 시계 대체 기준점)
                 game.getEndAt().isBefore(now),          // closed
@@ -26,7 +29,12 @@ public class BalanceGameMapper {
                         BalanceGameOption.B, game.getOptionBText(), ImageInfo.from(game.getOptionBImage()), voteCountB),
                 voteCountA + voteCountB,
                 myVote,
-                commentCount
+                commentCount,
+                likeCount,
+                game.getContent().getViewCount(),
+                isLiked,
+                isCommented,
+                noticeEnabled
         );
     }
 }

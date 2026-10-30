@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.profile.controller;
 
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileRequest;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
+import com.jiujitsu.api.domain.community.profile.dto.CommunityPublicProfileResponse;
 import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
@@ -51,7 +52,9 @@ public class CommunityProfileController {
             description = "현재 로그인한 사용자의 커뮤니티 프로필을 생성하거나 수정합니다."
     )
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.PERMISSION_DENIED})
+    @ApiErrorCodeExamples({ErrorCode.PERMISSION_DENIED, ErrorCode.REQUIRED_PARAMETER,
+            ErrorCode.COMPETITION_PIN_LIMIT_EXCEEDED, ErrorCode.COMPETITION_DUPLICATED,
+            ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.WRONG_PARAMETER})
     @PostMapping
     public CommunityProfileResponse upsertMyProfile(
             @Valid @RequestBody CommunityProfileRequest request

@@ -1,0 +1,104 @@
+# 보드 상태를 이슈/PR의 실제 상태에 맞춰 한 번에 맞춥니다.
+#
+# 닫힌 이슈 · 머지된 PR인데 Status가 Done이 아닌 아이템을 모두 Done으로 옮깁니다.
+# 자동화가 놓친 것을 나중에 손으로 옮기지 않아도 되도록,
+# Actions 탭에서 언제든 직접 실행할 수 있게 해 둡니다.
+name: Project Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "true면 무엇이 바뀌는지 로그만 남기고 실제로는 옮기지 않습니다"
+        type: boolean
+        default: true
+
+env:
+  PROJECT_NUMBER: "1"
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
+          script: |
+            const projectNumber = Number(process.env.PROJECT_NUMBER);
+            const org = context.repo.owner;
+            const dryRun = String(context.payload.inputs?.dry_run ?? 'true') !== 'false';
+
+            core.info(dryRun ? '=== DRY RUN (실제로 옮기지 않습니다) ===' : '=== APPLY ===');
+
+            const project = (await github.graphql(`
+              query($org:String!,$n:Int!){organization(login:$org){projectV2(number:$n){
+                id
+                field(name:"Status"){... on ProjectV2SingleSelectField{id options{id name}}}
+              }}}`, { org, n: projectNumber })).organization.projectV2;
+
+            const done = project.field?.options.find(o => o.name === 'Done');
+            if (!done) {
+              core.setFailed(
+                `Status 필드에 "Done" 옵션이 없습니다. ` +
+                `현재 옵션: ${(project.field?.options ?? []).map(o => o.name).join(', ') || '(Status 필드 없음)'}`
+              );
+              return;
+            }
+
+            // 보드 전체를 끝까지 넘겨 가며 읽습니다. 100개에서 끊으면
+            // 오래된 아이템만 보게 되어 정작 밀린 것들을 놓칩니다.
+            const page = `
+              query($org:String!,$n:Int!,$after:String){organization(login:$org){projectV2(number:$n){
+                items(first:100, after:$after){
+                  pageInfo{hasNextPage endCursor}
+                  nodes{
+                    id
+                    content{
+                      __typename
+                      ... on Issue{number state repository{nameWithOwner}}
+                      ... on PullRequest{number merged repository{nameWithOwner}}
+                    }
+                    fieldValueByName(name:"Status"){
+                      ... on ProjectV2ItemFieldSingleSelectValue{name}
+                    }
+                  }
+                }
+              }}}`;
+
+            const items = [];
+            let after = null;
+            do {
+              const p = (await github.graphql(page, { org, n: projectNumber, after }))
+                .organization.projectV2.items;
+              items.push(...p.nodes);
+              after = p.pageInfo.hasNextPage ? p.pageInfo.endCursor : null;
+            } while (after);
+
+            core.info(`보드 전체 아이템: ${items.length}개`);
+
+            const targets = items.filter(it => {
+              const c = it.content;
+              if (!c) return false;                                   // 콘텐츠 없는 초안 카드
+              if (it.fieldValueByName?.name === 'Done') return false;  // 이미 Done
+              if (c.__typename === 'Issue') return c.state === 'CLOSED';
+              if (c.__typename === 'PullRequest') return c.merged === true;
+              return false;
+            });
+
+            core.info(`Done으로 옮길 대상: ${targets.length}개`);
+            for (const it of targets) {
+              const c = it.content;
+              const kind = c.__typename === 'Issue' ? '이슈' : 'PR';
+              const from = it.fieldValueByName?.name ?? '(상태 없음)';
+              core.info(`- [${kind}] ${c.repository.nameWithOwner}#${c.number} : ${from} → Done`);
+              if (dryRun) continue;
+              await github.graphql(`
+                mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){updateProjectV2ItemFieldValue(
+                  input:{projectId:$p,itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}
+                ){clientMutationId}}`,
+                { p: project.id, i: it.id, f: project.field.id, o: done.id });
+            }
+
+            core.info(dryRun
+              ? `DRY RUN 종료 — ${targets.length}개가 대상입니다. 실제로 옮기지는 않았습니다.`
+              : `${targets.length}개를 Done으로 옮겼습니다.`);

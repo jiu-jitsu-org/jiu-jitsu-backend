@@ -10,6 +10,7 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Component
@@ -27,7 +28,7 @@ public class BalanceGameFactory {
     public BalanceGame createBalanceGame(Content content,
                                          String optionAText, Long optionAImageId,
                                          String optionBText, Long optionBImageId,
-                                         LocalDateTime endAt) {
+                                         LocalDateTime endAt, LocalDate gameDate) {
         return BalanceGame.builder()
                 .content(content)
                 .optionAText(optionAText)
@@ -35,6 +36,7 @@ public class BalanceGameFactory {
                 .optionBText(optionBText)
                 .optionBImage(findActiveImageOrNull(optionBImageId))
                 .endAt(endAt)
+                .gameDate(gameDate)
                 .build();
     }
 

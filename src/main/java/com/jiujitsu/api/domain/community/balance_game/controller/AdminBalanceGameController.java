@@ -28,7 +28,7 @@ public class AdminBalanceGameController {
             summary = "[임시] 밸런스 게임 등록",
             description = "테스트 데이터 생성을 위한 임시 관리자 등록 API 입니다. 추후 정식 관리자 기능으로 대체됩니다. (ROLE_ADMIN 필요)"
     )
-    @ApiErrorCodeExamples({ErrorCode.IMAGE_FILE_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.BALANCE_GAME_END_AT_MUST_BE_FUTURE})
     @PostMapping
     public BalanceGameResponse create(@Valid @RequestBody BalanceGameCreateRequest request) {
         return balanceGameService.create(request);

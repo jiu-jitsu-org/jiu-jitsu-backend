@@ -34,6 +34,7 @@ public class DeployTestController {
         Map<String, String> response = new HashMap<>();
         response.put("message", "Hello, " + name + "!!");
         response.put("timestamp", java.time.LocalDateTime.now().toString());
+        response.put("timezone", java.util.TimeZone.getDefault().getID());
 
         return ResponseEntity.ok(response);
     }

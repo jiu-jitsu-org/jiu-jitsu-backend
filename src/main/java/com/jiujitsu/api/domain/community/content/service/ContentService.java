@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.community.content.dto.ContentSaveResponse;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentLike;
 import com.jiujitsu.api.domain.community.content.entity.ContentSave;
+import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.community.content.mapper.ContentLikeMapper;
 import com.jiujitsu.api.domain.community.content.mapper.ContentSaveMapper;
 import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
@@ -63,8 +64,9 @@ public class ContentService {
             if (!Objects.equals(user.getId(), content.getCreatedBy().getId())) {
                 FcmPushType pushType = FcmPushType.CONTENTS_LIKE;
 
+                // 딥링크 목적지는 푸시 종류가 아니라 대상 컨텐츠 타입이 결정한다 (게시글 / 밸런스 게임)
                 Map<String, String> pushData = new HashMap<>();
-                pushData.put("type", pushType.getActionType().toString());
+                pushData.put("type", content.getContentType().getPushActionType().name());
                 pushData.put("data", content.getId().toString());
 
                 Long contentOwnerId = content.getCreatedBy().getId();
@@ -100,6 +102,12 @@ public class ContentService {
         // 게시물 조회
         Content content = contentRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
+
+        // 저장 목록("내가 저장한 글")은 게시글만 조회하므로, 목록에 뜨지 않을 컨텐츠는 저장 자체를 막는다.
+        // 밸런스 게임은 마감 후 지나가는 컨텐츠라 저장 대신 '내가 참여한 밸런스 게임'으로 다룬다.
+        if (content.getContentType() != ContentType.BOARD) {
+            throw new ErrorException(ErrorCode.CONTENT_SAVE_NOT_SUPPORTED);
+        }
 
         // 기존 저장 조회
         ContentSave newSave = null;

@@ -13,8 +13,7 @@ public record UserProfileResponse(
         @Schema(description = "닉네임", example = "홍길동") String nickname,
         @Schema(description = "프로필 이미지") ImageInfo profileImage,
         @Schema(description = "SNS 제공자", example = "KAKAO") SnsProvider snsProvider,
-        @Schema(description = "관장/사범 신청 여부", example = "true") Boolean ownerRequested,
-        @Schema(description = "관장/사범 신청 문서 이미지") ImageInfo ownerRequestImage,
+        @Schema(description = "관장/사범 인증 신청 상태") OwnerVerificationInfo ownerVerification,
         @Schema(description = "사용자 역할", example = "USER") UserRole role,
         @Schema(description = "사용자 상태", example = "ACTIVE") UserStatus status
 ) {

@@ -10,6 +10,8 @@ import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
+import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
+import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
@@ -27,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -46,6 +49,7 @@ public class BoardService {
     private final NoticeService noticeService;
     private final ReportService reportService;
     private final BoardHideService boardHideService;
+    private final CommunityProfileService communityProfileService;
 
     /**
      * 게시물 목록 조회
@@ -79,9 +83,9 @@ public class BoardService {
     /**
      * 게시물 상세 조회
      */
-    public BoardResponse getById(Long id) {
+    public BoardResponse getById(Long contentId) {
         // 게시글 조회
-        Board board = boardRepository.findByContent_Id(id)
+        Board board = boardRepository.findByContent_Id(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
         // 전체 숨김 처리된 게시물
@@ -91,7 +95,7 @@ public class BoardService {
 
         // 신고한 게시물은 신고자에게 숨김
         authenticationFacade.getCurrentUserOptional().ifPresent(user -> {
-            if (reportService.hasReported(user, ReportType.BOARD, id)) {
+            if (reportService.hasReported(user, ReportType.BOARD, contentId)) {
                 throw new ErrorException(ErrorCode.BOARD_NOT_FOUND);
             }
         });
@@ -104,8 +108,6 @@ public class BoardService {
         } else {
             board.getContent().incrementViewCount();
         }
-
-        Long contentId = board.getContent().getId();
 
         // 댓글 수 조회
         long commentCount = communityCommentsService.getCountComments(contentId);
@@ -131,9 +133,13 @@ public class BoardService {
             noticeEnabled = noticeService.isContentNoticeEnabled(currentUser.get().getId(), contentId);
         }
 
+        // 작성자 프로필 조회
+        CommunityProfile authorProfile = getAuthorProfile(board);
+
         // dto 생성
         return boardMapper.toResponse(
                 board,
+                authorProfile,
                 commentCount,
                 likeCount,
                 saveCount,
@@ -149,8 +155,8 @@ public class BoardService {
      * 게시물 작성
      */
     public BoardResponse create(BoardCreateRequest request) {
-        // 로그인 유저 체크
-        authenticationFacade.checkCurrentUser();
+        // 로그인 유저 조회
+        User user = authenticationFacade.getCurrentUser();
 
         // 등록 카테고리 조회
         BoardCategory category = boardCategoryService.findActiveCategory(request.categoryId());
@@ -163,15 +169,15 @@ public class BoardService {
         board = boardRepository.save(board);
 
         // dto 생성
-        return boardMapper.toResponse(board);
+        return boardMapper.toResponse(board, user, communityProfileService.findProfile(user).orElse(null));
     }
 
     /**
      * 게시물 수정
      */
-    public BoardResponse update(Long id, BoardUpdateRequest request) {
+    public BoardResponse update(Long contentId, BoardUpdateRequest request) {
         // 게시물 조회
-        Board board = boardRepository.findByContent_Id(id)
+        Board board = boardRepository.findByContent_Id(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
         // 권한 체크
@@ -200,14 +206,14 @@ public class BoardService {
         boardRepository.flush();
 
         // dto 생성
-        return boardMapper.toResponse(board);
+        return boardMapper.toResponse(board, board.getCreatedBy(), getAuthorProfile(board));
     }
 
     /**
      * 게시물 삭제
      */
-    public void delete(Long id) {
-        Board board = boardRepository.findByContent_Id(id)
+    public void delete(Long contentId) {
+        Board board = boardRepository.findByContent_Id(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
 
         // 권한 체크
@@ -298,6 +304,15 @@ public class BoardService {
             savedContentIds = contentService.getUserSavedContentIds(user.get().getId(), contentIds);
         }
 
+        // 작성자 프로필 일괄 조회
+        Map<Long, CommunityProfile> authorProfileMap = communityProfileService.getProfilesByUserIds(
+                boardPage.getContent().stream()
+                        .map(Board::getCreatedBy)
+                        .filter(Objects::nonNull)
+                        .map(User::getId)
+                        .collect(Collectors.toSet())
+        );
+
         Set<Long> finalCommentedContentIds = commentedContentIds;
         Set<Long> finalLikedContentIds = likedContentIds;
         Set<Long> finalSavedContentIds = savedContentIds;
@@ -306,6 +321,7 @@ public class BoardService {
 
                     return boardMapper.toBoardListResponse(
                             board,
+                            board.getCreatedBy() == null ? null : authorProfileMap.get(board.getCreatedBy().getId()),
                             commentCountMap.getOrDefault(contentId, 0L),
                             contentLikeMap.getOrDefault(contentId, 0L),
                             contentSaveMap.getOrDefault(contentId, 0L),
@@ -318,4 +334,8 @@ public class BoardService {
         );
     }
 
+    // 작성자 커뮤니티 프로필 (미작성 시 null)
+    private CommunityProfile getAuthorProfile(Board board) {
+        return communityProfileService.findProfile(board.getCreatedBy()).orElse(null);
+    }
 }

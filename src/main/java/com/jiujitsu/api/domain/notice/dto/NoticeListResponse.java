@@ -12,7 +12,7 @@ public record NoticeListResponse(
         @Schema(description = "제목", example = "타이틀입니다.") String title,
         @Schema(description = "내용", example = "내용입니다.") String body,
         @Schema(description = "알림 타입", example = "NEW_COMMENTS") FcmPushType pushType,
-        @Schema(description = "알림 동작 타입", example = "BOARD_DETAIL") PushActionType actionType,
+        @Schema(description = "알림 동작 타입 (대상 컨텐츠 타입이 결정: 게시글=BOARD_DETAIL, 밸런스 게임=BALANCE_DETAIL)", example = "BOARD_DETAIL") PushActionType actionType,
         @Schema(description = "데이터값", example = "1") String data,
         @Schema(description = "읽음여부", example = "true") Boolean isRead,
         @Schema(description = "생성 일시") LocalDateTime createdAt

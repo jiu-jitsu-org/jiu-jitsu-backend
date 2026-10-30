@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -44,4 +45,10 @@ public class BalanceGame extends BaseEntity {
 
     @Column(nullable = false)
     private LocalDateTime endAt;        // 마감 일시 (프론트 카운트다운 기준)
+
+    // 게임이 "진행된" 날짜. 등록 시각(createdAt)·마감 일시(endAt)와 의미가 달라 별도로 보관한다.
+    // - createdAt: 심야 등록 시 진행일 전날이 된다 (BalanceGameService.resolveEndAt 참고)
+    // - endAt: 마감 정책이 바뀌면(예: 익일 새벽 마감) 날짜가 밀려 과거 데이터까지 어긋난다
+    @Column(name = "game_date", nullable = false)
+    private LocalDate gameDate;
 }

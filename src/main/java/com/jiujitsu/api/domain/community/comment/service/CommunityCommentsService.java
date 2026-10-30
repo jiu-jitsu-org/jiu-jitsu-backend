@@ -22,6 +22,8 @@ import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepositor
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
+import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
+import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -31,6 +33,7 @@ import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
+import com.jiujitsu.api.global.fcm.entity.PushActionType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -66,6 +69,7 @@ public class CommunityCommentsService {
     private final CommentMapper commentMapper;
     private final CommentLikeFactory commentLikeFactory;
     private final CommentLikeMapper commentLikeMapper;
+    private final CommunityProfileService communityProfileService;
 
 
     private static final int INITIAL_CHILD_LIMIT = 3;
@@ -171,13 +175,16 @@ public class CommunityCommentsService {
         // 알림 설정 (커밋 후 FCM 발송 + 알림 저장)
         User boardWriter = content.getCreatedBy();
 
+        // 딥링크 목적지는 푸시 종류가 아니라 대상 컨텐츠 타입이 결정한다 (게시글 / 밸런스 게임)
+        PushActionType actionType = content.getContentType().getPushActionType();
+
         // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
         if (!Objects.equals(user.getId(), boardWriter.getId())) {
             eventPublisher.publishEvent(new CommentNoticeEvent(
                     boardWriter.getId(),
                     content.getId(),
                     FcmPushType.NEW_COMMENTS,
-                    Map.of("type", FcmPushType.NEW_COMMENTS.getActionType().toString(),
+                    Map.of("type", actionType.name(),
                            "data", content.getId().toString())
             ));
         }
@@ -189,13 +196,16 @@ public class CommunityCommentsService {
                         parentComments.get().getCreatedBy().getId(),
                         content.getId(),
                         FcmPushType.NEW_CHILD_COMMENTS,
-                        Map.of("type", FcmPushType.NEW_CHILD_COMMENTS.getActionType().toString(),
+                        Map.of("type", actionType.name(),
                                "data", content.getId().toString())
                 ));
             }
         }
 
-        return commentMapper.toCommunityCommentsResponse(communityComments, new ArrayList<>());
+        // 작성자 프로필 조회
+        CommunityProfile authorProfile = communityProfileService.findProfile(user).orElse(null);
+
+        return commentMapper.toCommunityCommentsResponse(communityComments, user, authorProfile, new ArrayList<>());
     }
 
     /**
@@ -222,12 +232,16 @@ public class CommunityCommentsService {
             commentLikeRepository.save(newLike);
 
             if (!Objects.equals(user.getId(), comment.getCreatedBy().getId())) {
+                Content content = comment.getContent();
+                // data 는 상세 화면을 여는 데 쓰이므로 commentId 가 아닌 contentId 를 보낸다.
+                // 나머지 3개 푸시와 동일한 규약이며, 밸런스 상세(GET /community/balance-game/{contentId})
+                // 진입에도 contentId 가 필요하다. (#136)
                 eventPublisher.publishEvent(new CommentNoticeEvent(
                         comment.getCreatedBy().getId(),
-                        comment.getContent().getId(),
+                        content.getId(),
                         FcmPushType.COMMENTS_LIKE,
-                        Map.of("type", FcmPushType.COMMENTS_LIKE.getActionType().toString(),
-                               "data", comment.getId().toString())
+                        Map.of("type", content.getContentType().getPushActionType().name(),
+                               "data", content.getId().toString())
                 ));
             }
         }
@@ -422,7 +436,16 @@ public class CommunityCommentsService {
                 ? Set.of()
                 : communityCommentsRepository.findRepliedParentIds(user.getId(), commentIds);
 
-        return new CommentViewContext(likeCountMap, likedCommentIds, user, blockedUserIds, reportedCommentIdSet, repliedParentIds);
+        // 작성자 프로필 일괄 조회
+        Map<Long, CommunityProfile> authorProfileMap = communityProfileService.getProfilesByUserIds(
+                comments.stream()
+                        .map(CommunityComments::getCreatedBy)
+                        .filter(Objects::nonNull)
+                        .map(User::getId)
+                        .collect(Collectors.toSet())
+        );
+
+        return new CommentViewContext(likeCountMap, likedCommentIds, user, blockedUserIds, reportedCommentIdSet, repliedParentIds, authorProfileMap);
     }
 
     private CommunityCommentsResponse toResponse(CommunityComments comment,
@@ -431,6 +454,7 @@ public class CommunityCommentsService {
                                                  CommentViewContext viewContext) {
         return commentMapper.toCommunityCommentsResponse(
                 comment,
+                comment.getCreatedBy() == null ? null : viewContext.authorProfileMap().get(comment.getCreatedBy().getId()),
                 childrenList,
                 viewContext.likeCountMap().getOrDefault(comment.getId(), 0L),
                 viewContext.likedCommentIds().contains(comment.getId()),
@@ -448,7 +472,8 @@ public class CommunityCommentsService {
             User user,
             Set<Long> blockedUserIds,
             Set<Long> reportedCommentIdSet,
-            Set<Long> repliedParentIds
+            Set<Long> repliedParentIds,
+            Map<Long, CommunityProfile> authorProfileMap
     ) {
     }
 

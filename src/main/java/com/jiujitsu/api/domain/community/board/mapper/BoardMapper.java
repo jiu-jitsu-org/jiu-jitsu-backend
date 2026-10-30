@@ -6,7 +6,9 @@ import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardTag;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileInfo;
+import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
+import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.global.util.TimeAgoUtil;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +20,7 @@ public class BoardMapper {
     /**
      * 목록 response
      */
-    public BoardListResponse toBoardListResponse(Board board, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, boolean isAuthor) {
+    public BoardListResponse toBoardListResponse(Board board, CommunityProfile authorProfile, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, boolean isAuthor) {
         Content content = board.getContent();
 
         return new BoardListResponse(
@@ -38,7 +40,7 @@ public class BoardMapper {
                 isSaved,
                 getImageInfoList(content),
                 getTagNames(board),
-                CommunityProfileInfo.from(board.getCreatedBy()),
+                CommunityProfileInfo.from(board.getCreatedBy(), authorProfile),
                 isAuthor,
                 TimeAgoUtil.format(board.getCreatedAt())
         );
@@ -47,7 +49,7 @@ public class BoardMapper {
     /**
      * 상세 response
      */
-    public BoardResponse toResponse(Board board, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, Boolean noticeEnabled, boolean isAuthor) {
+    public BoardResponse toResponse(Board board, CommunityProfile authorProfile, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, Boolean noticeEnabled, boolean isAuthor) {
         Content content = board.getContent();
         return new BoardResponse(
                 content.getId(),
@@ -68,13 +70,17 @@ public class BoardMapper {
                 getImageInfoList(content),
                 getTagNames(board),
                 noticeEnabled,
-                CommunityProfileInfo.from(board.getCreatedBy()),
+                CommunityProfileInfo.from(board.getCreatedBy(), authorProfile),
                 isAuthor,
                 TimeAgoUtil.format(board.getCreatedAt())
         );
     }
 
-    public BoardResponse toResponse(Board board) {
+    /**
+     * 작성·수정 직후 response
+     * - author: 작성 직후 board.getCreatedBy() 는 감사(AuditorAware)가 넣은 id 만 있는 User 라 실제 작성자를 받는다
+     */
+    public BoardResponse toResponse(Board board, User author, CommunityProfile authorProfile) {
         Content content = board.getContent();
         return new BoardResponse(
                 content.getId(),
@@ -95,7 +101,7 @@ public class BoardMapper {
                 getImageInfoList(content),
                 getTagNames(board),
                 null,
-                CommunityProfileInfo.from(board.getCreatedBy()),
+                CommunityProfileInfo.from(author, authorProfile),
                 true,
                 TimeAgoUtil.format(board.getCreatedAt())
         );

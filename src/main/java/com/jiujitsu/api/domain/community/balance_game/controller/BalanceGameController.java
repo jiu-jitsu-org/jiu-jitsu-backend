@@ -12,6 +12,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "balance-game-controller", description = "커뮤니티 밸런스 게임 API")
@@ -33,8 +36,21 @@ public class BalanceGameController {
     }
 
     @Operation(
+            summary = "내가 투표한 밸런스 게임 목록 조회",
+            description = "내가 투표한 밸런스 게임 목록을 gameDate 최신순으로 조회합니다. 마감된 게임도 포함하며, "
+                    + "투표를 취소한 게임은 제외됩니다. 항목은 상세 조회와 같은 형태이며 조회수는 증가하지 않습니다. "
+                    + "정렬은 서버에서 고정하므로 sort 파라미터는 무시됩니다."
+    )
+    @LoginErrorExamples
+    @GetMapping("/participated")
+    public Page<BalanceGameResponse> participatedList(@PageableDefault(size = 20) Pageable pageable) {
+        return balanceGameService.getParticipatedList(pageable);
+    }
+
+    @Operation(
             summary = "밸런스 게임 상세 조회",
             description = "밸런스 게임 상세 정보를 조회합니다. 마감된 게임도 조회 가능하며 결과만 노출됩니다. "
+                    + "호출할 때마다 조회수(viewCount)가 1 증가합니다. (메인의 '오늘의 게임' 조회는 미증가) "
                     + "댓글은 별도로 댓글 목록 API(/community/comments)를 contentId 로 호출합니다."
     )
     @ApiErrorCodeExamples({ErrorCode.BALANCE_GAME_NOT_FOUND})

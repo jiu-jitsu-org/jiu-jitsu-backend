@@ -76,6 +76,7 @@ domain/
 ├── community/        - 커뮤니티 (하위 도메인 존재)
 │   ├── board/        - 게시글
 │   ├── comment/      - 댓글
+│   ├── competition/  - 등록 대회 (대회명 자동완성 검색, 관리자 등록)
 │   ├── content/      - 컨텐츠 공통 (좋아요, 저장)
 │   ├── profile/      - 커뮤니티 프로필
 │   └── report/       - 신고
@@ -263,11 +264,12 @@ domain/community/board/
 
 | 도메인 | 주요 기능 |
 |--------|-----------|
-| user | SNS 로그인(Google/Apple), JWT 발급, 프로필, 탈퇴, 차단 |
+| user | SNS 로그인(Google/Apple), JWT 발급, 프로필, 탈퇴, 차단, 관장/사범 인증 신청·승인(관리자) |
 | admin | 관리자 회원가입/로그인, 신고 처리 |
 | boot_strap | OS별 앱 버전 정보 조회 |
 | community/board | 게시글 CRUD, 카테고리, 좋아요, 저장, 숨김 |
 | community/comment | 댓글 CRUD, 좋아요 |
+| community/competition | 등록 대회 검색(대회명 자동완성), 관리자 일괄 등록 |
 | community/content | 좋아요/저장 공통 처리 |
 | community/profile | 커뮤니티 프로필(벨트, 경기 이력 등) |
 | community/report | 게시글/댓글 신고, 자동 숨김 |

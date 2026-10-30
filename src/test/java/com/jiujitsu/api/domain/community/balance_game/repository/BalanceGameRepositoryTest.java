@@ -28,6 +28,7 @@ class BalanceGameRepositoryTest {
                 .optionAText(aText)
                 .optionBText(bText)
                 .endAt(endAt)
+                .gameDate(endAt.toLocalDate())
                 .build();
         return balanceGameRepository.save(game);
     }
