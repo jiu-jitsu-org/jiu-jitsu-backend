@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.profile.controller;
 
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileRequest;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
+import com.jiujitsu.api.domain.community.profile.dto.CommunityPublicProfileResponse;
 import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
@@ -30,6 +31,16 @@ public class CommunityProfileController {
     @GetMapping
     public CommunityProfileResponse getMyProfile() {
         return communityProfileService.getMyProfile();
+    }
+
+    @Operation(
+            summary = "다른 회원 공개 프로필 조회",
+            description = "회원 ID로 공개 프로필을 조회합니다. 비로그인도 조회 가능하며, 체급·성별·특기·지도 정보는 내려가지 않습니다. 대회 정보는 대회명이 있는 기록만 내려갑니다."
+    )
+    @ApiErrorCodeExamples({ErrorCode.MEMBER_NOT_FOUND})
+    @GetMapping("/{userId}")
+    public CommunityPublicProfileResponse getPublicProfile(@PathVariable Long userId) {
+        return communityProfileService.getPublicProfile(userId);
     }
 
     @Operation(

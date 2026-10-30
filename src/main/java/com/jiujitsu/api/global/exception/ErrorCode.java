@@ -51,6 +51,7 @@ public enum ErrorCode {
     ALREADY_REPORTED(400, "U0008", "이미 신고한 게시물/댓글입니다."),
     REPORT_NOT_FOUND(404, "U0009", "존재하지 않는 신고입니다."),
     SELF_HIDE_NOT_ALLOWED(400, "U0010", "자신의 게시물은 숨길 수 없습니다."),
+    MEMBER_NOT_FOUND(404, "U0011", "존재하지 않는 회원입니다."),
 
     /**
      * 인증 에러
