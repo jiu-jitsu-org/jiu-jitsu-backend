@@ -41,6 +41,16 @@ public class NoticeService {
     private final ContentRepository contentRepository;
 
     /**
+     * 안 읽은 알림 수 조회 (종 아이콘 dot 용)
+     * - 집계 기준은 목록 조회와 동일
+     */
+    @Transactional(readOnly = true)
+    public long getUnreadCount() {
+        User user = authenticationFacade.getCurrentUser();
+        return noticeRepository.countByUserIdAndIsRead(user.getId(), false);
+    }
+
+    /**
      * 알림 목록 조회
      */
     @Transactional(readOnly = true)
