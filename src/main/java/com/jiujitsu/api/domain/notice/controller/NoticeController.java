@@ -26,6 +26,13 @@ public class NoticeController {
 
     private final NoticeService noticeService;
 
+    @Operation(summary = "안 읽은 알림 수 조회", description = "안 읽은 알림 수를 반환합니다. 종 아이콘 dot 갱신용으로, 목록 조회와 동일한 집계 기준을 사용합니다.")
+    @LoginErrorExamples
+    @GetMapping("/unread-count")
+    public long getUnreadCount() {
+        return noticeService.getUnreadCount();
+    }
+
     @Operation(summary = "알림 목록 조회", description = "알림 목록을 조회합니다.")
     @LoginErrorExamples
     @GetMapping

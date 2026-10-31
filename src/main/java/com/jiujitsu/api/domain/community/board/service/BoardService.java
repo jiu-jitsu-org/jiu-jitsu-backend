@@ -16,6 +16,7 @@ import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -37,6 +38,7 @@ import java.util.stream.Stream;
 public class BoardService {
 
     private final AuthenticationFacade authenticationFacade;
+    private final UserRepository userRepository;
     private final BoardRepository boardRepository;
     private final BoardFactory boardFactory;
     private final BoardMapper boardMapper;
@@ -196,6 +198,14 @@ public class BoardService {
         content.getImageFiles().clear();
         content.addImageFiles(boardFactory.createImageFiles(request.getImageFileIdList()));
 
+        if (request.getTags() != null) {
+            boardFactory.replaceTags(board, request.getTags());
+        }
+
+        // 이미지·태그만 바꾼 경우 Board 엔티티가 dirty 상태가 되지 않아
+        // @LastModifiedDate 가 갱신되지 않으므로, 항상 touch() 로 dirty 상태를 보장한다.
+        board.touch();
+
         // 수정여부 업데이트를 위한 flush 강제호출
         boardRepository.flush();
 
@@ -224,6 +234,32 @@ public class BoardService {
         User user = authenticationFacade.getCurrentUser();
         Page<Board> page = boardRepository.findAllByCreatedByAndNotHidden(user, pageable);
 
+        return mapBoardsToResponse(page);
+    }
+
+    /**
+     * 특정 사용자가 쓴 글 목록 (비로그인 가능)
+     * - 차단 관계이면 404
+     * - 신고/숨김 콘텐츠 제외 (뷰어 기준)
+     */
+    @Transactional(readOnly = true)
+    public Page<BoardListResponse> getUserBoardList(Long userId, Pageable pageable) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+
+        authenticationFacade.getCurrentUserOptional().ifPresent(viewer -> {
+            if (userBlockService.isBlockedBetween(viewer.getId(), userId)) {
+                throw new ErrorException(ErrorCode.USER_NOT_FOUND);
+            }
+        });
+
+        List<Long> reportedContentIds = reportService.getReportedTargetIds(ReportType.BOARD);
+        List<Long> hiddenContentIds = boardHideService.getHiddenContentIds();
+        List<Long> excludedContentIds = Stream.concat(reportedContentIds.stream(), hiddenContentIds.stream())
+                .distinct().toList();
+        List<Long> excludedContentIdsSentinel = excludedContentIds.isEmpty() ? List.of(-1L) : excludedContentIds;
+
+        Page<Board> page = boardRepository.findAllByUserFiltered(userId, excludedContentIdsSentinel, pageable);
         return mapBoardsToResponse(page);
     }
 

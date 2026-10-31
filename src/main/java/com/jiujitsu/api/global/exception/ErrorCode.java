@@ -23,6 +23,7 @@ public enum ErrorCode {
     NOTICE_NOT_FOUND(404, "C0005", "존재하지 않는 알림입니다."),
     BALANCE_GAME_NOT_FOUND(404, "C0006", "존재하지 않는 밸런스 게임입니다."),
     BALANCE_GAME_CLOSED(400, "C0007", "이미 마감된 밸런스 게임입니다."),
+    COMMENT_RESTORE_EXPIRED(400, "C0008", "복구 가능 시간이 만료됐습니다."),
     CONTENT_SAVE_NOT_SUPPORTED(400, "C0008", "저장할 수 없는 게시물입니다."),
     BALANCE_GAME_END_AT_MUST_BE_FUTURE(400, "C0009", "마감 일시는 미래 시간이어야 합니다."),
     COMPETITION_NOT_FOUND(404, "C0010", "존재하지 않는 등록 대회입니다."),
@@ -55,7 +56,7 @@ public enum ErrorCode {
     MEMBER_NOT_FOUND(404, "U0011", "존재하지 않는 회원입니다."),
     OWNER_REQUEST_NOT_FOUND(404, "U0012", "존재하지 않는 관장/사범 인증 신청입니다."),
     OWNER_REQUEST_NOT_PENDING(400, "U0013", "이미 처리된 관장/사범 인증 신청입니다."),
-
+    PROFILE_NOT_FOUND(404, "U0011", "존재하지 않는 회원입니다."),
     /**
      * 인증 에러
      */

@@ -49,6 +49,11 @@ public class Board extends BaseEntity implements Hideable {
     public void addTags(List<BoardTag> newTags) {
         this.tags.addAll(newTags);
     }
+
+    public void replaceTags(List<BoardTag> newTags) {
+        this.tags.clear();
+        this.tags.addAll(newTags);
+    }
     @Column
     private LocalDateTime hiddenAt; // 숨김일시
 

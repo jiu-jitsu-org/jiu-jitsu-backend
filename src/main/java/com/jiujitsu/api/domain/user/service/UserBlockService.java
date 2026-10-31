@@ -52,6 +52,15 @@ public class UserBlockService {
     }
 
     /**
+     * 두 사용자 사이에 어느 방향이든 차단 관계가 있는지 확인
+     */
+    @Transactional(readOnly = true)
+    public boolean isBlockedBetween(Long viewerId, Long targetId) {
+        return userBlockRepository.existsByBlockerIdAndBlockedId(viewerId, targetId)
+                || userBlockRepository.existsByBlockerIdAndBlockedId(targetId, viewerId);
+    }
+
+    /**
      * 현재 로그인 유저가 차단한 유저 ID 목록 조회
      */
     @Transactional(readOnly = true)

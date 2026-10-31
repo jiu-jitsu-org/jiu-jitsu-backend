@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.community.comment.repository;
 
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -96,4 +97,51 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
             """)
     Set<Long> findRepliedParentIds(@Param("userId") Long userId,
                                    @Param("parentIds") Collection<Long> parentIds);
+
+    /**
+     * 특정 사용자가 댓글을 단 Board 목록을 묶음 페이징
+     * 반환: [boardId(Long), latestCommentedAt(LocalDateTime)]
+     * - 삭제된 댓글 제외
+     * - 숨김 게시물 제외
+     * - 뷰어가 차단한 게시물 작성자 제외 (excludedAuthorIds: 차단 없으면 [-1L] 전달)
+     * - 묶음끼리 최근 댓글 기준 최신순
+     */
+    @Query(value = """
+            SELECT b.id, MAX(c.createdAt)
+            FROM Board b
+            INNER JOIN CommunityComments c ON c.content = b.content
+            WHERE c.createdBy.id = :userId
+              AND c.deletedAt IS NULL
+              AND b.hiddenAt IS NULL
+              AND b.createdBy.id NOT IN :excludedAuthorIds
+            GROUP BY b.id
+            ORDER BY MAX(c.createdAt) DESC
+            """,
+            countQuery = """
+            SELECT COUNT(DISTINCT b.id)
+            FROM Board b
+            INNER JOIN CommunityComments c ON c.content = b.content
+            WHERE c.createdBy.id = :userId
+              AND c.deletedAt IS NULL
+              AND b.hiddenAt IS NULL
+              AND b.createdBy.id NOT IN :excludedAuthorIds
+            """)
+    Page<Object[]> findBoardsWithLatestCommentByUser(
+            @Param("userId") Long userId,
+            @Param("excludedAuthorIds") List<Long> excludedAuthorIds,
+            Pageable pageable);
+
+    /**
+     * 특정 원글(content) 목록에서 특정 사용자가 단 댓글 조회 (삭제 제외, 최신순)
+     */
+    @Query("""
+            SELECT c FROM CommunityComments c
+            WHERE c.content.id IN :contentIds
+              AND c.createdBy.id = :userId
+              AND c.deletedAt IS NULL
+            ORDER BY c.createdAt DESC
+            """)
+    List<CommunityComments> findByContentIdsAndUserId(
+            @Param("contentIds") List<Long> contentIds,
+            @Param("userId") Long userId);
 }
