@@ -36,4 +36,13 @@ public abstract class BaseEntity {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /**
+     * 엔티티 자체 필드 변경 없이 updatedAt만 갱신해야 할 때 호출.
+     * 이 필드를 직접 변경해 Hibernate dirty-check를 유도하면
+     * @PreUpdate 가 발동되어 @LastModifiedDate / @LastModifiedBy 도 함께 갱신된다.
+     */
+    public void touch() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

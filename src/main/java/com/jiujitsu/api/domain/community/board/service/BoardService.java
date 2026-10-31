@@ -202,6 +202,10 @@ public class BoardService {
             boardFactory.replaceTags(board, request.getTags());
         }
 
+        // 이미지·태그만 바꾼 경우 Board 엔티티가 dirty 상태가 되지 않아
+        // @LastModifiedDate 가 갱신되지 않으므로, 항상 touch() 로 dirty 상태를 보장한다.
+        board.touch();
+
         // 수정여부 업데이트를 위한 flush 강제호출
         boardRepository.flush();
 
