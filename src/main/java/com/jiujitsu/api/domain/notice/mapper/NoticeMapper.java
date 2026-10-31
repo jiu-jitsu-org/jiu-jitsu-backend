@@ -8,7 +8,7 @@ import com.jiujitsu.api.domain.notice.entity.Notice;
 import com.jiujitsu.api.domain.notice.entity.UserNoticeSetting;
 
 public class NoticeMapper {
-    public static NoticeListResponse toNoticeListResponse(Notice notice) {
+    public static NoticeListResponse toNoticeListResponse(Notice notice, String deletedStatus) {
         return new NoticeListResponse(
                 notice.getId(),
                 notice.getTitle(),
@@ -17,7 +17,8 @@ public class NoticeMapper {
                 notice.getPushActionType(),
                 notice.getData(),
                 notice.getIsRead(),
-                notice.getCreatedAt()
+                notice.getCreatedAt(),
+                deletedStatus
         );
     }
 

@@ -185,7 +185,9 @@ public class CommunityCommentsService {
                     content.getId(),
                     FcmPushType.NEW_COMMENTS,
                     Map.of("type", actionType.name(),
-                           "data", content.getId().toString())
+                           "data", content.getId().toString()),
+                    user.getId(),
+                    communityComments.getId()
             ));
         }
 
@@ -197,7 +199,9 @@ public class CommunityCommentsService {
                         content.getId(),
                         FcmPushType.NEW_CHILD_COMMENTS,
                         Map.of("type", actionType.name(),
-                               "data", content.getId().toString())
+                               "data", content.getId().toString()),
+                        user.getId(),
+                        communityComments.getId()
                 ));
             }
         }
@@ -241,7 +245,9 @@ public class CommunityCommentsService {
                         content.getId(),
                         FcmPushType.COMMENTS_LIKE,
                         Map.of("type", content.getContentType().getPushActionType().name(),
-                               "data", content.getId().toString())
+                               "data", content.getId().toString()),
+                        user.getId(),
+                        comment.getId()
                 ));
             }
         }

@@ -41,6 +41,12 @@ public class Notice extends BaseEntity {
     private String data;
 
     @Column
+    private Long senderUserId;  // 알림 발신자 (차단 필터용)
+
+    @Column
+    private Long refId;         // 댓글/대댓글 ID (삭제 안내 구분용)
+
+    @Column
     private Boolean isRead;
 
     public void setRead() {
