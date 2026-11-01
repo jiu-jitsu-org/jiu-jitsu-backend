@@ -73,14 +73,16 @@ public class CommunityCommentsService {
 
 
     private static final int INITIAL_CHILD_LIMIT = 3;
+    private static final int COMMENT_PAGE_SIZE = 20;
     private static final int REPLY_PAGE_SIZE = 10;
 
     /**
-     * 댓글 목록 조회
-     * 대댓글은 sortType 기준 3개만 미리보기로 포함한다. 나머지는 대댓글 추가 조회로 가져온다.
+     * 댓글 목록 조회 (페이징)
+     * 최상위 댓글을 20개씩 페이징하며, 대댓글은 sortType 기준 3개만 미리보기로 포함한다.
+     * 나머지 대댓글은 대댓글 추가 조회로 가져온다.
      */
     @Transactional(readOnly = true)
-    public List<CommunityCommentsResponse> getComments(CommentsListRequest request) {
+    public Slice<CommunityCommentsResponse> getComments(CommentsListRequest request, Pageable pageable) {
         Long contentId = request.id();
         CommentsSortType sortType = request.sortType();
 
@@ -90,16 +92,25 @@ public class CommunityCommentsService {
         Set<Long> blockedUserIds = new HashSet<>(userBlockService.getBlockedUserIds());
         Set<Long> reportedCommentIdSet = new HashSet<>(reportService.getReportedTargetIds(ReportType.COMMENT));
 
-        List<CommunityComments> comments = communityCommentsRepository.findByContentIdFiltered(contentId);
-        CommentViewContext viewContext = buildViewContext(comments, blockedUserIds, reportedCommentIdSet);
+        Sort sort = toSort(sortType);
+        int pageSize = pageable.getPageSize();
+        Pageable pageRequest = PageRequest.of(pageable.getPageNumber(), pageSize + 1, sort);
 
-        Map<Long, List<CommunityComments>> childrenByParentId = comments.stream()
-                .filter(c -> !isRootComment(c))
+        List<CommunityComments> fetched = communityCommentsRepository.findRootCommentsByContentIdFiltered(contentId, pageRequest);
+        boolean hasNext = fetched.size() > pageSize;
+        List<CommunityComments> roots = hasNext ? fetched.subList(0, pageSize) : fetched;
+
+        List<Long> rootIds = roots.stream().map(CommunityComments::getId).toList();
+        List<CommunityComments> replies = rootIds.isEmpty()
+                ? List.of()
+                : communityCommentsRepository.findRepliesByParentIds(rootIds);
+
+        Map<Long, List<CommunityComments>> childrenByParentId = replies.stream()
                 .collect(Collectors.groupingBy(CommunityComments::getParentId, LinkedHashMap::new, Collectors.toList()));
 
-        List<CommunityComments> roots = comments.stream()
-                .filter(this::isRootComment)
-                .toList();
+        List<CommunityComments> all = new ArrayList<>(roots);
+        all.addAll(replies);
+        CommentViewContext viewContext = buildViewContext(all, blockedUserIds, reportedCommentIdSet);
 
         List<CommunityCommentsResponse> result = roots.stream()
                 .map(root -> {
@@ -115,9 +126,7 @@ public class CommunityCommentsService {
                 })
                 .toList();
 
-        return Objects.equals(sortType, CommentsSortType.CREATE_DESC)
-                ? result.stream().sorted(Comparator.comparing(CommunityCommentsResponse::createdAt).reversed()).toList()
-                : result.stream().sorted(Comparator.comparing(CommunityCommentsResponse::createdAt)).toList();
+        return new SliceImpl<>(result, PageRequest.of(pageable.getPageNumber(), pageSize, sort), hasNext);
     }
 
     /**

@@ -18,8 +18,6 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @Tag(name = "community-comments-controller", description = "커뮤니티 댓글 API")
 @CommonApiResponses
 @RestController
@@ -31,12 +29,18 @@ public class CommunityCommentsController {
 
     @Operation(
             summary = "커뮤니티 게시글 댓글 목록 조회",
-            description = "현재 커뮤니티 게시물의 댓글을 조회합니다. 대댓글은 sortType 기준 3개만 포함하며, 나머지는 대댓글 추가 조회로 가져옵니다. 차단한 작성자의 댓글/대댓글은 제외하지 않고 isBlocked=true로 내려가며, 본문과 작성자 정보는 마스킹됩니다."
+            description = "현재 커뮤니티 게시물의 최상위 댓글을 페이징합니다. " +
+                    "page(0부터)·size(기본 20)로 페이지를 제어합니다. " +
+                    "대댓글은 sortType 기준 3개만 포함하며, 나머지는 대댓글 추가 조회로 가져옵니다. " +
+                    "차단한 작성자의 댓글/대댓글은 제외하지 않고 isBlocked=true로 내려가며, 본문과 작성자 정보는 마스킹됩니다."
     )
     @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
     @GetMapping
-    public List<CommunityCommentsResponse> getComments(@ModelAttribute CommentsListRequest request) {
-        return communityCommentsService.getComments(request);
+    public Slice<CommunityCommentsResponse> getComments(
+            @ModelAttribute CommentsListRequest request,
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        return communityCommentsService.getComments(request, pageable);
     }
 
     @Operation(

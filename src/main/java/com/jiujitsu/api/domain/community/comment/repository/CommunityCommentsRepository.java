@@ -66,6 +66,37 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
     List<CommunityComments> findByContentIdFiltered(@Param("contentId") Long contentId);
 
     /**
+     * 최상위 댓글 목록 페이징 조회 (parentId IS NULL or 0, 숨김 필터 동일)
+     */
+    @EntityGraph(attributePaths = {"createdBy", "content"})
+    @Query("""
+            SELECT c FROM CommunityComments c
+            WHERE c.content.id = :contentId
+              AND (c.parentId IS NULL OR c.parentId = 0)
+              AND (
+                (c.hiddenAt IS NULL AND c.isReported = false AND c.deletedAt IS NULL)
+                OR c.deletedAt IS NOT NULL
+                OR c.isReported = true
+              )
+            """)
+    List<CommunityComments> findRootCommentsByContentIdFiltered(@Param("contentId") Long contentId, Pageable pageable);
+
+    /**
+     * 특정 부모 댓글들의 대댓글 일괄 조회 (숨김 필터 동일)
+     */
+    @EntityGraph(attributePaths = {"createdBy", "content"})
+    @Query("""
+            SELECT c FROM CommunityComments c
+            WHERE c.parentId IN :parentIds
+              AND (
+                (c.hiddenAt IS NULL AND c.isReported = false AND c.deletedAt IS NULL)
+                OR c.deletedAt IS NOT NULL
+                OR c.isReported = true
+              )
+            """)
+    List<CommunityComments> findRepliesByParentIds(@Param("parentIds") List<Long> parentIds);
+
+    /**
      * 대댓글 추가 조회 (parentId 기준, 숨김 필터는 목록 조회와 동일)
      */
     @EntityGraph(attributePaths = {"createdBy", "content"})
