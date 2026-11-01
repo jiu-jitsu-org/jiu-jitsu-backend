@@ -30,6 +30,9 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -79,14 +82,16 @@ class CommunityCommentsAuthorProfileTest {
         CommunityComments root = comment(100L, 0L, owner, content, 1);
         CommunityComments child = comment(101L, 100L, noProfile, content, 2);
         given(contentRepository.findById(CONTENT_ID)).willReturn(Optional.of(content));
-        given(communityCommentsRepository.findByContentIdFiltered(CONTENT_ID)).willReturn(List.of(root, child));
+        given(communityCommentsRepository.findRootCommentsByContentIdFiltered(eq(CONTENT_ID), any())).willReturn(List.of(root));
+        given(communityCommentsRepository.findRepliesByParentIds(List.of(100L))).willReturn(List.of(child));
         CommunityProfile ownerProfile = CommunityProfile.builder()
                 .user(owner).beltRank(BeltRank.BLACK).beltStripe(BeltStripe.STRIPE_1).build();
         given(communityProfileService.getProfilesByUserIds(Set.of(1L, 2L))).willReturn(Map.of(1L, ownerProfile));
 
         // when
-        List<CommunityCommentsResponse> result = communityCommentsService.getComments(
-                new CommentsListRequest(CONTENT_ID, CommentsSortType.CREATE_DESC));
+        Slice<CommunityCommentsResponse> slice = communityCommentsService.getComments(
+                new CommentsListRequest(CONTENT_ID, CommentsSortType.CREATE_DESC), PageRequest.of(0, 20));
+        List<CommunityCommentsResponse> result = slice.getContent();
 
         // then - 댓글 묶음당 1번
         verify(communityProfileService, times(1)).getProfilesByUserIds(any());
@@ -110,14 +115,14 @@ class CommunityCommentsAuthorProfileTest {
         CommunityComments root = comment(100L, 0L, blocked, content, 1);
         given(contentRepository.findById(CONTENT_ID)).willReturn(Optional.of(content));
         given(userBlockService.getBlockedUserIds()).willReturn(List.of(blocked.getId()));
-        given(communityCommentsRepository.findByContentIdFiltered(CONTENT_ID)).willReturn(List.of(root));
+        given(communityCommentsRepository.findRootCommentsByContentIdFiltered(eq(CONTENT_ID), any())).willReturn(List.of(root));
         CommunityProfile blockedProfile = CommunityProfile.builder()
                 .user(blocked).beltRank(BeltRank.BLUE).beltStripe(BeltStripe.STRIPE_2).build();
         given(communityProfileService.getProfilesByUserIds(Set.of(3L))).willReturn(Map.of(3L, blockedProfile));
 
         // when
         List<CommunityCommentsResponse> result = communityCommentsService.getComments(
-                new CommentsListRequest(CONTENT_ID, CommentsSortType.CREATE_DESC));
+                new CommentsListRequest(CONTENT_ID, CommentsSortType.CREATE_DESC), PageRequest.of(0, 20)).getContent();
 
         // then
         CommunityProfileInfo author = result.get(0).author();

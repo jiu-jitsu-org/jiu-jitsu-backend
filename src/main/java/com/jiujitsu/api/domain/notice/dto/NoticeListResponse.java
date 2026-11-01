@@ -15,6 +15,9 @@ public record NoticeListResponse(
         @Schema(description = "알림 동작 타입 (대상 컨텐츠 타입이 결정: 게시글=BOARD_DETAIL, 밸런스 게임=BALANCE_DETAIL)", example = "BOARD_DETAIL") PushActionType actionType,
         @Schema(description = "데이터값", example = "1") String data,
         @Schema(description = "읽음여부", example = "true") Boolean isRead,
-        @Schema(description = "생성 일시") LocalDateTime createdAt
+        @Schema(description = "생성 일시") LocalDateTime createdAt,
+        @Schema(description = "대상 삭제 상태. null=정상, BOARD=게시글 삭제, COMMENT=댓글 삭제, REPLY=대댓글 삭제",
+                allowableValues = {"BOARD", "COMMENT", "REPLY"}, nullable = true)
+        String deletedStatus
 ) {
 }

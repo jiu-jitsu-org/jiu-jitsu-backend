@@ -64,6 +64,22 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     """)
     Page<Board> findAllByCreatedByAndNotHidden(@Param("createdBy") User createdBy, Pageable pageable);
 
+    /**
+     * 특정 사용자가 작성한 글 목록 (타인 조회용)
+     * - 숨김 · 신고 콘텐츠 제외
+     * - 뷰어가 차단한 작성자 제외(자기 글 조회 시에는 빈 리스트 전달)
+     */
+    @Query("""
+    SELECT b FROM Board b
+    WHERE b.createdBy.id = :authorId
+      AND b.hiddenAt IS NULL
+      AND b.content.id NOT IN :excludedContentIds
+    """)
+    Page<Board> findAllByUserFiltered(
+            @Param("authorId") Long authorId,
+            @Param("excludedContentIds") List<Long> excludedContentIds,
+            Pageable pageable);
+
     @Query("""
     SELECT b
     FROM ContentSave cs

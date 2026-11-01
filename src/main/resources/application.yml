@@ -49,6 +49,17 @@ springdoc:
 # Apple Key 공통
 apple:
   filePath: ./jiujitsuLab_AuthKey_Z3HRNZG68M.p8
+  keyId: Z3HRNZG68M           # Apple Developer Console > Keys 에서 확인
+  teamId: ${APPLE_TEAM_ID}    # Apple Developer Console > Membership > Team ID
+  clientId: ${APPLE_CLIENT_ID} # 앱 번들 ID (예: kr.bjj-oss.app)
+
+# Kakao
+kakao:
+  adminKey: ${KAKAO_ADMIN_KEY} # Kakao Developers > 앱 설정 > 앱 키 > Admin 키
+
+# api_log 보관 기간 (단위: 일)
+api-log:
+  retention-days: 90 # 통신비밀보호법 기준 3개월. 정책 확정 시 변경.
 
 # fcm 공통
 fcm:

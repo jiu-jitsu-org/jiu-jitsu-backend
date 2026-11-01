@@ -9,6 +9,7 @@ import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
 import com.jiujitsu.api.global.exception.annotation.LoginErrorExamples;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class CommunityProfileController {
     private final CommunityProfileService communityProfileService;
 
     @Operation(
-            summary = "내 커뮤니티 프로필 조회",
+            summary = "내 커뮤니티 프로필(선수 카드) 조회",
             description = "현재 로그인한 사용자의 커뮤니티 프로필을 조회합니다."
     )
     @LoginErrorExamples
@@ -35,9 +36,9 @@ public class CommunityProfileController {
 
     @Operation(
             summary = "다른 회원 공개 프로필 조회",
-            description = "회원 ID로 공개 프로필을 조회합니다. 비로그인도 조회 가능하며, 현재 체급·성별·특기·지도 정보는 내려가지 않습니다. 대회 정보는 대회명이 있는 기록만 내려가며, 부문의 출전 체급은 포함됩니다."
+            description = "회원 ID로 공개 프로필을 조회합니다. 비로그인도 조회 가능하며, 체급·성별·특기·지도 정보는 내려가지 않습니다. 대회 정보는 대회명이 있는 기록만 내려갑니다."
     )
-    @ApiErrorCodeExamples({ErrorCode.MEMBER_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.PROFILE_NOT_FOUND})
     @GetMapping("/{userId}")
     public CommunityPublicProfileResponse getPublicProfile(@PathVariable Long userId) {
         return communityProfileService.getPublicProfile(userId);

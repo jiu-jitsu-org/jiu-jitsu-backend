@@ -59,6 +59,39 @@ public class CommunityProfileMapper {
     }
 
     /**
+     * 프로필 응답 생성 (타인 조회) — isWeightHidden=true 이면 weightKg 마스킹
+     */
+    public CommunityProfileResponse getCommunityProfileResponseForOther(CommunityProfile profile) {
+        User user = profile.getUser();
+        boolean isOwner = user.getRole() == UserRole.OWNER;
+        OwnerProfile ownerProfile = isOwner ? profile.getOwnerProfile() : null;
+        Double weightKg = Boolean.TRUE.equals(profile.getWeightHidden()) ? null : profile.getWeightKg();
+
+        return new CommunityProfileResponse(
+                user.getNickname(),
+                ImageInfo.from(user.getProfileImageFile()),
+                profile.getBeltRank(),
+                profile.getBeltStripe(),
+                profile.getGender(),
+                weightKg,
+                profile.getAcademyName(),
+                profile.getBestSubmission(),
+                profile.getFavoriteSubmission(),
+                profile.getBestTechnique(),
+                profile.getFavoriteTechnique(),
+                profile.getBestPosition(),
+                profile.getFavoritePosition(),
+                profile.getWeightHidden(),
+                isOwner,
+                getTeachingPhilosophy(ownerProfile),
+                getTeachingStartDate(ownerProfile),
+                getTeachingDetail(ownerProfile),
+                mapCompetitions(profile),
+                countMedals(profile)
+        );
+    }
+
+    /**
      * 프로필 응답 생성 - User 정보만
      */
     public CommunityProfileResponse getCommunityProfileResponseUser(User user) {

@@ -16,6 +16,7 @@ import java.util.List;
 public interface ReportRepository extends JpaRepository<Report, Long> {
 
     boolean existsByCreatedByAndReportTypeAndTargetId(User createdBy, ReportType reportType, Long targetId);
+    boolean existsByCreatedByIdAndReportTypeAndTargetId(Long createdById, ReportType reportType, Long targetId);
 
     long countByReportTypeAndTargetId(ReportType reportType, Long targetId);
 

@@ -8,5 +8,7 @@ public record CommentNoticeEvent(
         Long recipientUserId,
         Long contentId,
         FcmPushType pushType,
-        Map<String, String> pushData
+        Map<String, String> pushData,
+        Long senderUserId,
+        Long refId          // 댓글/대댓글 ID
 ) {}

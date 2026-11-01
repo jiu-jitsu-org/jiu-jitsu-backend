@@ -24,4 +24,7 @@ public class BoardUpdateRequest {
 
     @Schema(description = "이미지 파일 ID 리스트 (전체)")
     private List<Long> imageFileIdList;
+
+    @Schema(description = "태그 목록", example = "[\"BJJ\", \"운동\"]")
+    private List<String> tags;
 }

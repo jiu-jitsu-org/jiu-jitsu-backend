@@ -13,6 +13,7 @@ import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.community.content.repository.ContentSaveRepository;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.repository.UserBlockRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -37,6 +38,7 @@ public class ContentService {
     private final ContentSaveMapper contentSaveMapper;
     private final FcmPushEventPublisher fcmPushEventPublisher;
     private final NoticeService noticeService;
+    private final UserBlockRepository userBlockRepository;
 
     /**
      * 게시물 좋아요 등록/삭제
@@ -70,9 +72,14 @@ public class ContentService {
                 pushData.put("data", content.getId().toString());
 
                 Long contentOwnerId = content.getCreatedBy().getId();
+                // 게시물 주인이 좋아요 누른 사람을 차단한 경우 → 알림/푸시 안 함
+                if (userBlockRepository.existsByBlockerIdAndBlockedId(contentOwnerId, user.getId())) {
+                    return contentLikeMapper.toContentLikeResponse(content, newLike,
+                            getContentLikeCount(List.of(content.getId())).getOrDefault(content.getId(), 0L));
+                }
                 if (noticeService.isContentNoticeEnabled(contentOwnerId, content.getId())) {
                     fcmPushEventPublisher.publish(contentOwnerId, pushType, pushData);
-                    noticeService.saveNotice(contentOwnerId, pushType, pushData);
+                    noticeService.saveNotice(contentOwnerId, pushType, pushData, user.getId(), null);
                 }
             }
         }

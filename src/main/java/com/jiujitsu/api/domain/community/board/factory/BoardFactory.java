@@ -37,17 +37,26 @@ public class BoardFactory {
                 .title(title)
                 .body(body)
                 .build();
-        // 태그 리스트 생성 (공백 제거 → 소문자 → 빈 값 제거 → 중복 제거)
-        List<BoardTag> tags = tagNames.stream()
+        board.addTags(createTags(board, tagNames));
+
+        return board;
+    }
+
+    public void replaceTags(Board board, List<String> tagNames) {
+        board.replaceTags(createTags(board, tagNames));
+    }
+
+    private List<BoardTag> createTags(Board board, List<String> tagNames) {
+        if (tagNames == null || tagNames.isEmpty()) {
+            return List.of();
+        }
+        return tagNames.stream()
                 .map(String::strip)
                 .map(String::toLowerCase)
                 .filter(name -> !name.isBlank())
                 .distinct()
                 .map(name -> BoardTag.builder().board(board).name(name).build())
                 .toList();
-        board.addTags(tags);
-
-        return board;
     }
 
     public List<ImageFile> createImageFiles(List<Long> imageFileIds) {

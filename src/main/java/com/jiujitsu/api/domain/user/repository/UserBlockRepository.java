@@ -15,6 +15,19 @@ public interface UserBlockRepository extends JpaRepository<UserBlock, Long> {
 
     Optional<UserBlock> findByBlockerAndBlocked(User blocker, User blocked);
 
+    Optional<UserBlock> findByBlockerIdAndBlockedId(Long blockerId, Long blockedId);
+
     @Query("SELECT ub.blocked.id FROM UserBlock ub WHERE ub.blocker.id = :blockerId")
     List<Long> findBlockedIdsByBlockerId(@Param("blockerId") Long blockerId);
+
+    @Query("""
+            SELECT ub FROM UserBlock ub
+            JOIN FETCH ub.blocked b
+            WHERE ub.blocker.id = :blockerId
+              AND b.deletedAt IS NULL
+            ORDER BY ub.createdAt DESC
+            """)
+    List<UserBlock> findActiveBlocksByBlockerIdOrderByCreatedAtDesc(@Param("blockerId") Long blockerId);
+
+    boolean existsByBlockerIdAndBlockedId(Long blockerId, Long blockedId);
 }

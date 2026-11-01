@@ -27,6 +27,7 @@ public class ReportController {
     @Operation(summary = "게시물/댓글 신고", description = "게시물 또는 댓글을 신고합니다. 동일 대상 중복 신고 불가.")
     @LoginErrorExamples
     @ApiErrorCodeExamples({
+            ErrorCode.WRONG_PARAMETER,
             ErrorCode.ALREADY_REPORTED,
             ErrorCode.SELF_REPORT_NOT_ALLOWED,
             ErrorCode.BOARD_NOT_FOUND,
