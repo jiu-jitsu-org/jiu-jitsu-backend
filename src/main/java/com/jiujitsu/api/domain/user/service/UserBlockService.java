@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.user.service;
 
+import com.jiujitsu.api.domain.user.dto.BlockedUserResponse;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserBlock;
 import com.jiujitsu.api.domain.user.repository.UserBlockRepository;
@@ -68,5 +69,26 @@ public class UserBlockService {
         return authenticationFacade.getCurrentUserOptional()
                 .map(user -> userBlockRepository.findBlockedIdsByBlockerId(user.getId()))
                 .orElse(Collections.emptyList());
+    }
+
+    /**
+     * 차단한 회원 목록 조회 (최근 차단순, 탈퇴 회원 제외)
+     */
+    @Transactional(readOnly = true)
+    public List<BlockedUserResponse> getBlockedUsers() {
+        User blocker = authenticationFacade.getCurrentUser();
+        return userBlockRepository.findActiveBlocksByBlockerIdOrderByCreatedAtDesc(blocker.getId())
+                .stream()
+                .map(BlockedUserResponse::from)
+                .toList();
+    }
+
+    /**
+     * 차단 해제 전용 (이미 해제된 경우 무시 — 다중 기기 안전)
+     */
+    public void unblock(Long blockedUserId) {
+        User blocker = authenticationFacade.getCurrentUser();
+        userBlockRepository.findByBlockerIdAndBlockedId(blocker.getId(), blockedUserId)
+                .ifPresent(userBlockRepository::delete);
     }
 }
