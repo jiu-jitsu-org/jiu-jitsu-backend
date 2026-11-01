@@ -38,7 +38,7 @@ public class UserCleanupService {
         );
 
         if (expiredUsers.isEmpty()) {
-            log.info("----- 회원탈퇴 유저 없음 end -----");
+            log.info("----- 회원탈퇴 유저 없음 end ------");
             return;
         }
 
