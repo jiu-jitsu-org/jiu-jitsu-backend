@@ -23,12 +23,14 @@ public record CompetitionDivisionDto(
         @Schema(description = "앱솔루트 여부 (없으면 false). true면 체급 kg·이하/초과는 null", example = "false")
                 Boolean competitionAbsolute
 ) {
-    // 체급 kg와 이하/초과는 같이 있거나 같이 없다
+    // UNDER는 kg 필수, OVER는 kg 없이도 허용(무제한), kg만 단독 입력 불가
     @JsonIgnore
     @Schema(hidden = true)
-    @AssertTrue(message = "체급 kg와 이하/초과는 함께 입력해야 합니다.")
+    @AssertTrue(message = "체급 kg와 이하/초과는 함께 입력해야 합니다. (UNDER는 kg 필수, kg만 단독 입력 불가)")
     public boolean isWeightBoundPaired() {
-        return (competitionWeightLimit == null) == (competitionWeightBound == null);
+        if (competitionWeightLimit != null && competitionWeightBound == null) return false; // kg만 단독 입력 불가
+        if (competitionWeightBound == CompetitionWeightBound.UNDER && competitionWeightLimit == null) return false; // UNDER는 kg 필수
+        return true;
     }
 
     // 앱솔루트는 무제한급이라 체급과 함께 올 수 없다
