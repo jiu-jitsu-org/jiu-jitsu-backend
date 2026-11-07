@@ -94,7 +94,7 @@ public class CommunityCommentsService {
 
         Sort sort = toSort(sortType);
         int pageSize = pageable.getPageSize();
-        Pageable pageRequest = PageRequest.of(pageable.getPageNumber(), pageSize + 1, sort);
+        Pageable pageRequest = new OffsetLimitRequest(pageable.getOffset(), pageSize + 1, sort);
 
         List<CommunityComments> fetched = communityCommentsRepository.findRootCommentsByContentIdFiltered(contentId, pageRequest);
         boolean hasNext = fetched.size() > pageSize;
