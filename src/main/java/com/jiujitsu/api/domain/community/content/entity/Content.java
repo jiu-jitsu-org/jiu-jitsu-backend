@@ -37,6 +37,7 @@ public class Content extends BaseEntity {
             joinColumns = @JoinColumn(name = "content_id"),
             inverseJoinColumns = @JoinColumn(name = "image_file_id")
     )
+    @OrderColumn(name = "position")
     @Builder.Default
     private List<ImageFile> imageFiles = new ArrayList<>();
 

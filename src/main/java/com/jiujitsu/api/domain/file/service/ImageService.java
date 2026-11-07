@@ -12,10 +12,14 @@ import com.jiujitsu.api.domain.file.event.ImageFileDeletedEvent;
 import com.jiujitsu.api.global.properties.ImageKitProperties;
 import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
 import com.jiujitsu.api.domain.user.entity.OwnerVerificationRequest;
+import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.OwnerVerificationRequestRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
+import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -38,6 +42,7 @@ public class ImageService {
     private final OwnerProfileRepository ownerProfileRepository;
     private final OwnerVerificationRequestRepository ownerVerificationRequestRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuthenticationFacade authenticationFacade;
 
     @Transactional
     public void deleteImageFile(Long id) {
@@ -71,16 +76,40 @@ public class ImageService {
     }
 
     /**
-     * 이미지 파일 저장
+     * 이미지 파일 저장 (로그인 필수 — uploaderId 기록)
      */
     @Transactional
     public ImageFileResponse registerImageFile(ImageFileRegisterRequest request) {
+        User uploader = authenticationFacade.getCurrentUser();
         ImageFile imageFile = ImageFile.builder()
                 .cdnId(request.cdnId())
                 .imageUrl(request.imageUrl())
                 .status(ImageFileStatus.TEMP)
+                .uploaderId(uploader.getId())
                 .build();
         return ImageFileResponse.from(imageFileRepository.save(imageFile));
+    }
+
+    /**
+     * 내가 올린 TEMP 이미지 삭제 (프론트 best-effort 삭제용)
+     * - 본인이 업로드한 TEMP 이미지만 삭제 가능
+     * - ACTIVE 이미지는 게시글 수정·삭제 경로로만 분리 처리
+     */
+    @Transactional
+    public void deleteMyTempImageFile(Long id) {
+        ImageFile imageFile = imageFileRepository.findById(id)
+                .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
+
+        User currentUser = authenticationFacade.getCurrentUser();
+        if (!Objects.equals(imageFile.getUploaderId(), currentUser.getId())
+                || imageFile.getStatus() != ImageFileStatus.TEMP) {
+            throw new ErrorException(ErrorCode.AUTHENTICATION_FAILED);
+        }
+
+        if (imageFile.getCdnId() != null) {
+            eventPublisher.publishEvent(new ImageFileDeletedEvent(imageFile.getCdnId()));
+        }
+        imageFileRepository.delete(imageFile);
     }
 
     /**

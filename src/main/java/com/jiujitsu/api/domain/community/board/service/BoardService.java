@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
 import com.jiujitsu.api.domain.community.board.entity.BoardListType;
 import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
+import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
@@ -193,10 +194,18 @@ public class BoardService {
             board.changeBody(request.getBody());
         }
 
-        // 기존 이미지 모두 제거 후 재생성 (orphanRemoval 로 자동 삭제)
+        // 기존 이미지 모두 제거 후 재생성
         Content content = board.getContent();
+        List<ImageFile> oldImages = new ArrayList<>(content.getImageFiles());
         content.getImageFiles().clear();
-        content.addImageFiles(boardFactory.createImageFiles(request.getImageFileIdList()));
+        List<ImageFile> newImages = boardFactory.createImageFiles(request.getImageFileIdList());
+        content.addImageFiles(newImages);
+
+        // 목록에서 빠진 이미지를 TEMP로 복귀 → TTL 배치가 수거
+        Set<Long> newImageIds = newImages.stream().map(ImageFile::getId).collect(Collectors.toSet());
+        oldImages.stream()
+                .filter(img -> !newImageIds.contains(img.getId()))
+                .forEach(ImageFile::deactivate);
 
         if (request.getTags() != null) {
             boardFactory.replaceTags(board, request.getTags());
@@ -222,6 +231,9 @@ public class BoardService {
 
         // 권한 체크
         board.validateOwner(authenticationFacade.getCurrentUser());
+
+        // 연결된 이미지를 TEMP로 복귀 → TTL 배치가 수거
+        board.getContent().getImageFiles().forEach(ImageFile::deactivate);
 
         boardRepository.delete(board);
     }
