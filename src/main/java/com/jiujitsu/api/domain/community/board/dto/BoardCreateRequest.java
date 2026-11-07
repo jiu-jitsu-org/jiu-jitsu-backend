@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.board.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ public record BoardCreateRequest(
         @NotBlank(message = "내용은 필수입니다.")
         @Schema(description = "내용", example = "게시글 내용", requiredMode = Schema.RequiredMode.REQUIRED)
             String body,
+        @Size(max = 3, message = "이미지는 최대 3장까지 첨부할 수 있습니다.")
         @Schema(description = "이미지 파일 ID 리스트")
             List<Long> imageFileIdList,
         @Schema(description = "태그 목록", example = "[\"BJJ\", \"운동\"]")

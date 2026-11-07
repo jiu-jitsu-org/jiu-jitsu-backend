@@ -43,7 +43,14 @@ public class ImageFile {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "uploader_id")
+    private Long uploaderId;
+
     public void activate() {
         this.status = ImageFileStatus.ACTIVE;
+    }
+
+    public void deactivate() {
+        this.status = ImageFileStatus.TEMP;
     }
 }

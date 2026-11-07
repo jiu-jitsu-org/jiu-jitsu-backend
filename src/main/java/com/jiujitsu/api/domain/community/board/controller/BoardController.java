@@ -81,7 +81,7 @@ public class BoardController {
     @PutMapping("/{id}")
     public BoardResponse update(
             @Parameter(name = "id", description = "컨텐츠 ID (게시글의 contentId)", required = true) @PathVariable Long id,
-            @RequestBody BoardUpdateRequest request
+            @Valid @RequestBody BoardUpdateRequest request
     ) {
         return boardService.update(id, request);
     }
