@@ -94,7 +94,7 @@ public class CommunityCommentsService {
 
         Sort sort = toSort(sortType);
         int pageSize = pageable.getPageSize();
-        Pageable pageRequest = PageRequest.of(pageable.getPageNumber(), pageSize + 1, sort);
+        Pageable pageRequest = new OffsetLimitRequest(pageable.getOffset(), pageSize + 1, sort);
 
         List<CommunityComments> fetched = communityCommentsRepository.findRootCommentsByContentIdFiltered(contentId, pageRequest);
         boolean hasNext = fetched.size() > pageSize;
@@ -188,7 +188,10 @@ public class CommunityCommentsService {
         PushActionType actionType = content.getContentType().getPushActionType();
 
         // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
-        if (!Objects.equals(user.getId(), boardWriter.getId())) {
+        // 단, 게시글 작성자 == 부모댓글 작성자인 경우 알림2(NEW_CHILD_COMMENTS)로 대체되므로 중복 방지
+        boolean boardWriterIsParentAuthor = parentComments.isPresent() &&
+                Objects.equals(boardWriter.getId(), parentComments.get().getCreatedBy().getId());
+        if (!Objects.equals(user.getId(), boardWriter.getId()) && !boardWriterIsParentAuthor) {
             eventPublisher.publishEvent(new CommentNoticeEvent(
                     boardWriter.getId(),
                     content.getId(),

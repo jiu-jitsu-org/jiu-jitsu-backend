@@ -167,6 +167,9 @@ public class UserService {
 
         tokenBlacklistService.blacklistToken(token);
 
+        // 푸시 토큰·기기 정보 즉시 삭제 (유예 기간 중 FCM 발송 방지)
+        user.getAppInfos().clear();
+
         // 사용자 상태를 DELETED로 변경 (soft delete)
         user.updateStatus(UserStatus.DELETED);
     }
