@@ -17,27 +17,27 @@ import java.util.Set;
 public interface CommunityCommentsRepository extends JpaRepository<CommunityComments, Long> {
 
     /**
-     * Content 다건의 상위 댓글 수 조회 (hiddenAt IS NULL, parentId가 null인 댓글만)
+     * Content 다건의 댓글+대댓글 수 조회 (hiddenAt IS NULL, deletedAt IS NULL)
      */
     @Query("""
             SELECT c.content.id, COUNT(c)
             FROM CommunityComments c
             WHERE c.content.id IN :contentIds
-              AND (c.parentId IS NULL or c.parentId = 0)
               AND c.hiddenAt IS NULL
+              AND c.deletedAt IS NULL
             GROUP BY c.content.id
             """)
     List<Object[]> countTopLevelCommentsByContentIds(@Param("contentIds") List<Long> contentIds);
 
     /**
-     * Content 단건의 상위 댓글 수 조회 (hiddenAt IS NULL, parentId가 null인 댓글만)
+     * Content 단건의 댓글+대댓글 수 조회 (hiddenAt IS NULL, deletedAt IS NULL)
      */
     @Query("""
                 SELECT COUNT(c)
                 FROM CommunityComments c
                 WHERE c.content.id = :contentId
-                  AND (c.parentId IS NULL or c.parentId = 0)
                   AND c.hiddenAt IS NULL
+                  AND c.deletedAt IS NULL
             """)
     long countVisibleRootComments(@Param("contentId") Long contentId);
 
