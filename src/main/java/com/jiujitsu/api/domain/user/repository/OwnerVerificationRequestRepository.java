@@ -38,6 +38,8 @@ public interface OwnerVerificationRequestRepository extends JpaRepository<OwnerV
 
     List<OwnerVerificationRequest> findByDocumentImageFile(ImageFile imageFile);
 
+    List<OwnerVerificationRequest> findByUser(User user);
+
     /**
      * 신청자 id 만 조회 (엔티티를 영속성 컨텍스트에 올리지 않고 잠금 순서를 정하기 위함)
      */
