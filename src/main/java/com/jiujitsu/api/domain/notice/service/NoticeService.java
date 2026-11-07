@@ -1,5 +1,7 @@
 package com.jiujitsu.api.domain.notice.service;
 
+import com.jiujitsu.api.domain.community.board.entity.Board;
+import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.board.service.BoardHideService;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
@@ -47,6 +49,7 @@ public class NoticeService {
     private final ContentNoticeSettingRepository contentNoticeSettingRepository;
     private final ContentRepository contentRepository;
     private final CommunityCommentsRepository communityCommentsRepository;
+    private final BoardRepository boardRepository;
     private final UserBlockService userBlockService;
     private final BoardHideService boardHideService;
     private final ReportService reportService;
@@ -105,9 +108,29 @@ public class NoticeService {
                 : communityCommentsRepository.findAllById(refIds).stream()
                         .collect(Collectors.toMap(CommunityComments::getId, c -> c));
 
+        // body 계산용: contentId → 게시글 제목
+        Map<Long, String> boardTitleByContentId = contentIds.isEmpty()
+                ? Map.of()
+                : boardRepository.findAllByContentIdIn(List.copyOf(contentIds)).stream()
+                        .collect(Collectors.toMap(b -> b.getContent().getId(), Board::getTitle));
+
+        // body 계산용: NEW_CHILD_COMMENTS 알림의 부모 댓글 일괄 조회
+        Set<Long> parentIds = notices.stream()
+                .filter(n -> n.getPushType() == FcmPushType.NEW_CHILD_COMMENTS && n.getRefId() != null)
+                .map(n -> commentByRefId.get(n.getRefId()))
+                .filter(Objects::nonNull)
+                .map(CommunityComments::getParentId)
+                .filter(id -> id != null && id != 0)
+                .collect(Collectors.toSet());
+        Map<Long, CommunityComments> parentCommentById = parentIds.isEmpty()
+                ? Map.of()
+                : communityCommentsRepository.findAllById(parentIds).stream()
+                        .collect(Collectors.toMap(CommunityComments::getId, c -> c));
+
         return notices.stream()
                 .map(n -> NoticeMapper.toNoticeListResponse(n,
-                        computeDeletedStatus(n, existingContentIds, commentByRefId)))
+                        computeDeletedStatus(n, existingContentIds, commentByRefId),
+                        computeBody(n, boardTitleByContentId, commentByRefId, parentCommentById)))
                 .toList();
     }
 
@@ -260,6 +283,33 @@ public class NoticeService {
             return false;
         }
         return true;
+    }
+
+    /**
+     * 알림 body 동적 계산
+     * - NEW_COMMENTS        : 현재 게시글 제목 (밸런스 게임이면 null)
+     * - NEW_CHILD_COMMENTS  : 부모 댓글 본문 (삭제/숨김이면 null)
+     * - 그 외                : null
+     */
+    private String computeBody(Notice notice,
+                               Map<Long, String> boardTitleByContentId,
+                               Map<Long, CommunityComments> commentByRefId,
+                               Map<Long, CommunityComments> parentCommentById) {
+        return switch (notice.getPushType()) {
+            case NEW_COMMENTS -> {
+                if (notice.getData() == null) yield null;
+                yield boardTitleByContentId.get(Long.parseLong(notice.getData()));
+            }
+            case NEW_CHILD_COMMENTS -> {
+                if (notice.getRefId() == null) yield null;
+                CommunityComments reply = commentByRefId.get(notice.getRefId());
+                if (reply == null || reply.getParentId() == null || reply.getParentId() == 0) yield null;
+                CommunityComments parent = parentCommentById.get(reply.getParentId());
+                if (parent == null || parent.isDeleted() || parent.isHidden()) yield null;
+                yield parent.getBody();
+            }
+            default -> null;
+        };
     }
 
     /**
