@@ -133,6 +133,7 @@ public class UserService {
         User user = authenticationFacade.getCurrentUser();
         ImageFile imageFile = imageFileRepository.findById(imageFileId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
+        imageFile.activate();
         user.updateProfileImage(imageFile);
         return toUserProfileResponse(user);
     }

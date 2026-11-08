@@ -91,25 +91,25 @@ public class ImageService {
     }
 
     /**
-     * 내가 올린 TEMP 이미지 삭제 (프론트 best-effort 삭제용)
-     * - 본인이 업로드한 TEMP 이미지만 삭제 가능
-     * - ACTIVE 이미지는 게시글 수정·삭제 경로로만 분리 처리
+     * 내 이미지 삭제 (프론트 삭제용)
+     * - 본인이 업로드한 이미지(uploaderId 일치) 또는 본인 프로필 이미지(SNS 가입분 포함) 삭제 가능
+     * - 삭제 시 프로필·인증서류 등 연결 참조도 함께 정리
      */
     @Transactional
-    public void deleteMyTempImageFile(Long id) {
+    public void deleteMyImageFile(Long id) {
         ImageFile imageFile = imageFileRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
 
         User currentUser = authenticationFacade.getCurrentUser();
-        if (!Objects.equals(imageFile.getUploaderId(), currentUser.getId())
-                || imageFile.getStatus() != ImageFileStatus.TEMP) {
-            throw new ErrorException(ErrorCode.AUTHENTICATION_FAILED);
+        boolean isOwner = Objects.equals(imageFile.getUploaderId(), currentUser.getId())
+                || userRepository.findByProfileImageFile(imageFile)
+                        .map(u -> Objects.equals(u.getId(), currentUser.getId()))
+                        .orElse(false);
+        if (!isOwner) {
+            throw new ErrorException(ErrorCode.PERMISSION_DENIED);
         }
 
-        if (imageFile.getCdnId() != null) {
-            eventPublisher.publishEvent(new ImageFileDeletedEvent(imageFile.getCdnId()));
-        }
-        imageFileRepository.delete(imageFile);
+        deleteImageFile(id);
     }
 
     /**
