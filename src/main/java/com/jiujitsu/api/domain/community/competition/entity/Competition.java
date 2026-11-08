@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.competition.entity;
 
+import com.jiujitsu.api.domain.community.profile.entity.CompetitionUniform;
 import com.jiujitsu.api.global.entity.BaseEntity;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -10,7 +11,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.text.Normalizer;
+import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @Entity
@@ -42,6 +46,69 @@ public class Competition extends BaseEntity {
     @Column(name = "competition_year")
     private Integer competitionYear;    // 개최 연도 (모르면 null)
 
+    // --- 대회 이벤트 정보 (대회 탭 노출용) ---
+    // 하나의 Competition 은 데이터 완성도만 다를 뿐 같은 개념이다.
+    // published=false 는 프로필 대회 기록 자동완성용 "이름(+연도)" 카탈로그 엔트리로,
+    // 아래 이벤트 필드가 비어 있고 대회 탭 목록/상세에는 노출하지 않는다.
+    // published=true 는 관리자가 일정·장소 등을 채워 공개한 대회(쓰기/수집은 별도 이슈).
+    @Column(name = "published", nullable = false)
+    private boolean published;
+
+    @Column(name = "open_date")
+    private LocalDate openDate;              // 대회일
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "region", length = 20)
+    private CompetitionRegion region;        // 지역(시·도)
+
+    @Column(name = "place", length = 200)
+    private String place;                    // 장소 (시·군 + 체육관명)
+
+    @Column(name = "host", length = 100)
+    private String host;                     // 주최 단체
+
+    @Column(name = "notice_url", length = 500)
+    private String noticeUrl;                // 대회 공지 링크
+
+    // 종목(도복/노기) — 둘 다면 둘 다. 프로필 대회 기록과 같은 어휘(CompetitionUniform) 재사용
+    @ElementCollection
+    @CollectionTable(name = "competition_uniforms", joinColumns = @JoinColumn(name = "competition_id"))
+    @Column(name = "uniform", length = 10)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private Set<CompetitionUniform> uniforms = new LinkedHashSet<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "audience", length = 20)
+    private CompetitionAudience audience;    // 대상 제한 (null = 제한 없음)
+
+    // 접수 일정 (대회일 = openDate)
+    @Column(name = "registration_start_date")
+    private LocalDate registrationStartDate; // 접수 시작
+
+    @Column(name = "early_bird_deadline")
+    private LocalDate earlyBirdDeadline;     // 얼리버드 마감
+
+    @Column(name = "registration_deadline")
+    private LocalDate registrationDeadline;  // 접수 마감
+
+    // 참가비 (성인 1종목 기준 등은 feeNote 로 보조 표기)
+    @Column(name = "early_bird_fee")
+    private Integer earlyBirdFee;            // 얼리버드 금액 (없으면 null)
+
+    @Column(name = "base_fee")
+    private Integer baseFee;                 // 기본 참가비
+
+    @Column(name = "fee_note", length = 100)
+    private String feeNote;                  // 예: "성인 1종목 기준"
+
+    // 메타
+    @Column(name = "last_verified_at")
+    private LocalDate lastVerifiedAt;        // 정보 기준일(마지막 확인일)
+
+    @Column(name = "view_count", nullable = false)
+    private long viewCount;                  // 조회수 (증가 로직은 대회 상세 조회 이슈 #186)
+
     // 웹 페이지(공개 일정)에서 복사한 대회명에 섞여 들어오는 문자를 정리한다
     // - \s 는 ASCII 공백만 잡으므로 NBSP(U+00A0)·전각 공백(U+3000) 등 유니코드 공백(\p{Z})도 함께 본다
     // - 폭 없는 공백(U+200B)·BOM(U+FEFF) 같은 서식 문자(\p{Cf}), NUL 등 공백이 아닌 제어 문자(\p{Cc})는 지운다
@@ -53,6 +120,34 @@ public class Competition extends BaseEntity {
     // 중복 판단 키: 정규화 이름 + 연도 (연도 없음도 하나의 값으로 본다)
     public String duplicateKey() {
         return searchName + "|" + competitionYear;
+    }
+
+    /**
+     * 오늘 기준 접수/진행 상태 파생 (저장하지 않음).
+     * 대회일이 지나면 ENDED, 접수 마감이 지났으면 CLOSED, 접수 시작 전이면 UPCOMING, 그 외 OPEN.
+     * 일정이 비어 있는 값은 제약으로 보지 않는다(최대한 채워진 정보로만 판단).
+     */
+    public CompetitionStatus status(LocalDate today) {
+        if (openDate != null && today.isAfter(openDate)) {
+            return CompetitionStatus.ENDED;
+        }
+        if (registrationDeadline != null && today.isAfter(registrationDeadline)) {
+            return CompetitionStatus.CLOSED;
+        }
+        if (registrationStartDate != null && today.isBefore(registrationStartDate)) {
+            return CompetitionStatus.UPCOMING;
+        }
+        return CompetitionStatus.OPEN;
+    }
+
+    /**
+     * 오늘 기준 얼리버드 접수 중인지 — 얼리버드 마감일이 있고 아직 지나지 않았으며 접수가 열려 있는 상태.
+     * 목록·상세의 "얼리버드 마감 D-n" 강조용 보조 판단.
+     */
+    public boolean isEarlyBirdOpen(LocalDate today) {
+        return earlyBirdDeadline != null
+                && !today.isAfter(earlyBirdDeadline)
+                && status(today) == CompetitionStatus.OPEN;
     }
 
     /**
