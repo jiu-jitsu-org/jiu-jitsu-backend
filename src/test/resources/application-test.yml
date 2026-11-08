@@ -1,0 +1,12 @@
+# 테스트 전용 설정 — 프로파일 없이 뜨던 @SpringBootTest가 환경별 값·외부 자격증명 없이 기동되게 한다(#141).
+springdoc:
+  swagger-ui:
+    server:
+      url: http://localhost:8080/api
+
+# SNS 연결 해제(#149)용 환경변수 — 테스트에서는 외부 호출을 하지 않으므로 더미 값
+apple:
+  teamId: test-team-id
+  clientId: test-client-id
+kakao:
+  adminKey: test-kakao-admin-key

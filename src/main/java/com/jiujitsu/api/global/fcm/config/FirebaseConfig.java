@@ -7,10 +7,12 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.io.IOException;
 
 @Configuration
+@Profile("!test") // 테스트는 TestFcmConfig의 목 FirebaseMessaging을 쓴다
 public class FirebaseConfig {
     private FirebaseApp firebaseApp;
 

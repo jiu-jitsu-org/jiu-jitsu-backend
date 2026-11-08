@@ -62,6 +62,7 @@ class CommunityCommentsNoticeDeepLinkTest {
     private static final Long CONTENT_ID = 10L;
     private static final Long ME_ID = 1L;
     private static final Long OTHER_ID = 2L;
+    private static final Long THIRD_ID = 3L;
 
     @Test
     @DisplayName("밸런스 게임 대댓글 알림은 BALANCE_DETAIL 로 나간다")
@@ -69,7 +70,7 @@ class CommunityCommentsNoticeDeepLinkTest {
         // given
         Content content = stubContent(ContentType.BALANCE);
         stubContentWriter(content);
-        CommunityComments parent = stubComment(100L, OTHER_ID);
+        CommunityComments parent = stubComment(100L, THIRD_ID); // 글쓴이와 다른 사람의 댓글 (#177)
         stubCreateComment(content, parent);
 
         // when
@@ -91,7 +92,7 @@ class CommunityCommentsNoticeDeepLinkTest {
         // given
         Content content = stubContent(ContentType.BOARD);
         stubContentWriter(content);
-        CommunityComments parent = stubComment(100L, OTHER_ID);
+        CommunityComments parent = stubComment(100L, THIRD_ID); // 글쓴이와 다른 사람의 댓글 (#177)
         stubCreateComment(content, parent);
 
         // when
@@ -101,6 +102,24 @@ class CommunityCommentsNoticeDeepLinkTest {
         assertThat(capturePublishedEvents(2))
                 .extracting(e -> e.pushData().get("type"))
                 .containsOnly("BOARD_DETAIL");
+    }
+
+    @Test
+    @DisplayName("내 게시글의 내 댓글에 대댓글이 달리면 대댓글 알림 1건만 나간다 (#177)")
+    void createComment_onOwnCommentInOwnPost_publishesOnlyChildNotice() {
+        // given - 게시글 작성자와 부모 댓글 작성자가 같은 사람
+        Content content = stubContent(ContentType.BOARD);
+        stubContentWriter(content);
+        CommunityComments parent = stubComment(100L, OTHER_ID);
+        stubCreateComment(content, parent);
+
+        // when
+        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 100L, "대댓글"));
+
+        // then
+        CommentNoticeEvent event = capturePublishedEvents(1).get(0);
+        assertThat(event.pushType()).isEqualTo(FcmPushType.NEW_CHILD_COMMENTS);
+        assertThat(event.recipientUserId()).isEqualTo(OTHER_ID);
     }
 
     @Test

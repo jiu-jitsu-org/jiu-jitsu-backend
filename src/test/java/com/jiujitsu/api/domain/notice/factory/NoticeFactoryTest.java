@@ -24,12 +24,16 @@ class NoticeFactoryTest {
         Notice notice = noticeFactory.createNotice(
                 1L,
                 FcmPushType.NEW_CHILD_COMMENTS,
-                Map.of("type", PushActionType.BALANCE_DETAIL.name(), "data", "10")
+                Map.of("type", PushActionType.BALANCE_DETAIL.name(), "data", "10"),
+                2L,
+                100L
         );
 
         assertThat(notice.getPushActionType()).isEqualTo(PushActionType.BALANCE_DETAIL);
         assertThat(notice.getData()).isEqualTo("10");
         assertThat(notice.getPushType()).isEqualTo(FcmPushType.NEW_CHILD_COMMENTS);
+        assertThat(notice.getSenderUserId()).isEqualTo(2L);
+        assertThat(notice.getRefId()).isEqualTo(100L);
         assertThat(notice.getIsRead()).isFalse();
     }
 }
