@@ -11,16 +11,19 @@ import com.jiujitsu.api.domain.community.competition.repository.CompetitionRepos
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,23 +42,32 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class CompetitionServiceTest {
 
-    @InjectMocks
+    // 자동완성 기준일을 고정한다 (2026-11-08, Asia/Seoul)
+    private static final LocalDate TODAY = LocalDate.of(2026, 11, 8);
+    private static final Clock CLOCK = Clock.fixed(TODAY.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant(), ZoneId.of("Asia/Seoul"));
+
     private CompetitionService competitionService;
 
     @Mock private CompetitionRepository competitionRepository;
     @Mock private AuthenticationFacade authenticationFacade;
     @Spy private CompetitionMapper competitionMapper = new CompetitionMapper();
 
+    // Clock 은 목이 아닌 고정 시계를 넣어야 해서 @InjectMocks 대신 직접 만든다
+    @BeforeEach
+    void setUp() {
+        competitionService = new CompetitionService(competitionRepository, authenticationFacade, competitionMapper, CLOCK);
+    }
+
     @Test
     @DisplayName("검색어를 공백 제거·소문자로 정규화하고 LIKE 특수문자를 이스케이프해 20개까지 조회한다")
     void search_normalizesKeyword() {
-        given(competitionRepository.search(anyString(), anyString(), anyString(), anyInt(), any(Pageable.class)))
+        given(competitionRepository.search(anyString(), anyString(), anyString(), anyInt(), any(LocalDate.class), any(Pageable.class)))
                 .willReturn(List.of(Competition.of("Seoul Open 100%", 2026)));
 
         List<CompetitionResponse> result = competitionService.search("  SEOUL open 100% ");
 
         ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
-        verify(competitionRepository).search(eq("seoulopen100%"), eq("seoulopen100\\%%"), eq("%seoulopen100\\%%"), eq(java.time.Year.now().getValue()), pageable.capture());
+        verify(competitionRepository).search(eq("seoulopen100%"), eq("seoulopen100\\%%"), eq("%seoulopen100\\%%"), eq(TODAY.getYear()), eq(TODAY), pageable.capture());
         assertThat(pageable.getValue().getPageSize()).isEqualTo(CompetitionService.SEARCH_LIMIT);
         assertThat(result).extracting(CompetitionResponse::name, CompetitionResponse::year)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple("Seoul Open 100%", 2026));
@@ -68,7 +80,7 @@ class CompetitionServiceTest {
         assertThat(competitionService.search(" \u00A0 ")).isEmpty();
         assertThat(competitionService.search("가".repeat(Competition.NAME_MAX_LENGTH + 1))).isEmpty();
 
-        verify(competitionRepository, never()).search(anyString(), anyString(), anyString(), anyInt(), any(Pageable.class));
+        verify(competitionRepository, never()).search(anyString(), anyString(), anyString(), anyInt(), any(LocalDate.class), any(Pageable.class));
     }
 
     @Test
@@ -79,7 +91,7 @@ class CompetitionServiceTest {
         assertThatThrownBy(() -> competitionService.search("서울"))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_NOT_ACCESS);
-        verify(competitionRepository, never()).search(anyString(), anyString(), anyString(), anyInt(), any(Pageable.class));
+        verify(competitionRepository, never()).search(anyString(), anyString(), anyString(), anyInt(), any(LocalDate.class), any(Pageable.class));
     }
 
     @Test

@@ -1,6 +1,5 @@
 package com.jiujitsu.api.domain.community.competition.entity;
 
-import com.jiujitsu.api.domain.community.profile.entity.CompetitionUniform;
 import com.jiujitsu.api.global.entity.BaseEntity;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -9,20 +8,31 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 @Entity
 // 등록 대회 = 회차 단위 (같은 이름이라도 연도가 다르면 다른 대회)
 // PostgreSQL 유니크는 NULL 끼리 겹침으로 보지 않으므로, 연도 없는 같은 이름은 CompetitionService 에서 걸러낸다
-@Table(name = "competitions", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_competition_search_name_year", columnNames = {"search_name", "competition_year"})
-})
+// 대회 탭 목록은 공개 대회를 개최일 순으로 조회하므로 (published, open_date) 인덱스를 둔다
+@Table(name = "competitions",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_competition_search_name_year", columnNames = {"search_name", "competition_year"})
+        },
+        indexes = {
+                @Index(name = "idx_competition_published_open_date", columnList = "published, open_date")
+        })
 @Getter
 @Builder
 @NoArgsConstructor
@@ -51,6 +61,9 @@ public class Competition extends BaseEntity {
     // published=false 는 프로필 대회 기록 자동완성용 "이름(+연도)" 카탈로그 엔트리로,
     // 아래 이벤트 필드가 비어 있고 대회 탭 목록/상세에는 노출하지 않는다.
     // published=true 는 관리자가 일정·장소 등을 채워 공개한 대회(쓰기/수집은 별도 이슈).
+    // NOT NULL 컬럼은 DB 기본값을 함께 둔다: ddl-auto update 로 기존 행이 있는 테이블에 추가될 때
+    // 기본값이 없으면 PostgreSQL 이 ADD COLUMN 을 거부한다
+    @ColumnDefault("false")
     @Column(name = "published", nullable = false)
     private boolean published;
 
@@ -70,11 +83,20 @@ public class Competition extends BaseEntity {
     @Column(name = "notice_url", length = 500)
     private String noticeUrl;                // 대회 공지 링크
 
-    // 종목(도복/노기) — 둘 다면 둘 다. 프로필 대회 기록과 같은 어휘(CompetitionUniform) 재사용
+    // 종목(도복/노기) — 둘 다면 둘 다. 프로필 대회 기록의 출전 부문과 같은 어휘(CompetitionUniform)
+    // 값 객체 집합이라 별도 엔티티 대신 @ElementCollection 으로 둔다
+    // - uniform NOT NULL → (competition_id, uniform) 복합 PK 가 생겨 같은 종목 중복 행을 DB 가 막는다
+    // - 대회 행이 지워지면 종목 행도 함께 지운다 (CompetitionRecord 의 @OnDelete 와 같은 DB 레벨 처리)
+    //   Hibernate 는 @ElementCollection 에 @OnDelete 를 허용하지 않아 FK 정의로 ON DELETE CASCADE 를 명시한다
+    // - 목록 조회 시 대회마다 따로 불러오지 않도록 배치 로딩
     @ElementCollection
-    @CollectionTable(name = "competition_uniforms", joinColumns = @JoinColumn(name = "competition_id"))
-    @Column(name = "uniform", length = 10)
+    @CollectionTable(name = "competition_uniforms",
+            joinColumns = @JoinColumn(name = "competition_id"),
+            foreignKey = @ForeignKey(name = "fk_competition_uniforms_competition",
+                    foreignKeyDefinition = "foreign key (competition_id) references competitions (id) on delete cascade"))
+    @Column(name = "uniform", nullable = false, length = 10)
     @Enumerated(EnumType.STRING)
+    @BatchSize(size = 100)
     @Builder.Default
     private Set<CompetitionUniform> uniforms = new LinkedHashSet<>();
 
@@ -103,9 +125,10 @@ public class Competition extends BaseEntity {
     private String feeNote;                  // 예: "성인 1종목 기준"
 
     // 메타
-    @Column(name = "last_verified_at")
-    private LocalDate lastVerifiedAt;        // 정보 기준일(마지막 확인일)
+    @Column(name = "last_verified_date")
+    private LocalDate lastVerifiedDate;      // 정보 기준일(마지막 확인일)
 
+    @ColumnDefault("0")
     @Column(name = "view_count", nullable = false)
     private long viewCount;                  // 조회수 (증가 로직은 대회 상세 조회 이슈 #186)
 
@@ -123,11 +146,25 @@ public class Competition extends BaseEntity {
     }
 
     /**
-     * 오늘 기준 접수/진행 상태 파생 (저장하지 않음).
+     * 종목(읽기 전용). 컬렉션을 밖에서 바꾸지 못하게 한다
+     */
+    public Set<CompetitionUniform> getUniforms() {
+        return Collections.unmodifiableSet(uniforms);
+    }
+
+    /**
+     * 오늘 기준 접수/진행 상태 파생 (저장하지 않음). 공개 대회만 상태가 있다.
      * 대회일이 지나면 ENDED, 접수 마감이 지났으면 CLOSED, 접수 시작 전이면 UPCOMING, 그 외 OPEN.
-     * 일정이 비어 있는 값은 제약으로 보지 않는다(최대한 채워진 정보로만 판단).
+     * 비어 있는 일정은 제약으로 보지 않는다(채워진 정보로만 판단). 대회 당일은 접수 마감 뒤라면 CLOSED.
+     * 오늘 날짜는 호출부가 Clock 으로 구해 넘긴다(테스트에서 날짜 고정).
+     *
+     * @throws IllegalStateException 미공개(카탈로그) 엔트리 — 일정이 없어 상태를 판단할 수 없다.
+     *                               조회 쪽에서 published 필터를 빠뜨린 프로그래밍 오류를 바로 드러낸다
      */
     public CompetitionStatus status(LocalDate today) {
+        if (!published) {
+            throw new IllegalStateException("미공개 대회는 접수 상태가 없습니다. competitionId=" + id);
+        }
         if (openDate != null && today.isAfter(openDate)) {
             return CompetitionStatus.ENDED;
         }
@@ -145,9 +182,45 @@ public class Competition extends BaseEntity {
      * 목록·상세의 "얼리버드 마감 D-n" 강조용 보조 판단.
      */
     public boolean isEarlyBirdOpen(LocalDate today) {
-        return earlyBirdDeadline != null
-                && !today.isAfter(earlyBirdDeadline)
-                && status(today) == CompetitionStatus.OPEN;
+        // status 를 먼저 불러 미공개 엔트리는 얼리버드 정보가 없어도 똑같이 막는다
+        return status(today) == CompetitionStatus.OPEN
+                && earlyBirdDeadline != null
+                && !today.isAfter(earlyBirdDeadline);
+    }
+
+    /**
+     * 이벤트 정보 불변식 검증. 위반이면 COMPETITION_INVALID_EVENT_INFO
+     * - 공개 대회는 대회일이 있어야 한다
+     * - 일정 순서: 접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 (비어 있는 값은 건너뛰고 채워진 것끼리 비교)
+     * - 참가비는 0 이상, 얼리버드 금액이 있으면 얼리버드 마감일도 있어야 한다
+     * 저장 직전(@PrePersist/@PreUpdate)에 항상 확인해 어떤 쓰기 경로로도 잘못된 데이터가 저장되지 않게 한다.
+     * 쓰기 쪽(관리자 입력·정보 수집)은 저장 전에 직접 호출해 400 으로 응답할 것 —
+     * 커밋 시점 flush 에서 터지면 트랜잭션 예외로 감싸져 에러 코드가 사라진다
+     */
+    @PrePersist
+    @PreUpdate
+    public void validateEventInfo() {
+        if (published && openDate == null) {
+            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        }
+        List<LocalDate> schedule = Stream.of(registrationStartDate, earlyBirdDeadline, registrationDeadline, openDate)
+                .filter(Objects::nonNull)
+                .toList();
+        for (int i = 1; i < schedule.size(); i++) {
+            if (schedule.get(i).isBefore(schedule.get(i - 1))) {
+                throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+            }
+        }
+        if (isNegative(earlyBirdFee) || isNegative(baseFee)) {
+            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        }
+        if (earlyBirdFee != null && earlyBirdDeadline == null) {
+            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        }
+    }
+
+    private static boolean isNegative(Integer fee) {
+        return fee != null && fee < 0;
     }
 
     /**

@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDivisionDto;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
 import com.jiujitsu.api.domain.community.profile.dto.MedalCountDto;
+import com.jiujitsu.api.domain.community.competition.entity.CompetitionUniform;
 import com.jiujitsu.api.domain.community.profile.entity.*;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;

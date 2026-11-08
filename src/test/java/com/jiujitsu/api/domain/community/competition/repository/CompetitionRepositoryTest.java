@@ -1,7 +1,11 @@
 package com.jiujitsu.api.domain.community.competition.repository;
 
 import com.jiujitsu.api.domain.community.competition.entity.Competition;
+import com.jiujitsu.api.domain.community.competition.entity.CompetitionUniform;
 import com.jiujitsu.api.domain.community.competition.service.CompetitionService;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +13,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 
+import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -21,6 +27,9 @@ class CompetitionRepositoryTest {
     @Autowired
     private CompetitionRepository competitionRepository;
 
+    @Autowired
+    private EntityManager em;
+
     private void save(String name, Integer year) {
         competitionRepository.save(Competition.of(name, year));
     }
@@ -32,10 +41,24 @@ class CompetitionRepositoryTest {
                 .toList();
     }
 
+    // 자동완성 기준일 (서비스는 Clock 으로 구한 오늘을 넘긴다)
+    private static final LocalDate TODAY = LocalDate.of(2026, 11, 8);
+
     private List<Competition> searchAll(String keyword, int limit) {
         String normalized = Competition.normalize(keyword);
         String escaped = CompetitionService.escapeLike(normalized);
-        return competitionRepository.search(normalized, escaped + "%", "%" + escaped + "%", 2026, PageRequest.of(0, limit));
+        return competitionRepository.search(normalized, escaped + "%", "%" + escaped + "%", TODAY.getYear(), TODAY, PageRequest.of(0, limit));
+    }
+
+    // 개최일이 있는 공개 대회
+    private Competition publishedEvent(String name, LocalDate openDate) {
+        return Competition.builder()
+                .name(name)
+                .searchName(Competition.normalize(name))
+                .competitionYear(openDate.getYear())
+                .published(true)
+                .openDate(openDate)
+                .build();
     }
 
     @Test
@@ -118,5 +141,55 @@ class CompetitionRepositoryTest {
         assertThat(searchAll("서울", 20)).extracting(Competition::getName, Competition::getCompetitionYear)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple("서울 오픈", 2026),
                         org.assertj.core.groups.Tuple.tuple("서울 컵", null));
+    }
+
+    @Test
+    @DisplayName("개최일이 있는 대회는 올해라도 오늘 이후면 빼고, 오늘(당일)까지 열린 대회는 남긴다")
+    void searchExcludesNotYetHeldEventsThisYear() {
+        competitionRepository.save(publishedEvent("부산 오픈", TODAY.minusDays(1)));
+        competitionRepository.save(publishedEvent("대구 오픈", TODAY));
+        competitionRepository.save(publishedEvent("광주 오픈", TODAY.plusDays(14)));
+
+        assertThat(search("오픈")).containsExactlyInAnyOrder("부산 오픈", "대구 오픈");
+    }
+
+    @Test
+    @DisplayName("종목은 중복 없이 저장되고 다시 불러올 수 있다")
+    void savesUniforms() {
+        Competition event = Competition.builder()
+                .name("서울 오픈").searchName(Competition.normalize("서울 오픈")).competitionYear(2026)
+                .published(true).openDate(LocalDate.of(2026, 11, 22))
+                .uniforms(new LinkedHashSet<>(List.of(CompetitionUniform.GI, CompetitionUniform.NO_GI)))
+                .build();
+        Long id = competitionRepository.saveAndFlush(event).getId();
+        em.clear();
+
+        assertThat(competitionRepository.findById(id).orElseThrow().getUniforms())
+                .containsExactlyInAnyOrder(CompetitionUniform.GI, CompetitionUniform.NO_GI);
+    }
+
+    @Test
+    @DisplayName("불변식을 어긴 대회는 저장 직전에 COMPETITION_INVALID_EVENT_INFO 로 막는다")
+    void rejectsInvalidEventInfoOnPersist() {
+        Competition noOpenDate = Competition.builder()
+                .name("서울 오픈").searchName(Competition.normalize("서울 오픈")).competitionYear(2026)
+                .published(true)
+                .build();
+
+        assertThatThrownBy(() -> competitionRepository.saveAndFlush(noOpenDate))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+    }
+
+    @Test
+    @DisplayName("기존 카탈로그 엔트리(이름+연도)는 미공개·조회수 0 으로 저장된다")
+    void catalogEntryDefaults() {
+        Long id = competitionRepository.saveAndFlush(Competition.of("서울 오픈", 2026)).getId();
+        em.clear();
+
+        Competition saved = competitionRepository.findById(id).orElseThrow();
+        assertThat(saved.isPublished()).isFalse();
+        assertThat(saved.getViewCount()).isZero();
+        assertThat(saved.getUniforms()).isEmpty();
     }
 }
