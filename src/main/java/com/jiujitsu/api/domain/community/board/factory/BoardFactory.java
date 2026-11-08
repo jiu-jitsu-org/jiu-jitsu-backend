@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
+import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
@@ -14,12 +15,14 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
 public class BoardFactory {
 
     private final ImageFileRepository imageFileRepository;
+    private final AuthenticationFacade authenticationFacade;
 
     public Content createContent(List<Long> imageFileIds) {
         Content content = Content.builder()
@@ -63,9 +66,16 @@ public class BoardFactory {
         if (imageFileIds == null || imageFileIds.isEmpty()) {
             return Collections.emptyList();
         }
+        Long currentUserId = authenticationFacade.getCurrentUser().getId();
         return imageFileIds.stream()
-                .map(id -> imageFileRepository.findById(id)
-                        .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND)))
+                .map(id -> {
+                    ImageFile imageFile = imageFileRepository.findById(id)
+                            .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
+                    if (!Objects.equals(imageFile.getUploaderId(), currentUserId)) {
+                        throw new ErrorException(ErrorCode.PERMISSION_DENIED);
+                    }
+                    return imageFile;
+                })
                 .toList();
     }
 }

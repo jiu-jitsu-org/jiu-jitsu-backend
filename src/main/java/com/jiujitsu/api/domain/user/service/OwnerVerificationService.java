@@ -56,6 +56,7 @@ public class OwnerVerificationService {
 
         ImageFile imageFile = imageFileRepository.findById(imageFileId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.IMAGE_FILE_NOT_FOUND));
+        imageFile.activate();
 
         OwnerVerificationRequest request = ownerVerificationRequestRepository.findTopByUserOrderByIdDesc(user)
                 .filter(OwnerVerificationRequest::isPending)

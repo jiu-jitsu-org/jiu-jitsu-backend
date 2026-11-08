@@ -46,16 +46,16 @@ public class ImageController {
     }
 
     @Operation(
-            summary = "이미지 삭제 (본인 TEMP 전용)",
-            description = "본인이 올린 TEMP 이미지를 삭제합니다. cdnId가 있는 경우 CDN에서도 함께 삭제됩니다. " +
-                    "ACTIVE 이미지는 게시글 수정·삭제로만 분리됩니다."
+            summary = "이미지 삭제 (본인 소유 전용)",
+            description = "본인이 업로드한 이미지 또는 본인 프로필 이미지를 삭제합니다. " +
+                    "cdnId가 있는 경우 CDN에서도 함께 삭제되며, 프로필·인증서류 연결 참조도 정리됩니다."
     )
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.AUTHENTICATION_FAILED, ErrorCode.FAILED_CDN_DELETE})
+    @ApiErrorCodeExamples({ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.PERMISSION_DENIED, ErrorCode.FAILED_CDN_DELETE})
     @DeleteMapping("/{id}")
     public void deleteImageFile(
             @Parameter(description = "이미지 파일 ID") @PathVariable Long id
     ) {
-        imageService.deleteMyTempImageFile(id);
+        imageService.deleteMyImageFile(id);
     }
 }
