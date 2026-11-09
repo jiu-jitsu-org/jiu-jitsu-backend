@@ -1,8 +1,8 @@
-package com.jiujitsu.api.domain.community.competition.repository;
+package com.jiujitsu.api.domain.competition.repository;
 
-import com.jiujitsu.api.domain.community.competition.entity.Competition;
-import com.jiujitsu.api.domain.community.competition.entity.CompetitionUniform;
-import com.jiujitsu.api.domain.community.competition.service.CompetitionService;
+import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
+import com.jiujitsu.api.domain.competition.service.CompetitionService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import jakarta.persistence.EntityManager;

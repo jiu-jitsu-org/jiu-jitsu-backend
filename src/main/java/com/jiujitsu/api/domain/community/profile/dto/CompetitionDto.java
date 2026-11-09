@@ -1,7 +1,7 @@
 package com.jiujitsu.api.domain.community.profile.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.jiujitsu.api.domain.community.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.entity.CompetitionRecord;
 import io.swagger.v3.oas.annotations.media.Schema;

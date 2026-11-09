@@ -1,9 +1,9 @@
 package com.jiujitsu.api.domain.community.profile.repository;
 
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDivisionDto;
-import com.jiujitsu.api.domain.community.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
-import com.jiujitsu.api.domain.community.competition.entity.CompetitionUniform;
+import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
 import com.jiujitsu.api.domain.community.profile.entity.*;
 import com.jiujitsu.api.domain.community.profile.mapper.CommunityProfileMapper;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;

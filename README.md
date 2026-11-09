@@ -119,7 +119,6 @@ src/main/java/com/jiujitsu/api/
 | GET | `/community/profile` | 내 커뮤니티 프로필 조회 |
 | GET | `/community/profile/{userId}` | 다른 회원 공개 프로필 조회 (비로그인 가능, 체급·특기 제외) |
 | POST | `/community/profile` | 커뮤니티 프로필 생성/수정 (항목별: 도장, 벨트·체급, 벨트만, 스타일, 대회, 지도 정보) |
-| GET | `/community/competitions?keyword=` | 등록 대회 검색 (대회명 자동완성, 올해까지) |
 
 > 커뮤니티 프로필 포함 정보: 벨트 등급, 스트라이프, 성별, 선호 포지션/기술/서브미션, 대회 출전 이력
 
@@ -138,6 +137,12 @@ src/main/java/com/jiujitsu/api/
 | GET | `/admin/reports` | 신고 목록 조회 (페이징) |
 | PATCH | `/admin/reports/board/{contentId}/unhide` | 게시글 숨김 해제 |
 | PATCH | `/admin/reports/comment/{commentId}/unhide` | 댓글 숨김 해제 |
+
+### 대회 (`/api/competitions`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/competitions/autocomplete?keyword=` | 등록 대회 검색 (프로필 대회 기록용 대회명 자동완성, 지난 대회까지) |
 
 ### 관리자 등록 대회 (`/api/admin/competitions`)
 

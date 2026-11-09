@@ -76,10 +76,10 @@ domain/
 ├── community/        - 커뮤니티 (하위 도메인 존재)
 │   ├── board/        - 게시글
 │   ├── comment/      - 댓글
-│   ├── competition/  - 등록 대회 (대회명 자동완성 검색, 관리자 등록)
 │   ├── content/      - 컨텐츠 공통 (좋아요, 저장)
 │   ├── profile/      - 커뮤니티 프로필
 │   └── report/       - 신고
+├── competition/      - 대회 탭 (대회 정보·상태, 대회명 자동완성, 관리자 등록). 커뮤니티(UGC)와 분리된 독립 도메인
 ├── file/             - 이미지 파일
 ├── notice/           - 알림
 └── user/             - 유저, 인증, 차단
@@ -269,7 +269,7 @@ domain/community/board/
 | boot_strap | OS별 앱 버전 정보 조회 |
 | community/board | 게시글 CRUD, 카테고리, 좋아요, 저장, 숨김 |
 | community/comment | 댓글 CRUD, 좋아요 |
-| community/competition | 등록 대회 검색(대회명 자동완성), 관리자 일괄 등록 |
+| competition | 대회 정보·상태 파생, 등록 대회 검색(대회명 자동완성), 관리자 일괄 등록 |
 | community/content | 좋아요/저장 공통 처리 |
 | community/profile | 커뮤니티 프로필(벨트, 경기 이력 등) |
 | community/report | 게시글/댓글 신고, 자동 숨김 |

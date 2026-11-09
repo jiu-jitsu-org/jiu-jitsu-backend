@@ -1,4 +1,4 @@
-package com.jiujitsu.api.domain.community.competition.entity;
+package com.jiujitsu.api.domain.competition.entity;
 
 /**
  * 대회 접수/진행 상태. 저장하지 않고 개최일·접수 일정과 오늘 날짜로 파생한다

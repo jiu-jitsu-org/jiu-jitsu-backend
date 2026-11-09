@@ -1,4 +1,4 @@
-package com.jiujitsu.api.domain.community.competition.entity;
+package com.jiujitsu.api.domain.competition.entity;
 
 /**
  * 대회 개최 지역 (국내 시·도 17개). 지역 필터·목록 표시용.

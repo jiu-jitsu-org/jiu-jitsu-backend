@@ -1,8 +1,8 @@
-package com.jiujitsu.api.domain.community.competition.controller;
+package com.jiujitsu.api.domain.competition.controller;
 
-import com.jiujitsu.api.domain.community.competition.dto.CompetitionCreateRequest;
-import com.jiujitsu.api.domain.community.competition.dto.CompetitionCreateResponse;
-import com.jiujitsu.api.domain.community.competition.service.CompetitionService;
+import com.jiujitsu.api.domain.competition.dto.CompetitionCreateRequest;
+import com.jiujitsu.api.domain.competition.dto.CompetitionCreateResponse;
+import com.jiujitsu.api.domain.competition.service.CompetitionService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;

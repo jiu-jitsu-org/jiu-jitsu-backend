@@ -1,6 +1,6 @@
-package com.jiujitsu.api.domain.community.competition.repository;
+package com.jiujitsu.api.domain.competition.repository;
 
-import com.jiujitsu.api.domain.community.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.Competition;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

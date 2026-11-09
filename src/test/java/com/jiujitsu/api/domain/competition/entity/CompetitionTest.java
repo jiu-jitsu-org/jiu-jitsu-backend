@@ -1,4 +1,4 @@
-package com.jiujitsu.api.domain.community.competition.entity;
+package com.jiujitsu.api.domain.competition.entity;
 
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;

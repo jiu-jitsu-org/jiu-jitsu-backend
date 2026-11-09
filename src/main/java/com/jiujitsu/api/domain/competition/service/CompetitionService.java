@@ -1,12 +1,12 @@
-package com.jiujitsu.api.domain.community.competition.service;
+package com.jiujitsu.api.domain.competition.service;
 
-import com.jiujitsu.api.domain.community.competition.dto.CompetitionCreateRequest;
-import com.jiujitsu.api.domain.community.competition.dto.CompetitionCreateResponse;
-import com.jiujitsu.api.domain.community.competition.dto.CompetitionCreateResponse.SkipReason;
-import com.jiujitsu.api.domain.community.competition.dto.CompetitionResponse;
-import com.jiujitsu.api.domain.community.competition.entity.Competition;
-import com.jiujitsu.api.domain.community.competition.mapper.CompetitionMapper;
-import com.jiujitsu.api.domain.community.competition.repository.CompetitionRepository;
+import com.jiujitsu.api.domain.competition.dto.CompetitionCreateRequest;
+import com.jiujitsu.api.domain.competition.dto.CompetitionCreateResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionCreateResponse.SkipReason;
+import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
+import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
+import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;

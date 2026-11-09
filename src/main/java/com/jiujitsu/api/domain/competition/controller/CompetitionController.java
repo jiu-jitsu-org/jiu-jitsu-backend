@@ -1,7 +1,7 @@
-package com.jiujitsu.api.domain.community.competition.controller;
+package com.jiujitsu.api.domain.competition.controller;
 
-import com.jiujitsu.api.domain.community.competition.dto.CompetitionResponse;
-import com.jiujitsu.api.domain.community.competition.service.CompetitionService;
+import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
+import com.jiujitsu.api.domain.competition.service.CompetitionService;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
 import com.jiujitsu.api.global.exception.annotation.LoginErrorExamples;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,7 +18,7 @@ import java.util.List;
 @Tag(name = "competition-controller", description = "등록 대회 API")
 @CommonApiResponses
 @RestController
-@RequestMapping("/community/competitions")
+@RequestMapping("/competitions")
 @RequiredArgsConstructor
 public class CompetitionController {
 
@@ -30,7 +30,7 @@ public class CompetitionController {
                     + "정확 일치 → 앞부분 일치 → 부분 일치, 그 안에서 개최 연도 최신순(연도 없는 대회는 뒤)으로 최대 20개를 반환합니다. 검색어가 비어 있으면 빈 배열을 반환합니다."
     )
     @LoginErrorExamples
-    @GetMapping
+    @GetMapping("/autocomplete")
     public List<CompetitionResponse> search(
             @Parameter(description = "검색어 (대회명 일부)", example = "서울")
             @RequestParam(required = false) String keyword

@@ -1,4 +1,4 @@
-package com.jiujitsu.api.domain.community.competition.dto;
+package com.jiujitsu.api.domain.competition.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

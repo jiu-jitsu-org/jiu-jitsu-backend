@@ -1,4 +1,4 @@
-package com.jiujitsu.api.domain.community.competition.entity;
+package com.jiujitsu.api.domain.competition.entity;
 
 /**
  * 대회 참가 대상 제한. 제한이 없으면 null (전체를 뜻하는 값을 따로 두지 않는다 — 같은 의미를 두 가지로 표현하지 않기 위해).
