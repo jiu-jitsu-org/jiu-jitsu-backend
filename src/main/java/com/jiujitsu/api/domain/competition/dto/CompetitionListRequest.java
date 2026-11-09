@@ -12,10 +12,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 // 쿼리 파라미터 묶음 (컨트롤러에서 @ParameterObject). 필드 설명은 @Parameter — @Schema 를 붙이면 Swagger 가 타입을 string 으로 덮어쓴다
+// example 은 size 만 둔다: Swagger "Try it out" 이 예시값을 미리 채워 date·keyword 등이 몰래 함께 전송된다
 @Schema(description = "대회 목록 조회 조건")
 public record CompetitionListRequest(
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-        @Parameter(description = "기준일. 이 날(포함) 이후 대회부터 첫 페이지. 비우면 오늘. cursor 와 함께 보낼 수 없음", example = "2026-11-09")
+        @Parameter(description = "기준일. 이 날(포함) 이후 대회부터 첫 페이지. 비우면 오늘. cursor 와 함께 보낼 수 없음 (예: 2026-11-09)")
         LocalDate date,
         @Parameter(description = "다음·이전 페이지 커서 (응답의 nextCursor·previousCursor 그대로)")
         String cursor,
@@ -27,9 +28,9 @@ public record CompetitionListRequest(
         List<CompetitionRegion> region,
         @Parameter(description = "오늘 기준 접수/진행 상태. 여러 개면 그중 하나")
         List<CompetitionStatus> status,
-        @Parameter(description = "true 면 내 관심 대회만 (로그인 필요)", example = "false")
+        @Parameter(description = "true 면 내 관심 대회만 (로그인 필요)")
         Boolean interested,
-        @Parameter(description = "대회명 일부 (공백·대소문자 무시)", example = "서울")
+        @Parameter(description = "대회명 일부 (공백·대소문자 무시, 예: 서울)")
         String keyword
 ) {
 
