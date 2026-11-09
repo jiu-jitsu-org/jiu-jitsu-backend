@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.competition.repository;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,7 +14,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface CompetitionRepository extends JpaRepository<Competition, Long> {
+// 대회 탭 목록의 선택 필터 조합은 Specification 으로 (CompetitionSpecifications)
+public interface CompetitionRepository extends JpaRepository<Competition, Long>, JpaSpecificationExecutor<Competition> {
 
     // 패턴은 정규화 + LIKE 이스케이프(\) 가 끝난 값 (CompetitionService 참고)
     // 정확 일치 → 앞부분 일치 → 부분 일치 순으로 먼저 보여 줘 짧은 검색어에서도 원하는 대회가 20개 안에 들게 한다

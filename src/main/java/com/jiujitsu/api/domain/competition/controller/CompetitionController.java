@@ -1,21 +1,28 @@
 package com.jiujitsu.api.domain.competition.controller;
 
+import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
+import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
+import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
 import com.jiujitsu.api.domain.competition.service.CompetitionService;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
 import com.jiujitsu.api.global.exception.annotation.LoginErrorExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "competition-controller", description = "등록 대회 API")
+@Tag(name = "competition-controller", description = "대회 API")
 @CommonApiResponses
 @RestController
 @RequestMapping("/competitions")
@@ -23,6 +30,23 @@ import java.util.List;
 public class CompetitionController {
 
     private final CompetitionService competitionService;
+    private final CompetitionQueryService competitionQueryService;
+
+    @Operation(
+            summary = "대회 목록 (대회 탭)",
+            description = "공개 대회를 대회일 오름차순(같은 날은 id 순)으로 반환합니다. 비로그인도 조회할 수 있습니다.\n\n"
+                    + "- 첫 요청: date(기준일, 기본 오늘)부터 size 개. 기준일 포함\n"
+                    + "- 다음(미래 쪽): cursor=nextCursor / 이전(과거 쪽): cursor=previousCursor. 더 없으면 해당 커서가 null\n"
+                    + "- cursor 를 쓸 때 필터는 같은 값으로 다시 보내고 date 는 보내지 않습니다 (함께 보내면 WRONG_PARAMETER)\n"
+                    + "- 응답 목록은 방향과 상관없이 항상 오름차순입니다 (이전 페이지는 화면 위에 붙이면 됨)\n"
+                    + "- 필터는 모두 AND. region·status 는 여러 개를 보내면 그중 하나. interested=true 는 로그인 필요\n"
+                    + "- status·earlyBirdOpen 은 응답 today(서버 기준일) 기준입니다. 남은 날은 마감일 − today"
+    )
+    @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.LOGIN_NOT_ACCESS})
+    @GetMapping
+    public CompetitionListResponse getList(@Valid @ModelAttribute CompetitionListRequest request) {
+        return competitionQueryService.getList(request);
+    }
 
     @Operation(
             summary = "등록 대회 검색 (대회명 자동완성)",

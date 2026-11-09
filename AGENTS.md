@@ -79,7 +79,7 @@ domain/
 │   ├── content/      - 컨텐츠 공통 (좋아요, 저장)
 │   ├── profile/      - 커뮤니티 프로필
 │   └── report/       - 신고
-├── competition/      - 대회 탭 (대회 정보·상태, 관심, 대회명 자동완성, 관리자 등록). 커뮤니티(UGC)와 분리된 독립 도메인
+├── competition/      - 대회 탭 (대회 정보·상태, 목록, 관심, 대회명 자동완성, 관리자 등록). 커뮤니티(UGC)와 분리된 독립 도메인
 ├── file/             - 이미지 파일
 ├── notice/           - 알림
 └── user/             - 유저, 인증, 차단
@@ -259,6 +259,8 @@ domain/community/board/
 - DTO는 Java record를 우선 사용한다.
 - 인증 유저 조회는 `AuthenticationFacade`를 통한다 (`AuthenticationUtil`에 직접 접근하지 않는다).
 - 재사용이 확인되기 전에는 공통화하지 않는다.
+- 조회 조건은 `@Query`(JPQL)가 기본이다. 선택 필터가 여러 개 조합되는 목록만 Spring Data `Specification`을 쓴다 (예: `competition/repository/CompetitionSpecifications` — 지역·상태·관심·이름을 AND). `:x IS NULL OR ...` 분기를 쿼리 하나에 늘리지 않기 위함
+- 기준점(예: 오늘)이 있고 앞뒤로 넘기는 목록은 offset `Page` 대신 키셋 커서를 쓴다 (예: 대회 목록 `CompetitionCursor`). 날짜가 바뀌거나 행이 추가돼도 중복·누락이 없다
 
 ## 현재 구현된 도메인 요약
 
@@ -272,7 +274,7 @@ domain/community/board/
 | community/content | 좋아요/저장 공통 처리 |
 | community/profile | 커뮤니티 프로필(벨트, 경기 이력 등) |
 | community/report | 게시글/댓글 신고, 자동 숨김 |
-| competition | 대회 정보·상태 파생, 관심 등록/해제·관심 수, 등록 대회 검색(대회명 자동완성), 관리자 일괄 등록 |
+| competition | 대회 정보·상태 파생, 대회 탭 목록(기준일 + 양방향 커서, 필터), 관심 등록/해제·관심 수, 등록 대회 검색(대회명 자동완성), 관리자 일괄 등록 |
 | file | CDN 이미지 파일 등록/삭제 |
 | notice | 알림 설정, FCM 푸시 전송 |
 

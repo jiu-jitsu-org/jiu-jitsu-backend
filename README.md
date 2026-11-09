@@ -142,6 +142,7 @@ src/main/java/com/jiujitsu/api/
 
 | Method | Path | 설명 |
 |--------|------|------|
+| GET | `/competitions` | 대회 탭 목록 (공개 대회, 대회일순). 기준일 `date` + 양방향 커서(`nextCursor`·`previousCursor`), 필터 `region`·`status`·`interested`·`keyword`. 비로그인 가능 |
 | GET | `/competitions/autocomplete?keyword=` | 등록 대회 검색 (프로필 대회 기록용 대회명 자동완성, 지난 대회까지) |
 | PUT | `/competitions/{competitionId}/interest` | 대회 관심 등록 (멱등, 처리 후 관심 상태·관심 수) |
 | DELETE | `/competitions/{competitionId}/interest` | 대회 관심 해제 (멱등, 미공개로 바뀐 대회도 해제 가능) |
