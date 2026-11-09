@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,7 +45,8 @@ public class CompetitionController {
     )
     @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.LOGIN_NOT_ACCESS})
     @GetMapping
-    public CompetitionListResponse getList(@Valid @ModelAttribute CompetitionListRequest request) {
+    // @ParameterObject: Swagger 에 조건을 객체 하나가 아닌 쿼리 파라미터 각각으로 보여 준다
+    public CompetitionListResponse getList(@Valid @ParameterObject @ModelAttribute CompetitionListRequest request) {
         return competitionQueryService.getList(request);
     }
 
