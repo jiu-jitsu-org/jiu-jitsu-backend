@@ -15,7 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Year;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -30,6 +31,7 @@ public class CompetitionService {
     private final CompetitionRepository competitionRepository;
     private final AuthenticationFacade authenticationFacade;
     private final CompetitionMapper competitionMapper;
+    private final Clock clock;
 
     /**
      * 등록 대회 일괄 조회 (대회 기록 연결용). 없는 ID가 하나라도 있으면 COMPETITION_NOT_FOUND
@@ -49,7 +51,8 @@ public class CompetitionService {
 
     /**
      * 등록 대회 검색 (대회명 자동완성)
-     * 공백·대소문자 무시 부분 일치, 최대 20개. 올해 이후 예정 대회는 빼고 (대회 기록은 올해까지만 받음)
+     * 공백·대소문자 무시 부분 일치, 최대 20개. 아직 열리지 않은 대회는 뺀다
+     * (연도만 아는 대회는 올해까지, 개최일이 있는 대회는 오늘까지 — 대회 기록은 지난 대회만 받음)
      */
     @Transactional(readOnly = true)
     public List<CompetitionResponse> search(String keyword) {
@@ -62,7 +65,8 @@ public class CompetitionService {
         }
 
         String escaped = escapeLike(normalized);
-        return competitionRepository.search(normalized, escaped + "%", "%" + escaped + "%", Year.now().getValue(), PageRequest.of(0, SEARCH_LIMIT))
+        LocalDate today = LocalDate.now(clock);
+        return competitionRepository.search(normalized, escaped + "%", "%" + escaped + "%", today.getYear(), today, PageRequest.of(0, SEARCH_LIMIT))
                 .stream()
                 .map(competitionMapper::toResponse)
                 .toList();
