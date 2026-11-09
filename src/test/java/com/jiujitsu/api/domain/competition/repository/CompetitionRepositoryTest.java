@@ -192,4 +192,14 @@ class CompetitionRepositoryTest {
         assertThat(saved.getViewCount()).isZero();
         assertThat(saved.getUniforms()).isEmpty();
     }
+
+    @Test
+    @DisplayName("findByIdAndPublishedTrue: 공개 대회만 찾고 미공개 카탈로그 엔트리는 빈 결과")
+    void findByIdAndPublishedTrue() {
+        Competition published = competitionRepository.save(publishedEvent("서울 오픈", TODAY.plusDays(7)));
+        Competition catalog = competitionRepository.save(Competition.of("부산 오픈", 2025));
+
+        assertThat(competitionRepository.findByIdAndPublishedTrue(published.getId())).contains(published);
+        assertThat(competitionRepository.findByIdAndPublishedTrue(catalog.getId())).isEmpty();
+    }
 }

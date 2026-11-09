@@ -43,10 +43,13 @@ public class CompetitionInterestService {
 
     /**
      * 관심 해제. 등록돼 있지 않으면 그대로 둔다 (멱등)
+     * 등록과 달리 공개 여부는 보지 않는다 — 관심 등록 뒤 미공개로 바뀐 대회도 내 관심을 지울 수 있게
      */
     public CompetitionInterestResponse unregister(Long competitionId) {
         User user = authenticationFacade.getCurrentUserForUpdate();
-        getPublishedCompetition(competitionId);
+        if (!competitionRepository.existsById(competitionId)) {
+            throw new ErrorException(ErrorCode.COMPETITION_NOT_FOUND);
+        }
 
         competitionInterestRepository.deleteByCompetitionIdAndUserId(competitionId, user.getId());
         return new CompetitionInterestResponse(competitionId, false, competitionInterestRepository.countByCompetitionId(competitionId));

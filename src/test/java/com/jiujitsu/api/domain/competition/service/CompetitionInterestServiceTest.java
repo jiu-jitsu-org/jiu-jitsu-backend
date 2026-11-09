@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -57,6 +58,12 @@ class CompetitionInterestServiceTest {
         given(competitionRepository.findByIdAndPublishedTrue(COMPETITION_ID)).willReturn(Optional.of(competition));
     }
 
+    // 해제는 공개 여부와 상관없이 대회가 있기만 하면 된다
+    private void givenLoginAndExists() {
+        given(authenticationFacade.getCurrentUserForUpdate()).willReturn(user);
+        given(competitionRepository.existsById(COMPETITION_ID)).willReturn(true);
+    }
+
     @Test
     @DisplayName("관심 등록: 없으면 저장하고, 처리 후 상태와 관심 수를 돌려준다")
     void register_creates() {
@@ -89,7 +96,7 @@ class CompetitionInterestServiceTest {
     @Test
     @DisplayName("관심 해제: 삭제하고, 처리 후 상태와 관심 수를 돌려준다")
     void unregister_deletes() {
-        givenLoginAndPublished();
+        givenLoginAndExists();
         given(competitionInterestRepository.countByCompetitionId(COMPETITION_ID)).willReturn(2L);
 
         CompetitionInterestResponse response = competitionInterestService.unregister(COMPETITION_ID);
@@ -101,7 +108,7 @@ class CompetitionInterestServiceTest {
     @Test
     @DisplayName("관심 해제: 등록돼 있지 않아도 에러 없이 해제 상태를 돌려준다 (멱등)")
     void unregister_idempotent() {
-        givenLoginAndPublished();
+        givenLoginAndExists();
         given(competitionInterestRepository.countByCompetitionId(COMPETITION_ID)).willReturn(0L);
 
         CompetitionInterestResponse response = competitionInterestService.unregister(COMPETITION_ID);
@@ -110,19 +117,39 @@ class CompetitionInterestServiceTest {
     }
 
     @Test
-    @DisplayName("없거나 미공개인 대회는 COMPETITION_NOT_FOUND (등록·해제 모두)")
-    void notPublished_notFound() {
+    @DisplayName("관심 등록: 없거나 미공개인 대회는 COMPETITION_NOT_FOUND")
+    void register_notPublished_notFound() {
         given(authenticationFacade.getCurrentUserForUpdate()).willReturn(user);
         given(competitionRepository.findByIdAndPublishedTrue(anyLong())).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> competitionInterestService.register(COMPETITION_ID))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+        verify(competitionInterestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("관심 해제: 없는 대회는 COMPETITION_NOT_FOUND")
+    void unregister_missing_notFound() {
+        given(authenticationFacade.getCurrentUserForUpdate()).willReturn(user);
+        given(competitionRepository.existsById(COMPETITION_ID)).willReturn(false);
+
         assertThatThrownBy(() -> competitionInterestService.unregister(COMPETITION_ID))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
-        verify(competitionInterestRepository, never()).save(any());
         verify(competitionInterestRepository, never()).deleteByCompetitionIdAndUserId(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("관심 해제: 공개 여부는 보지 않는다 — 등록 뒤 미공개로 바뀐 대회도 해제된다")
+    void unregister_ignoresPublished() {
+        givenLoginAndExists();
+        given(competitionInterestRepository.countByCompetitionId(COMPETITION_ID)).willReturn(0L);
+
+        competitionInterestService.unregister(COMPETITION_ID);
+
+        verify(competitionRepository, never()).findByIdAndPublishedTrue(anyLong());
+        verify(competitionInterestRepository).deleteByCompetitionIdAndUserId(COMPETITION_ID, 1L);
     }
 
     @Test
@@ -145,5 +172,15 @@ class CompetitionInterestServiceTest {
         assertThat(competitionInterestService.getInterestCounts(List.of(1L, 2L))).containsExactly(Map.entry(1L, 5L));
         assertThat(competitionInterestService.getInterestCounts(List.of())).isEmpty();
         verify(competitionInterestRepository).countByCompetitionIds(any());
+    }
+
+    @Test
+    @DisplayName("내 관심 대회 id 일괄 조회: 리포지토리 결과를 그대로, 빈 목록이면 조회하지 않는다")
+    void getInterestedIds() {
+        given(competitionInterestRepository.findInterestedCompetitionIds(1L, List.of(1L, 2L))).willReturn(Set.of(2L));
+
+        assertThat(competitionInterestService.getInterestedIds(1L, List.of(1L, 2L))).containsExactly(2L);
+        assertThat(competitionInterestService.getInterestedIds(1L, List.of())).isEmpty();
+        verify(competitionInterestRepository).findInterestedCompetitionIds(anyLong(), any());
     }
 }

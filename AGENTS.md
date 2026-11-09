@@ -269,10 +269,10 @@ domain/community/board/
 | boot_strap | OS별 앱 버전 정보 조회 |
 | community/board | 게시글 CRUD, 카테고리, 좋아요, 저장, 숨김 |
 | community/comment | 댓글 CRUD, 좋아요 |
-| competition | 대회 정보·상태 파생, 관심 등록/해제·관심 수, 등록 대회 검색(대회명 자동완성), 관리자 일괄 등록 |
 | community/content | 좋아요/저장 공통 처리 |
 | community/profile | 커뮤니티 프로필(벨트, 경기 이력 등) |
 | community/report | 게시글/댓글 신고, 자동 숨김 |
+| competition | 대회 정보·상태 파생, 관심 등록/해제·관심 수, 등록 대회 검색(대회명 자동완성), 관리자 일괄 등록 |
 | file | CDN 이미지 파일 등록/삭제 |
 | notice | 알림 설정, FCM 푸시 전송 |
 

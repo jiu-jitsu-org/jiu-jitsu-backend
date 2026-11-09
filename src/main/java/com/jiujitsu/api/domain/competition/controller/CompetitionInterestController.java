@@ -41,7 +41,7 @@ public class CompetitionInterestController {
 
     @Operation(
             summary = "대회 관심 해제",
-            description = "관심 대회 등록을 해제합니다. 등록돼 있지 않으면 그대로 두고 같은 결과를 반환합니다."
+            description = "관심 대회 등록을 해제합니다. 등록돼 있지 않으면 그대로 두고 같은 결과를 반환합니다. 등록 뒤 미공개로 바뀐 대회도 해제할 수 있습니다."
     )
     @LoginErrorExamples
     @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND})
