@@ -50,7 +50,9 @@ public class CompetitionQueryService {
      * offset 페이지를 쓰지 않는 이유: 기준이 오늘이라 날짜가 바뀌거나 대회가 추가되면 페이지가 밀리고, 기준일 앞쪽을 표현할 수 없다
      */
     public CompetitionListResponse getList(CompetitionListRequest request) {
-        if (request.date() != null && request.cursor() != null) {
+        // 빈 cursor(`cursor=`)는 없는 것으로 본다 — 빈 date 가 null 로 바인딩되는 것과 맞춘다
+        String cursor = request.cursor() == null || request.cursor().isBlank() ? null : request.cursor();
+        if (request.date() != null && cursor != null) {
             throw new ErrorException(ErrorCode.WRONG_PARAMETER);
         }
         LocalDate today = LocalDate.now(clock);
@@ -59,8 +61,8 @@ public class CompetitionQueryService {
             throw new ErrorException(ErrorCode.LOGIN_NOT_ACCESS);
         }
 
-        CompetitionCursor position = request.cursor() != null
-                ? CompetitionCursor.decode(request.cursor())
+        CompetitionCursor position = cursor != null
+                ? CompetitionCursor.decode(cursor)
                 : CompetitionCursor.startOf(request.date() != null ? request.date() : today);
         Specification<Competition> filter = filter(request, today, userId);
         int size = request.sizeOrDefault();

@@ -18,6 +18,16 @@ public record CompetitionCursor(Direction direction, LocalDate openDate, long id
 
     public enum Direction { AFTER, BEFORE }
 
+    // 다룰 수 있는 날짜 범위 (4자리 연도). 밖의 값은 DB 날짜 범위를 넘을 수 있어 쿼리 전에 400 으로 막는다
+    private static final LocalDate MIN_DATE = LocalDate.of(1, 1, 1);
+    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
+
+    public CompetitionCursor {
+        if (openDate.isBefore(MIN_DATE) || openDate.isAfter(MAX_DATE)) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+        }
+    }
+
     private static final String SEPARATOR = "|";
 
     /**

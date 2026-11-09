@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
+import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.entity.CompetitionStatus;
 import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
@@ -239,5 +240,52 @@ class CompetitionQueryServiceTest {
         assertThatThrownBy(() -> competitionQueryService.getList(request(TODAY, cursor, null)))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.WRONG_PARAMETER);
+    }
+
+    @Test
+    @DisplayName("빈 cursor 는 없는 것으로 본다 (첫 페이지, date 와 함께여도 에러 아님)")
+    void blankCursor_isAbsent() {
+        seedTimeline();
+
+        assertThat(names(competitionQueryService.getList(request(null, "", 2)))).containsExactly("오늘1", "오늘2");
+        assertThat(names(competitionQueryService.getList(request(TODAY.minusDays(1), " ", 1)))).containsExactly("과거2");
+    }
+
+    @Test
+    @DisplayName("status 필터는 기준일(date)이 아니라 오늘 기준이고, region 과 함께 다음 페이지에도 유지된다")
+    void statusAndRegion_todayBased_keptAcrossPages() {
+        // 10/1 기준이면 접수 중이었지만 오늘은 마감된 대회 — date 를 과거로 줘도 OPEN 에 나오면 안 된다
+        em.persist(Competition.builder().name("서울 마감").searchName("서울마감").competitionYear(2026).published(true)
+                .region(CompetitionRegion.SEOUL).openDate(TODAY.plusDays(10))
+                .registrationStartDate(TODAY.minusDays(60)).registrationDeadline(TODAY.minusDays(1)).build());
+        for (int i = 1; i <= 3; i++) {
+            em.persist(Competition.builder().name("서울 접수중" + i).searchName("서울접수중" + i).competitionYear(2026).published(true)
+                    .region(CompetitionRegion.SEOUL).openDate(TODAY.plusDays(10 + i))
+                    .registrationStartDate(TODAY.minusDays(60)).registrationDeadline(TODAY.plusDays(5)).build());
+        }
+        em.persist(Competition.builder().name("부산 접수중").searchName("부산접수중").competitionYear(2026).published(true)
+                .region(CompetitionRegion.BUSAN).openDate(TODAY.plusDays(11)).build());
+        // 첫 페이지 커서 뒤쪽에도 걸러져야 할 대회를 둔다 — 커서로 넘어갈 때 필터가 빠지면 2페이지에 섞인다
+        em.persist(Competition.builder().name("부산 접수중2").searchName("부산접수중2").competitionYear(2026).published(true)
+                .region(CompetitionRegion.BUSAN).openDate(TODAY.plusDays(20)).build());
+        em.persist(Competition.builder().name("서울 마감2").searchName("서울마감2").competitionYear(2026).published(true)
+                .region(CompetitionRegion.SEOUL).openDate(TODAY.plusDays(21))
+                .registrationStartDate(TODAY.minusDays(60)).registrationDeadline(TODAY.minusDays(1)).build());
+        em.flush();
+        List<CompetitionRegion> seoul = List.of(CompetitionRegion.SEOUL);
+        List<CompetitionStatus> open = List.of(CompetitionStatus.OPEN);
+
+        CompetitionListResponse first = competitionQueryService.getList(
+                new CompetitionListRequest(LocalDate.of(2026, 10, 1), null, 2, seoul, open, null, null));
+        CompetitionListResponse second = competitionQueryService.getList(
+                new CompetitionListRequest(null, first.nextCursor(), 2, seoul, open, null, null));
+
+        assertThat(names(first)).containsExactly("서울 접수중1", "서울 접수중2");
+        assertThat(names(second)).containsExactly("서울 접수중3");
+        assertThat(second.nextCursor()).isNull();
+        assertThat(java.util.stream.Stream.concat(first.competitions().stream(), second.competitions().stream()).toList()).allSatisfy(item -> {
+            assertThat(item.status()).isEqualTo(CompetitionStatus.OPEN);
+            assertThat(item.region()).isEqualTo(CompetitionRegion.SEOUL);
+        });
     }
 }

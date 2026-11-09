@@ -38,7 +38,7 @@ class CompetitionCursorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"not-base64!!", "", "AFTER|2026-12-06", "SIDEWAYS|2026-12-06|1", "AFTER|2026-13-01|1", "AFTER|2026-12-06|x"})
+    @ValueSource(strings = {"not-base64!!", "", "AFTER|2026-12-06", "SIDEWAYS|2026-12-06|1", "AFTER|2026-13-01|1", "AFTER|2026-12-06|x", "AFTER|+999999999-12-31|0", "BEFORE|-0001-01-01|5"})
     @DisplayName("형식이 틀린 커서는 WRONG_PARAMETER")
     void invalid(String raw) {
         String value = raw.contains("|")
@@ -46,6 +46,14 @@ class CompetitionCursorTest {
                 : raw;
 
         assertThatThrownBy(() -> CompetitionCursor.decode(value))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.WRONG_PARAMETER);
+    }
+
+    @Test
+    @DisplayName("기준일이 4자리 연도 범위를 벗어나면 WRONG_PARAMETER (DB 날짜 범위 밖 값이 쿼리까지 가지 않게)")
+    void startOf_outOfRange() {
+        assertThatThrownBy(() -> CompetitionCursor.startOf(LocalDate.of(10000, 1, 1)))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.WRONG_PARAMETER);
     }
