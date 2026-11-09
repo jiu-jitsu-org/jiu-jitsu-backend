@@ -143,6 +143,8 @@ src/main/java/com/jiujitsu/api/
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/competitions/autocomplete?keyword=` | 등록 대회 검색 (프로필 대회 기록용 대회명 자동완성, 지난 대회까지) |
+| PUT | `/competitions/{competitionId}/interest` | 대회 관심 등록 (멱등, 처리 후 관심 상태·관심 수) |
+| DELETE | `/competitions/{competitionId}/interest` | 대회 관심 해제 (멱등) |
 
 ### 관리자 등록 대회 (`/api/admin/competitions`)
 

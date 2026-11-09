@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CompetitionRepository extends JpaRepository<Competition, Long> {
@@ -41,4 +42,7 @@ public interface CompetitionRepository extends JpaRepository<Competition, Long> 
                              Pageable pageable);
 
     List<Competition> findAllBySearchNameIn(Collection<String> searchNames);
+
+    // 대회 탭에 노출되는 공개 대회만 (미공개 카탈로그 엔트리는 없는 대회로 본다)
+    Optional<Competition> findByIdAndPublishedTrue(Long id);
 }
