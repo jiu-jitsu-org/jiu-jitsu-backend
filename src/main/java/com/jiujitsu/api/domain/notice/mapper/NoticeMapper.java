@@ -8,16 +8,17 @@ import com.jiujitsu.api.domain.notice.entity.Notice;
 import com.jiujitsu.api.domain.notice.entity.UserNoticeSetting;
 
 public class NoticeMapper {
-    public static NoticeListResponse toNoticeListResponse(Notice notice, String deletedStatus, String body) {
+    // title: 좋아요 카드는 지금 좋아요 수로 다시 만든 제목 (#196), 그 밖엔 저장된 제목
+    public static NoticeListResponse toNoticeListResponse(Notice notice, String title, String deletedStatus, String body) {
         return new NoticeListResponse(
                 notice.getId(),
-                notice.getTitle(),
+                title,
                 body,
                 notice.getPushType(),
                 notice.getPushActionType(),
                 notice.getData(),
                 notice.getIsRead(),
-                notice.getCreatedAt(),
+                notice.getNotifiedAt(),
                 deletedStatus
         );
     }

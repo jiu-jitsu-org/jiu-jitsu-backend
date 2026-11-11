@@ -4,7 +4,9 @@ import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.board.service.BoardHideService;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
+import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepository;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
+import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
@@ -60,6 +62,8 @@ public class NoticeService {
     private final BoardHideService boardHideService;
     private final ReportService reportService;
     private final CompetitionRepository competitionRepository;
+    private final ContentLikeRepository contentLikeRepository;
+    private final CommentLikeRepository commentLikeRepository;
     private final Clock clock;
 
     /**
@@ -72,9 +76,14 @@ public class NoticeService {
         Set<Long> excludedContentIds = getExcludedContentIds();
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
 
-        return noticeRepository.findByUserIdAndIsReadFalse(user.getId())
+        List<Notice> unread = noticeRepository.findByUserIdAndIsReadFalse(user.getId())
                 .stream()
                 .filter(n -> isVisible(n, blockedUserIds, excludedContentIds))
+                .toList();
+        LikeCounts likeCounts = loadLikeCounts(unread);
+        LocalDateTime likeCardCutoff = likeCardCutoff();
+        return unread.stream()
+                .filter(n -> !likeCounts.isHidden(n, likeCardCutoff))
                 .count();
     }
 
@@ -89,9 +98,16 @@ public class NoticeService {
         Set<Long> excludedContentIds = getExcludedContentIds();
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
 
-        List<Notice> notices = noticeRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
+        List<Notice> visible = noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(user.getId())
                 .stream()
                 .filter(n -> isVisible(n, blockedUserIds, excludedContentIds))
+                .toList();
+
+        // 좋아요 카드: 지금 실제 좋아요 수로 제목을 만들고, 숨길 카드는 뺀다 (#196, LikeCounts#isHidden)
+        LikeCounts likeCounts = loadLikeCounts(visible);
+        LocalDateTime likeCardCutoff = likeCardCutoff();
+        List<Notice> notices = visible.stream()
+                .filter(n -> !likeCounts.isHidden(n, likeCardCutoff))
                 .toList();
 
         // 존재하는 contentId 일괄 조회
@@ -151,6 +167,7 @@ public class NoticeService {
 
         return notices.stream()
                 .map(n -> NoticeMapper.toNoticeListResponse(n,
+                        n.isLikeCard() ? Notice.likeTitle(n.getPushType(), likeCounts.of(n)) : n.getTitle(),
                         isCompetitionNotice(n)
                                 ? computeCompetitionDeletedStatus(n, publishedCompetitionIds)
                                 : computeDeletedStatus(n, existingContentIds, commentByRefId),
@@ -316,6 +333,55 @@ public class NoticeService {
         return Stream.concat(hidden.stream(), reported.stream()).collect(Collectors.toSet());
     }
 
+    /**
+     * 좋아요 카드의 지금 좋아요 수 — 게시글 좋아요는 contentId, 댓글 좋아요는 commentId 로 한 번씩 센다 (N+1 없음)
+     */
+    private LikeCounts loadLikeCounts(List<Notice> notices) {
+        List<Long> contentIds = notices.stream()
+                .filter(n -> n.isLikeCard() && n.getPushType() == FcmPushType.CONTENTS_LIKE && n.getData() != null)
+                .map(n -> Long.parseLong(n.getData()))
+                .distinct()
+                .toList();
+        List<Long> commentIds = notices.stream()
+                .filter(n -> n.isLikeCard() && n.getPushType() == FcmPushType.COMMENTS_LIKE && n.getRefId() != null)
+                .map(Notice::getRefId)
+                .distinct()
+                .toList();
+        Map<Long, Long> byContentId = contentIds.isEmpty() ? Map.of()
+                : toCountMap(contentLikeRepository.countContentLikeByContentIds(contentIds));
+        Map<Long, Long> byCommentId = commentIds.isEmpty() ? Map.of()
+                : toCountMap(commentLikeRepository.countGroupByCommentIds(commentIds));
+        return new LikeCounts(byContentId, byCommentId);
+    }
+
+    private static Map<Long, Long> toCountMap(List<Object[]> rows) {
+        return rows.stream().collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+    }
+
+    private record LikeCounts(Map<Long, Long> byContentId, Map<Long, Long> byCommentId) {
+        long of(Notice n) {
+            if (n.getPushType() == FcmPushType.COMMENTS_LIKE) {
+                return n.getRefId() == null ? 0L : byCommentId.getOrDefault(n.getRefId(), 0L);
+            }
+            return n.getData() == null ? 0L : byContentId.getOrDefault(Long.parseLong(n.getData()), 0L);
+        }
+
+        /**
+         * 알림함·안 읽은 수에서 뺄 좋아요 카드
+         * - 좋아요가 전부 취소됨 (0개)
+         * - 아직 푸시가 한 번도 안 감 (첫 기준 전 — 기준을 1보다 크게 바꾼 경우)
+         * - 마지막 푸시가 보관 기간(30일) 전 — 카드는 이미 보낸 기준을 들고 있어 정리에서 지우지 않으므로 여기서 숨긴다
+         */
+        boolean isHidden(Notice n, LocalDateTime cutoff) {
+            if (!n.isLikeCard()) return false;
+            return of(n) == 0 || n.isLikeCardBeforeFirstPush() || n.getNotifiedAt().isBefore(cutoff);
+        }
+    }
+
+    private LocalDateTime likeCardCutoff() {
+        return LocalDateTime.now(clock).minusDays(NoticeCleanupService.RETENTION_DAYS);
+    }
+
     // 대회 알림은 data 가 대회 id 다 (게시글·밸런스 게임은 contentId)
     private static boolean isCompetitionNotice(Notice n) {
         return n.getPushActionType() == PushActionType.COMPETITION_DETAIL;
@@ -337,30 +403,22 @@ public class NoticeService {
 
     /**
      * 알림 body 동적 계산
-     * - NEW_COMMENTS        : 현재 게시글 제목 (밸런스 게임이면 null)
-     * - NEW_CHILD_COMMENTS  : 부모 댓글 본문 (삭제/숨김이면 null)
-     * - 그 외                : null
+     * - 커뮤니티 알림 : NoticePreview.body (푸시 본문과 같은 규칙 — 게시글 제목 / 댓글 내용, 삭제·숨김 댓글은 null, #196)
+     * - 대회 마감 알림 : 발송 때 저장한 본문
      */
     private String computeBody(Notice notice,
                                Map<Long, String> boardTitleByContentId,
                                Map<Long, CommunityComments> commentByRefId,
                                Map<Long, CommunityComments> parentCommentById) {
         return switch (notice.getPushType()) {
-            case NEW_COMMENTS -> {
-                if (notice.getData() == null) yield null;
-                yield boardTitleByContentId.get(Long.parseLong(notice.getData()));
-            }
-            case NEW_CHILD_COMMENTS -> {
-                if (notice.getRefId() == null) yield null;
-                CommunityComments reply = commentByRefId.get(notice.getRefId());
-                if (reply == null || reply.getParentId() == null || reply.getParentId() == 0) yield null;
-                CommunityComments parent = parentCommentById.get(reply.getParentId());
-                if (parent == null || parent.isDeleted() || parent.isHidden()) yield null;
-                yield parent.getBody();
-            }
             // 대회 이름·마감 단계가 들어간 문구를 발송 때 저장해 둔다
             case COMPETITION_EARLY_BIRD_DEADLINE, COMPETITION_REGISTRATION_DEADLINE -> notice.getBody();
-            default -> null;
+            // 커뮤니티 알림: 푸시 본문과 같은 규칙 (NoticePreview.body), 값은 화면 단위 일괄 조회 결과에서
+            default -> NoticePreview.body(notice.getPushType(),
+                    notice.getData() == null ? null : Long.parseLong(notice.getData()),
+                    notice.getRefId(),
+                    boardTitleByContentId::get,
+                    id -> commentByRefId.containsKey(id) ? commentByRefId.get(id) : parentCommentById.get(id));
         };
     }
 

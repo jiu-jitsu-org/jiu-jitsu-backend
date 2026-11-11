@@ -49,16 +49,4 @@ class FcmPushServiceTest {
         assertThat(log.getValue().getPushActionType()).isEqualTo(PushActionType.COMPETITION_DETAIL);
         assertThat(log.getValue().getData()).isEqualTo("7");
     }
-
-    @Test
-    @DisplayName("제목·본문을 넘기지 않으면 푸시 종류의 고정 문구 (커뮤니티 알림)")
-    void send_defaultTexts() {
-        fcmPushService.send(userWithDevice(), FcmPushType.NEW_COMMENTS,
-                Map.of("type", PushActionType.BOARD_DETAIL.name(), "data", "3"));
-
-        ArgumentCaptor<PushSendLog> log = ArgumentCaptor.forClass(PushSendLog.class);
-        verify(pushSendLogService).insertPushSendLog(log.capture());
-        assertThat(log.getValue().getTitle()).isEqualTo(FcmPushType.NEW_COMMENTS.getTitle());
-        assertThat(List.of(log.getValue().getPushType())).containsExactly(FcmPushType.NEW_COMMENTS);
-    }
 }

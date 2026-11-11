@@ -11,39 +11,61 @@ import com.jiujitsu.api.domain.community.content.mapper.ContentSaveMapper;
 import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.community.content.repository.ContentSaveRepository;
-import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.domain.notice.event.LikeNoticeEvent;
 import com.jiujitsu.api.domain.user.entity.User;
-import com.jiujitsu.api.domain.user.repository.UserBlockRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
-import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
+import com.jiujitsu.api.global.util.ConstraintViolationUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class ContentService {
+    private final TransactionTemplate transactionTemplate;
     private final AuthenticationFacade authenticationFacade;
     private final ContentRepository contentRepository;
     private final ContentLikeRepository contentLikeRepository;
     private final ContentLikeMapper contentLikeMapper;
     private final ContentSaveRepository contentSaveRepository;
     private final ContentSaveMapper contentSaveMapper;
-    private final FcmPushEventPublisher fcmPushEventPublisher;
-    private final NoticeService noticeService;
-    private final UserBlockRepository userBlockRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 게시물 좋아요 등록/삭제
+     * 같은 사람의 요청이 동시에 들어와 늦은 쪽이 (게시글, 사람) 유니크 제약에 걸리면,
+     * 롤백하고 새 트랜잭션에서 지금 상태로 응답한다 (댓글 좋아요와 같음, #199)
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ContentLikeResponse like(Long id) {
+        try {
+            return transactionTemplate.execute(status -> toggleLike(id));
+        } catch (DataIntegrityViolationException e) {
+            // 이 트랜잭션이 쓰는 유니크는 (게시글, 사람)뿐이다 (PK 는 IDENTITY 라 충돌하지 않는다는 전제) → 유니크 위반이면 동시 요청.
+            // 그 밖의 위반(FK 등)은 그대로 드러낸다. 전제가 깨진 경우(PK 시퀀스 어긋남 등)를 추적할 수 있게 원인을 남긴다
+            if (!ConstraintViolationUtil.isUniqueViolation(e)) {
+                throw e;
+            }
+            log.info("게시글 좋아요 동시 요청 충돌 → 지금 상태로 응답 contentId={} cause={}",
+                    id, e.getMostSpecificCause().getMessage());
+            return transactionTemplate.execute(status -> currentLike(id));
+        }
+    }
+
+    private ContentLikeResponse toggleLike(Long id) {
         // 로그인 유저 정보 조회
         User user = authenticationFacade.getCurrentUser();
 
@@ -53,41 +75,45 @@ public class ContentService {
 
         // 기존 좋아요 조회
         ContentLike newLike = null;
-        Optional<ContentLike> existLike = contentLikeRepository.findByContentIdAndCreatedBy(id, user);
-
-        if (existLike.isPresent()) {
+        if (contentLikeRepository.existsByContentIdAndCreatedById(id, user.getId())) {
             // 좋아요 취소
-            contentLikeRepository.delete(existLike.get());
+            contentLikeRepository.deleteAllByContentIdAndCreatedById(id, user.getId());
         } else {
             // 좋아요 등록
             newLike = ContentLike.builder().content(content).build();
             contentLikeRepository.save(newLike);
 
-            if (!Objects.equals(user.getId(), content.getCreatedBy().getId())) {
-                FcmPushType pushType = FcmPushType.CONTENTS_LIKE;
-
-                // 딥링크 목적지는 푸시 종류가 아니라 대상 컨텐츠 타입이 결정한다 (게시글 / 밸런스 게임)
-                Map<String, String> pushData = new HashMap<>();
-                pushData.put("type", content.getContentType().getPushActionType().name());
-                pushData.put("data", content.getId().toString());
-
-                Long contentOwnerId = content.getCreatedBy().getId();
-                // 게시물 주인이 좋아요 누른 사람을 차단한 경우 → 알림/푸시 안 함
-                if (userBlockRepository.existsByBlockerIdAndBlockedId(contentOwnerId, user.getId())) {
-                    return contentLikeMapper.toContentLikeResponse(content, newLike,
-                            getContentLikeCount(List.of(content.getId())).getOrDefault(content.getId(), 0L));
-                }
-                if (noticeService.isContentNoticeEnabled(contentOwnerId, content.getId())) {
-                    fcmPushEventPublisher.publish(contentOwnerId, pushType, pushData);
-                    noticeService.saveNotice(contentOwnerId, pushType, pushData, user.getId(), null);
-                }
+            // 글쓴이 알림을 받는 컨텐츠만 (밸런스 게임 제외, ContentType#notifiesWriter)
+            if (content.getContentType().isNotifiesWriter()
+                    && !Objects.equals(user.getId(), content.getCreatedBy().getId())) {
+                // 알림은 커밋 뒤 개수 기준으로 처리한다 (#196, LikeNoticeService)
+                eventPublisher.publishEvent(new LikeNoticeEvent(
+                        content.getCreatedBy().getId(),
+                        content.getId(),
+                        null,
+                        FcmPushType.CONTENTS_LIKE,
+                        Map.of("type", content.getContentType().getPushActionType().name(),
+                               "data", content.getId().toString())
+                ));
             }
         }
 
         long likeCount = getContentLikeCount(List.of(content.getId()))
                 .getOrDefault(content.getId(), 0L);
 
-        return contentLikeMapper.toContentLikeResponse(content, newLike, likeCount);
+        return contentLikeMapper.toContentLikeResponse(content, newLike != null, likeCount);
+    }
+
+    // 동시 요청이 먼저 좋아요를 저장해 유니크 제약에 걸린 경우 → 지금 상태로 응답 (#199)
+    // 보통은 좋아요 상태지만, 그 사이 같은 사람의 다음 요청이 취소했으면 취소 상태다
+    private ContentLikeResponse currentLike(Long id) {
+        User user = authenticationFacade.getCurrentUser();
+        Content content = contentRepository.findById(id)
+                .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
+
+        boolean liked = contentLikeRepository.existsByContentIdAndCreatedById(id, user.getId());
+        return contentLikeMapper.toContentLikeResponse(content, liked,
+                getContentLikeCount(List.of(id)).getOrDefault(id, 0L));
     }
 
     /**

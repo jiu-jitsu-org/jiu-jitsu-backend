@@ -21,10 +21,6 @@ public class FcmPushService {
     private final FirebaseMessaging firebaseMessaging;
     private final PushSendLogService pushSendLogService;
 
-    public void send(User user, FcmPushType pushType, Map<String, String> data) {
-        send(user, pushType, data, pushType.getTitle(), pushType.getBody());
-    }
-
     public void send(User user, FcmPushType pushType, Map<String, String> data, String title, String body) {
         String actionType = data.get("type");
         String pushData = data.get("data");

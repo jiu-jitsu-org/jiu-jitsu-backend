@@ -26,6 +26,7 @@ import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
+import com.jiujitsu.api.domain.notice.event.LikeNoticeEvent;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -35,8 +36,11 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.entity.PushActionType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
+import com.jiujitsu.api.global.util.ConstraintViolationUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -45,17 +49,21 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class CommunityCommentsService {
 
+    private final TransactionTemplate transactionTemplate;
     private final CommentLikeRepository commentLikeRepository;
     private final CommunityCommentsRepository communityCommentsRepository;
     private final ContentRepository contentRepository;
@@ -188,10 +196,12 @@ public class CommunityCommentsService {
         PushActionType actionType = content.getContentType().getPushActionType();
 
         // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
+        // 글쓴이 알림을 받는 컨텐츠만 (밸런스 게임 제외, ContentType#notifiesWriter)
         // 단, 게시글 작성자 == 부모댓글 작성자인 경우 알림2(NEW_CHILD_COMMENTS)로 대체되므로 중복 방지
-        boolean boardWriterIsParentAuthor = parentComments.isPresent() &&
+        boolean notifyBoardWriter = content.getContentType().isNotifiesWriter();
+        boolean boardWriterIsParentAuthor = notifyBoardWriter && parentComments.isPresent() &&
                 Objects.equals(boardWriter.getId(), parentComments.get().getCreatedBy().getId());
-        if (!Objects.equals(user.getId(), boardWriter.getId()) && !boardWriterIsParentAuthor) {
+        if (notifyBoardWriter && !Objects.equals(user.getId(), boardWriter.getId()) && !boardWriterIsParentAuthor) {
             eventPublisher.publishEvent(new CommentNoticeEvent(
                     boardWriter.getId(),
                     content.getId(),
@@ -225,9 +235,29 @@ public class CommunityCommentsService {
     }
 
     /**
-     * 댓글 좋아요 등록
+     * 댓글 좋아요 등록/취소 (토글)
+     * 같은 사람의 요청이 동시에 들어와 둘 다 "좋아요 없음"으로 보고 저장하면, 늦은 쪽은 유니크 제약
+     * ({@link CommentLike#UNIQUE_CONSTRAINT})에 걸린다. 에러가 난 트랜잭션은 다시 쓸 수 없으므로(PostgreSQL)
+     * 롤백하고 새 트랜잭션에서 지금 상태로 응답한다. 알림은 커밋된 요청만 나간다. (#199)
+     * 같은 클래스 안에서 트랜잭션을 나눠야 해서 TransactionTemplate 으로 실행한다
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CommentLikeResponse createCommentLike(CommentLikeRequest request) {
+        try {
+            return transactionTemplate.execute(status -> toggleCommentLike(request));
+        } catch (DataIntegrityViolationException e) {
+            // 이 트랜잭션이 쓰는 유니크는 (댓글, 사람)뿐이다 (PK 는 IDENTITY 라 충돌하지 않는다는 전제) → 유니크 위반이면 동시 요청.
+            // 그 밖의 위반(FK 등)은 그대로 드러낸다. 전제가 깨진 경우(PK 시퀀스 어긋남 등)를 추적할 수 있게 원인을 남긴다
+            if (!ConstraintViolationUtil.isUniqueViolation(e)) {
+                throw e;
+            }
+            log.info("댓글 좋아요 동시 요청 충돌 → 지금 상태로 응답 commentId={} cause={}",
+                    request.commentId(), e.getMostSpecificCause().getMessage());
+            return transactionTemplate.execute(status -> currentCommentLike(request));
+        }
+    }
+
+    private CommentLikeResponse toggleCommentLike(CommentLikeRequest request) {
         // 로그인 유저 정보 조회
         User user = authenticationFacade.getCurrentUser();
 
@@ -237,11 +267,9 @@ public class CommunityCommentsService {
 
         // 기존 좋아요 조회
         CommentLike newLike = null;
-        Optional<CommentLike> existLike = commentLikeRepository.findByCommentIdAndCreatedBy(comment.getId(), user);
-
-        if (existLike.isPresent()) {
-            // 좋아요 취소
-            commentLikeRepository.delete(existLike.get());
+        if (commentLikeRepository.existsByCommentIdAndCreatedById(comment.getId(), user.getId())) {
+            // 좋아요 취소 (제약 전 중복 저장된 행이 있으면 함께 지운다)
+            commentLikeRepository.deleteAllByCommentIdAndCreatedById(comment.getId(), user.getId());
         } else {
             // 좋아요 등록
             newLike = commentLikeFactory.createCommentLike(comment);
@@ -252,25 +280,38 @@ public class CommunityCommentsService {
                 // data 는 상세 화면을 여는 데 쓰이므로 commentId 가 아닌 contentId 를 보낸다.
                 // 나머지 3개 푸시와 동일한 규약이며, 밸런스 상세(GET /community/balance-game/{contentId})
                 // 진입에도 contentId 가 필요하다. (#136)
-                eventPublisher.publishEvent(new CommentNoticeEvent(
+                // 알림은 커밋 뒤 댓글별 개수 기준으로 처리한다 (#196, LikeNoticeService)
+                eventPublisher.publishEvent(new LikeNoticeEvent(
                         comment.getCreatedBy().getId(),
                         content.getId(),
+                        comment.getId(),
                         FcmPushType.COMMENTS_LIKE,
                         Map.of("type", content.getContentType().getPushActionType().name(),
-                               "data", content.getId().toString()),
-                        user.getId(),
-                        comment.getId()
+                               "data", content.getId().toString())
                 ));
             }
         }
 
-        long likeCount = commentLikeRepository.countGroupByCommentIds(List.of(comment.getId()))
+        return commentLikeMapper.toCommentLikeResponse(comment, newLike != null, countCommentLike(comment.getId()));
+    }
+
+    // 동시 요청이 먼저 좋아요를 저장해 유니크 제약에 걸린 경우 → 지금 상태로 응답 (#199)
+    // 보통은 좋아요 상태지만, 그 사이 같은 사람의 다음 요청이 취소했으면 취소 상태다
+    private CommentLikeResponse currentCommentLike(CommentLikeRequest request) {
+        User user = authenticationFacade.getCurrentUser();
+        CommunityComments comment = communityCommentsRepository.findById(request.commentId())
+                .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
+
+        boolean liked = commentLikeRepository.existsByCommentIdAndCreatedById(comment.getId(), user.getId());
+        return commentLikeMapper.toCommentLikeResponse(comment, liked, countCommentLike(comment.getId()));
+    }
+
+    private long countCommentLike(Long commentId) {
+        return commentLikeRepository.countGroupByCommentIds(List.of(commentId))
                 .stream()
                 .findFirst()
                 .map(row -> ((Number) row[1]).longValue())
                 .orElse(0L);
-
-        return commentLikeMapper.toCommentLikeResponse(comment, newLike, likeCount);
     }
 
     /**
@@ -544,5 +585,4 @@ public class CommunityCommentsService {
             return false;
         }
     }
-
 }
