@@ -178,7 +178,7 @@ src/main/java/com/jiujitsu/api/
 | PUT | `/notice/{id}` | 개별 알림 읽음 처리 |
 | PUT | `/notice/setting/competition` | 처음 관심 등록 때 관심 대회 알림 질문 답 저장 |
 
-관심 대회 마감 알림은 매일 18시(`competition.deadline-notice.cron`) 내일 끝나는 얼리버드(할인 단계)·접수 마감을 관심 등록한 유저에게 보낸다 (`CompetitionDeadlineNoticeScheduler`)
+관심 대회 마감 알림은 매일 18시(`competition.deadline-notice.cron`) 내일 끝나는 얼리버드(할인 단계)·접수 마감을 관심 등록한 유저에게 보낸다 (`CompetitionDeadlineNoticeScheduler`). 놓친 날은 관리자 `POST /admin/competitions/deadline-notices`로 다시 돌린다 (이미 받은 유저는 건너뜀)
 
 ### 앱 버전 (`/api/bootstrap`)
 
