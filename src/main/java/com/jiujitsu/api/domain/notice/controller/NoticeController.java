@@ -68,9 +68,11 @@ public class NoticeController {
 
     @Operation(
             summary = "관심 대회 알림 질문 답 저장",
-            description = "처음 관심 등록 때 묻는 \"이 대회 마감 알림을 받을까요?\"의 답을 저장합니다. "
-                    + "알림 받기 = enabled true, 나중에 = false. 관심 대회 알림(competitionEnabled)을 답대로 두고 "
-                    + "competitionNoticeAsked 를 true 로 남겨, 앱은 이후 관심 등록 때 다시 묻지 않습니다. 응답은 알림 설정 전체"
+            description = "처음 관심 등록 때 묻는 \"이 대회 마감 알림을 받을까요?\"의 답을 저장합니다. 응답은 알림 설정 전체\n\n"
+                    + "- 앱은 관심 등록 때 competitionEnabled = false 이고 competitionNoticeAsked = false 일 때만 묻습니다 (설정에서 이미 켠 사람에겐 묻지 않음)\n"
+                    + "- 알림 받기 = enabled true: 관심 대회 알림(competitionEnabled)을 켭니다\n"
+                    + "- 나중에 = enabled false: 관심 대회 알림은 그대로(꺼진 채) 둡니다. 켜져 있었다면 끄지 않습니다\n"
+                    + "- 어느 쪽이든 competitionNoticeAsked 가 true 가 되어 다시 묻지 않습니다 (기기를 바꿔도)"
     )
     @LoginErrorExamples
     @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER})

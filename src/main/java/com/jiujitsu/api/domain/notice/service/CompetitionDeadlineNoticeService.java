@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 관심 대회 마감 전날 알림 (얼리버드·접수 마감). 스케줄러가 부른다 (CompetitionDeadlineNoticeScheduler)
+ * 관심 대회 마감 전날 알림 (얼리버드·접수 마감). CompetitionDeadlineNoticeRunService 가 부른다 (매일 저녁·관리자 재실행)
  * 알림 하나 = 대회 하나의 마감 하나. 받는 사람: 관심 등록 + 이 대회 알림 켜짐 + 설정의 관심 대회 알림 켜짐
  */
 @Service
