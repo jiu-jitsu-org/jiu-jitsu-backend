@@ -195,7 +195,6 @@ public class BalanceGameService {
      *
      * endAt 미입력 시 당일 한국 시간 23:59:59 자동 설정.
      * 자동 설정된 값이 이미 과거라면(심야 요청) 다음 날 23:59:59로 설정.
-     * gameDate(진행일)는 확정된 endAt 의 날짜를 그대로 고정 저장한다.
      * startAt 미입력 시 마감일 00:30 (00:00~00:30 은 전날 결과 버퍼). startAt 이 endAt 보다 앞이 아니면 BALANCE_GAME_START_AT_NOT_BEFORE_END_AT
      * gameDate(진행일)는 시작일 — 기본 일정에선 마감일과 같고, 시작을 넣어 날짜를 넘기는 게임은 시작한 날이 진행일
      */
