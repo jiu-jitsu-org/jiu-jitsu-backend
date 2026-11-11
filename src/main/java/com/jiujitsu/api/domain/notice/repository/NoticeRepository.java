@@ -25,8 +25,9 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Notice> findForUpdateByUserIdAndGroupKey(Long userId, String groupKey);
 
-    // 보관 기간 지난 알림 삭제. 좋아요 카드는 이미 보낸 기준을 들고 있어 지우지 않는다 (알림함에서만 숨김, NoticeService)
+    // 보관 기간 지난 알림 삭제. 푸시가 간 좋아요 카드는 이미 보낸 기준을 들고 있어 지우지 않는다 (알림함에서만 숨김, NoticeService)
+    // 푸시가 한 번도 안 간 좋아요 카드(like_pushed_count 0)는 잃을 기준이 없어 같이 지운다
     @Modifying
-    @Query("DELETE FROM Notice n WHERE n.notifiedAt < :threshold AND n.groupKey IS NULL")
+    @Query("DELETE FROM Notice n WHERE n.notifiedAt < :threshold AND (n.groupKey IS NULL OR n.likePushedCount = 0)")
     void deleteExpiredExceptLikeCards(@Param("threshold") LocalDateTime threshold);
 }

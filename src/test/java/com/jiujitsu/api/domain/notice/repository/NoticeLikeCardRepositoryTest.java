@@ -104,6 +104,44 @@ class NoticeLikeCardRepositoryTest {
     }
 
     @Test
+    @DisplayName("읽음 처리는 is_read 만 쓴다 — 그 사이 다른 트랜잭션이 올린 기준(like_pushed_count)·제목·시각을 옛 값으로 덮지 않는다")
+    void setRead_doesNotOverwriteConcurrentPush() {
+        Notice card = noticeRepository.saveAndFlush(noticeFactory.createLikeCard(like(1L, 10L)));
+        card.pushLike(5, "내 게시글에 좋아요가 5개 달렸어요", T.minusHours(1));
+        em.flush();
+
+        // 읽음 처리 트랜잭션이 카드를 읽어 둔 사이, 좋아요 처리(다른 트랜잭션)가 10개 기준을 커밋한 상황
+        em.getEntityManager().createQuery(
+                        "UPDATE Notice n SET n.likePushedCount = 10, n.title = '내 게시글에 좋아요가 10개 달렸어요', n.notifiedAt = :t WHERE n.id = :id")
+                .setParameter("t", T).setParameter("id", card.getId())
+                .executeUpdate();
+        card.setRead();
+        em.flush();
+        em.clear();
+
+        Notice saved = noticeRepository.findById(card.getId()).orElseThrow();
+        assertThat(saved.getLikePushedCount()).isEqualTo(10);
+        assertThat(saved.getTitle()).isEqualTo("내 게시글에 좋아요가 10개 달렸어요");
+        assertThat(saved.getNotifiedAt()).isEqualTo(T);
+        assertThat(saved.getIsRead()).isTrue();
+    }
+
+    @Test
+    @DisplayName("30일 정리: 푸시가 한 번도 안 간 좋아요 카드는 지운다 (잃을 기준이 없음)")
+    void cleanup_deletesNeverPushedLikeCards() {
+        Notice neverPushed = noticeRepository.saveAndFlush(noticeFactory.createLikeCard(like(1L, 10L)));
+        em.getEntityManager().createQuery("UPDATE Notice n SET n.notifiedAt = :t WHERE n.id = :id")
+                .setParameter("t", T.minusDays(31)).setParameter("id", neverPushed.getId())
+                .executeUpdate();
+        em.clear();
+
+        noticeRepository.deleteExpiredExceptLikeCards(T.minusDays(30));
+        em.clear();
+
+        assertThat(noticeRepository.findById(neverPushed.getId())).isEmpty();
+    }
+
+    @Test
     @DisplayName("30일 정리는 좋아요 카드를 지우지 않는다 — 이미 보낸 기준(likePushedCount)을 잃으면 같은 기준으로 다시 푸시하게 됨")
     void cleanup_keepsLikeCards() {
         Notice card = noticeRepository.saveAndFlush(noticeFactory.createLikeCard(like(1L, 10L)));

@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.LocalDateTime;
 
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@DynamicUpdate  // 바뀐 컬럼만 UPDATE — 읽음 처리와 좋아요 푸시(기준·제목·시각)가 겹쳐도 서로 덮어쓰지 않게
 public class Notice extends BaseEntity {
 
     public static final String GROUP_KEY_UNIQUE_CONSTRAINT = "uk_notice_user_group_key";
