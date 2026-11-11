@@ -17,6 +17,9 @@ public record BalanceGameCreateRequest(
             String optionBText,
         @Schema(description = "선택지 B 이미지 파일 ID (선택)", example = "2")
             Long optionBImageFileId,
-        @Schema(description = "마감 일시 (미입력 시 당일 한국 시간 23:59:59 자동 설정)", example = "2026-07-15T23:59:59", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-            LocalDateTime endAt
+        @Schema(description = "마감 일시 (미입력 시 한국 시간 23:59:59 자동 설정 — startAt 을 넣었으면 시작일, 아니면 당일이고 이미 지났으면 다음 날)", example = "2026-07-15T23:59:59", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+            LocalDateTime endAt,
+        @Schema(description = "투표 시작 일시 (미입력 시 마감일 00:30 — 00:00~00:30 은 전날 결과 버퍼라 그 전엔 메인에 안 나오고 투표 불가). "
+                + "마감보다 앞이어야 함(아니면 C0012). 시작만 넣으면 마감은 시작일 23:59:59 이고, 그 시각이 이미 지났으면 C0009. 날짜를 넘기는 게임은 시작을 함께 넣고, 진행일은 시작일", example = "2026-07-15T00:30:00", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+            LocalDateTime startAt
 ) { }

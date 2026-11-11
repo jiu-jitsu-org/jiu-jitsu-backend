@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -19,14 +20,15 @@ class BalanceGameRepositoryTest {
     @Autowired
     private BalanceGameRepository balanceGameRepository;
 
-    private BalanceGame saveGame(String aText, String bText, LocalDateTime endAt) {
+    private BalanceGame saveGame(String aText, LocalDateTime startAt, LocalDateTime endAt) {
         Content content = Content.builder()
                 .contentType(ContentType.BALANCE)
                 .build();
         BalanceGame game = BalanceGame.builder()
                 .content(content)
                 .optionAText(aText)
-                .optionBText(bText)
+                .optionBText("B")
+                .startAt(startAt)
                 .endAt(endAt)
                 .gameDate(endAt.toLocalDate())
                 .build();
@@ -34,29 +36,87 @@ class BalanceGameRepositoryTest {
     }
 
     @Test
-    @DisplayName("마감 전 게임 중 가장 먼저 마감되는(=현재 진행중) 1건을 반환한다")
-    void findCurrent() {
-        LocalDateTime now = LocalDateTime.now();
-        saveGame("A-과거", "B-과거", now.minusHours(1));            // 이미 마감
-        BalanceGame soon = saveGame("A-곧마감", "B-곧마감", now.plusHours(1));
-        saveGame("A-나중", "B-나중", now.plusHours(5));
+    @DisplayName("진행 중: 시작했고 마감 전인 게임 중 가장 먼저 마감되는 1건 (시작 전 게임은 빠짐)")
+    void findOpen() {
+        LocalDateTime now = LocalDateTime.of(2026, 11, 11, 12, 0);
+        saveGame("A-과거", now.minusDays(1), now.minusHours(1));            // 이미 마감
+        BalanceGame soon = saveGame("A-곧마감", now.minusHours(10), now.plusHours(1));
+        saveGame("A-나중", now.minusHours(10), now.plusHours(5));
+        saveGame("A-시작전", now.plusHours(2), now.plusMinutes(30));       // 더 먼저 마감되지만 시작 전
 
-        Optional<BalanceGame> result = balanceGameRepository.findTopByEndAtAfterOrderByEndAtAsc(now);
+        Optional<BalanceGame> result = balanceGameRepository.findOpen(now, PageRequest.of(0, 1)).stream().findFirst();
 
         assertThat(result).isPresent();
         assertThat(result.get().getId()).isEqualTo(soon.getId());
-        assertThat(result.get().getOptionAText()).isEqualTo("A-곧마감");
         assertThat(result.get().getContent().getContentType()).isEqualTo(ContentType.BALANCE);
     }
 
     @Test
-    @DisplayName("진행중인 게임이 없으면 빈 Optional 을 반환한다")
-    void findCurrent_empty() {
-        LocalDateTime now = LocalDateTime.now();
-        saveGame("A", "B", now.minusHours(1)); // 마감된 것만 존재
+    @DisplayName("진행 중: 시작 시각과 같으면 진행 중, 진행 중인 게임이 없으면 빈 Optional")
+    void findOpen_boundaryAndEmpty() {
+        LocalDateTime now = LocalDateTime.of(2026, 11, 11, 0, 30);
+        BalanceGame startsNow = saveGame("A-지금시작", now, now.plusHours(23));
 
-        Optional<BalanceGame> result = balanceGameRepository.findTopByEndAtAfterOrderByEndAtAsc(now);
+        assertThat(balanceGameRepository.findOpen(now, PageRequest.of(0, 1)).stream().findFirst())
+                .map(BalanceGame::getId).contains(startsNow.getId());
+        assertThat(balanceGameRepository.findOpen(now.minusSeconds(1), PageRequest.of(0, 1)).stream().findFirst())
+                .isEmpty();
+    }
 
-        assertThat(result).isEmpty();
+    @Test
+    @DisplayName("최근 마감 순 / 시작 전 다음 게임: 마감 게임은 최근 것부터, 시작 전 게임은 먼저 시작하는 것부터")
+    void findClosedAndUpcoming() {
+        LocalDateTime now = LocalDateTime.of(2026, 11, 11, 0, 10);
+        saveGame("A-그제", now.minusDays(2), now.minusDays(1));
+        BalanceGame yesterday = saveGame("A-어제", now.minusDays(1), now.minusMinutes(11));
+        BalanceGame today = saveGame("A-오늘", now.plusMinutes(20), now.plusHours(23));
+        saveGame("A-내일", now.plusDays(1), now.plusDays(2));
+
+        assertThat(balanceGameRepository.findClosed(now, PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(yesterday.getId());
+        assertThat(balanceGameRepository.findUpcoming(now, PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(today.getId());
+    }
+
+    @Test
+    @DisplayName("마감 경계: 마감 시각과 같으면 진행 중(findOpen 포함, findClosed 제외), 그 뒤부터 마감 — 엔티티 isClosed 와 같은 경계")
+    void endAtBoundary() {
+        LocalDateTime endAt = LocalDateTime.of(2026, 11, 11, 23, 59, 59);
+        BalanceGame game = saveGame("A", endAt.minusHours(23), endAt);
+
+        assertThat(balanceGameRepository.findOpen(endAt, PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(game.getId());
+        assertThat(balanceGameRepository.findClosed(endAt, PageRequest.of(0, 1))).isEmpty();
+        assertThat(balanceGameRepository.findClosed(endAt.plusSeconds(1), PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(game.getId());
+    }
+
+    @Test
+    @DisplayName("일정이 같은 게임이 둘이면 진행 중에 메인에 보인 게임이 버퍼 동안에도 결과로 나온다 (0표인 다른 게임 결과가 나가지 않게)")
+    void sameScheduleKeepsSameGame() {
+        LocalDateTime startAt = LocalDateTime.of(2026, 11, 11, 0, 30);
+        LocalDateTime endAt = LocalDateTime.of(2026, 11, 11, 23, 59, 59);
+        saveGame("A-1", startAt, endAt);
+        saveGame("A-2", startAt, endAt);
+
+        Long shownWhileOpen = balanceGameRepository.findOpen(endAt, PageRequest.of(0, 1)).get(0).getId();
+        Long shownInBuffer = balanceGameRepository.findClosed(endAt.plusMinutes(10), PageRequest.of(0, 1)).get(0).getId();
+
+        assertThat(shownInBuffer).isEqualTo(shownWhileOpen);
+    }
+
+    @Test
+    @DisplayName("마감이 같고 시작이 다른 게임: 먼저 시작한 게임이 하루 내내 메인에 남고 버퍼 결과도 그 게임 (나중에 등록·시작한 게임으로 바뀌지 않음)")
+    void sameEndAtKeepsEarlierStartedGame() {
+        LocalDateTime endAt = LocalDateTime.of(2026, 11, 12, 23, 59, 59);
+        saveGame("X-09시", LocalDateTime.of(2026, 11, 12, 9, 0), endAt);         // 먼저 등록(id 작음), 늦게 시작
+        BalanceGame y = saveGame("Y-00시30분", LocalDateTime.of(2026, 11, 12, 0, 30), endAt);
+
+        assertThat(balanceGameRepository.findOpen(LocalDateTime.of(2026, 11, 12, 8, 0), PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(y.getId());
+        assertThat(balanceGameRepository.findOpen(LocalDateTime.of(2026, 11, 12, 12, 0), PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(y.getId());
+        assertThat(balanceGameRepository.findClosed(LocalDateTime.of(2026, 11, 13, 0, 10), PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(y.getId());
     }
 }

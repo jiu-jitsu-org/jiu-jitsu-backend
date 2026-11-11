@@ -62,6 +62,7 @@ class BalanceGameVoteRepositoryTest {
                 .optionAText("A")
                 .optionBText("B")
                 .endAt(endAt)
+                .startAt(LocalDateTime.of(2000, 1, 1, 0, 0))
                 .gameDate(gameDate)
                 .build());
     }

@@ -28,7 +28,11 @@ public class BalanceGameController {
 
     @Operation(
             summary = "오늘의 밸런스 게임 조회",
-            description = "커뮤니티 메인에 노출할 현재 진행중인 밸런스 게임을 조회합니다. 진행중인 게임이 없으면 data 가 null 입니다."
+            description = "커뮤니티 메인에 노출할 밸런스 게임을 조회합니다.\n\n"
+                    + "- 진행 중(startAt 이후, endAt 까지)인 게임\n"
+                    + "- 진행 중인 게임이 없으면 방금 마감된 게임(closed=true, 결과)을 줍니다. 기본 일정에선 00:00~00:30 (새 게임은 00:30 부터)\n"
+                    + "- 그때 resultUntil = 결과를 보여 주는 끝 시각(다음 게임 시작, 없으면 마감 + 30분). 앱은 serverTime 기준 그 시각에 다시 조회합니다\n"
+                    + "- 둘 다 없으면 data 가 null 입니다"
     )
     @GetMapping
     public BalanceGameResponse getCurrent() {
@@ -65,10 +69,11 @@ public class BalanceGameController {
     @Operation(
             summary = "밸런스 게임 투표/취소",
             description = "밸런스 게임에 투표합니다. 이미 투표한 선택지를 다시 보내면 취소, 다른 선택지면 변경됩니다. "
-                    + "투표가 반영된 최신 상태를 반환하므로 클라이언트는 별도 재조회가 필요 없습니다."
+                    + "투표가 반영된 최신 상태를 반환하므로 클라이언트는 별도 재조회가 필요 없습니다. "
+                    + "시작(startAt, 보통 진행일 00:30) 전이면 BALANCE_GAME_NOT_STARTED, 마감(endAt) 뒤면 BALANCE_GAME_CLOSED 입니다."
     )
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.BALANCE_GAME_NOT_FOUND, ErrorCode.BALANCE_GAME_CLOSED})
+    @ApiErrorCodeExamples({ErrorCode.BALANCE_GAME_NOT_FOUND, ErrorCode.BALANCE_GAME_NOT_STARTED, ErrorCode.BALANCE_GAME_CLOSED})
     @PostMapping("/{contentId}/vote")
     public BalanceGameResponse vote(
             @Parameter(name = "contentId", description = "컨텐츠 ID", required = true)

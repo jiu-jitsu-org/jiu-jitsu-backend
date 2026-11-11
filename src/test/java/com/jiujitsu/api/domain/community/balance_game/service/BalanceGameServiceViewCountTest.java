@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -59,6 +60,7 @@ class BalanceGameServiceViewCountTest {
                 .optionAText("옵션A")
                 .optionBText("옵션B")
                 .endAt(LocalDateTime.now().plusHours(1))
+                .startAt(LocalDateTime.of(2000, 1, 1, 0, 0))
                 .build();
     }
 
@@ -68,7 +70,7 @@ class BalanceGameServiceViewCountTest {
         given(authenticationFacade.getCurrentUserOptional()).willReturn(Optional.empty());
         given(communityCommentsService.getCountComments(CONTENT_ID)).willReturn(0L);
         given(contentService.getContentLikeCount(any())).willReturn(Map.of());
-        given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), any(), anyLong(), anyLong(), any(), any()))
+        given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), any(), anyLong(), anyLong(), any(), any(), any()))
                 .willReturn(null);
     }
 
@@ -92,7 +94,7 @@ class BalanceGameServiceViewCountTest {
     void getCurrent_doesNotIncrementViewCount() {
         // given
         BalanceGame game = game();
-        given(balanceGameRepository.findTopByEndAtAfterOrderByEndAtAsc(any())).willReturn(Optional.of(game));
+        given(balanceGameRepository.findOpen(any(), any())).willReturn(List.of(game));
         stubAggregations();
 
         // when
