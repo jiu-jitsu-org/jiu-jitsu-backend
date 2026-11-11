@@ -148,12 +148,14 @@ src/main/java/com/jiujitsu/api/
 | GET | `/competitions/autocomplete?keyword=` | 등록 대회 검색 (프로필 대회 기록용 대회명 자동완성, 지난 대회까지) |
 | PUT | `/competitions/{competitionId}/interest` | 대회 관심 등록 (멱등, 처리 후 관심 상태·관심 수) |
 | DELETE | `/competitions/{competitionId}/interest` | 대회 관심 해제 (멱등, 미공개로 바뀐 대회도 해제 가능) |
+| POST | `/competitions/{competitionId}/info-reports` | 대회 정보 제보 (정보가 달라요, 공개 대회. 같은 항목은 하루 3번까지) |
 
 ### 관리자 등록 대회 (`/api/admin/competitions`)
 
 | Method | Path | 설명 |
 |--------|----------|------|
 | POST | `/admin/competitions` | 등록 대회 일괄 등록 (회차 = 대회명 + 연도, 중복은 건너뜀) |
+| GET | `/admin/competitions/info-reports` | 대회 정보 제보 목록 (최신순 페이지) |
 
 ### 관리자 관장/사범 인증 (`/api/admin/owner-requests`)
 
