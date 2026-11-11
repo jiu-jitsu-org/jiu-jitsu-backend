@@ -12,6 +12,7 @@ import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,12 +21,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -43,9 +47,17 @@ class ContentServiceLikeNoticeTest {
     @Mock private ContentSaveRepository contentSaveRepository;
     @Mock private ContentSaveMapper contentSaveMapper;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private TransactionTemplate transactionTemplate;
 
     private final User me = User.builder().id(1L).role(UserRole.USER).build();
     private final User writer = User.builder().id(2L).role(UserRole.USER).build();
+
+    // 좋아요는 TransactionTemplate 안에서 실행된다 (#199) → 콜백을 그대로 실행
+    @BeforeEach
+    void runTransactionInline() {
+        given(transactionTemplate.execute(any())).willAnswer(invocation ->
+                invocation.<TransactionCallback<?>>getArgument(0).doInTransaction(null));
+    }
 
     private Content content(User owner, ContentType type) {
         Content content = Content.builder().id(10L).contentType(type).build();
@@ -58,7 +70,7 @@ class ContentServiceLikeNoticeTest {
     void like_publishesLikeNoticeEvent() {
         given(authenticationFacade.getCurrentUser()).willReturn(me);
         given(contentRepository.findById(10L)).willReturn(Optional.of(content(writer, ContentType.BOARD)));
-        given(contentLikeRepository.findByContentIdAndCreatedBy(10L, me)).willReturn(Optional.empty());
+        given(contentLikeRepository.existsByContentIdAndCreatedById(10L, 1L)).willReturn(false);
         given(contentLikeRepository.countContentLikeByContentIds(List.of(10L))).willReturn(List.of());
 
         contentService.like(10L);
@@ -79,7 +91,7 @@ class ContentServiceLikeNoticeTest {
     void likeBalanceGame_noEvent() {
         given(authenticationFacade.getCurrentUser()).willReturn(me);
         given(contentRepository.findById(10L)).willReturn(Optional.of(content(writer, ContentType.BALANCE)));
-        given(contentLikeRepository.findByContentIdAndCreatedBy(10L, me)).willReturn(Optional.empty());
+        given(contentLikeRepository.existsByContentIdAndCreatedById(10L, 1L)).willReturn(false);
         given(contentLikeRepository.countContentLikeByContentIds(List.of(10L))).willReturn(List.of());
 
         contentService.like(10L);
@@ -92,7 +104,7 @@ class ContentServiceLikeNoticeTest {
     void likeOwnContent_noEvent() {
         given(authenticationFacade.getCurrentUser()).willReturn(me);
         given(contentRepository.findById(10L)).willReturn(Optional.of(content(me, ContentType.BOARD)));
-        given(contentLikeRepository.findByContentIdAndCreatedBy(10L, me)).willReturn(Optional.empty());
+        given(contentLikeRepository.existsByContentIdAndCreatedById(10L, 1L)).willReturn(false);
         given(contentLikeRepository.countContentLikeByContentIds(List.of(10L))).willReturn(List.of());
 
         contentService.like(10L);

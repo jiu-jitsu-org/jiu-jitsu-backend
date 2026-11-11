@@ -27,6 +27,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -62,6 +64,7 @@ class CommunityCommentsNoticeDeepLinkTest {
     @Mock private CommentLikeFactory commentLikeFactory;
     @Mock private CommentLikeMapper commentLikeMapper;
     @Mock private CommunityProfileService communityProfileService;
+    @Mock private TransactionTemplate transactionTemplate;
 
     private static final Long CONTENT_ID = 10L;
     private static final Long ME_ID = 1L;
@@ -151,7 +154,8 @@ class CommunityCommentsNoticeDeepLinkTest {
         User me = stubUser(ME_ID);
         given(authenticationFacade.getCurrentUser()).willReturn(me);
         given(communityCommentsRepository.findById(100L)).willReturn(Optional.of(comment));
-        given(commentLikeRepository.findByCommentIdAndCreatedBy(any(), any())).willReturn(Optional.empty());
+        given(commentLikeRepository.existsByCommentIdAndCreatedById(any(), any())).willReturn(false);
+        givenTransactionRunsInline();
         given(commentLikeRepository.countGroupByCommentIds(anyList())).willReturn(List.of());
 
         // when
@@ -171,6 +175,12 @@ class CommunityCommentsNoticeDeepLinkTest {
         assertThat(event.pushData().get("data")).isEqualTo(CONTENT_ID.toString());
         // 알림 수신 설정 조회용 contentId 는 댓글이 속한 컨텐츠여야 한다
         assertThat(event.contentId()).isEqualTo(CONTENT_ID);
+    }
+
+    // 좋아요는 TransactionTemplate 안에서 실행된다 (#199) → 콜백을 그대로 실행
+    private void givenTransactionRunsInline() {
+        given(transactionTemplate.execute(any())).willAnswer(invocation ->
+                invocation.<TransactionCallback<?>>getArgument(0).doInTransaction(null));
     }
 
     private void stubCreateComment(Content content, CommunityComments parent) {
