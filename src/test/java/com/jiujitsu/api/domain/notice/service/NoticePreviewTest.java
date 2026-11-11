@@ -16,6 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 // 알림 미리보기 본문 (#196): 알림함 카드 body 와 푸시 본문이 같은 규칙
 class NoticePreviewTest {
@@ -91,5 +94,17 @@ class NoticePreviewTest {
         assertThat(preview.of(FcmPushType.COMMENTS_LIKE, CONTENT, 999L)).isNull();
         assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, null)).isNull();
         assertThat(preview.of(FcmPushType.COMPETITION_EARLY_BIRD_DEADLINE, 1L, null)).isNull();
+    }
+
+    @Test
+    @DisplayName("대댓글 알림인데 refId 가 최상위 댓글(parentId 0)이면 null — id 0 을 부모로 조회하지 않음, contentId 가 없으면 게시글 제목도 null")
+    void rootComment_or_noContent_null() {
+        comment(1L, 0L, "최상위 댓글", "정상");
+
+        assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 1L)).isNull();
+        verify(commentsRepository, never()).findById(0L);
+        assertThat(preview.of(FcmPushType.NEW_COMMENTS, null, null)).isNull();
+        assertThat(preview.of(FcmPushType.CONTENTS_LIKE, null, null)).isNull();
+        verifyNoInteractions(boardRepository);
     }
 }
