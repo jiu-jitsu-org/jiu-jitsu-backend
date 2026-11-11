@@ -24,6 +24,7 @@ public enum ErrorCode {
     BALANCE_GAME_NOT_FOUND(404, "C0006", "존재하지 않는 밸런스 게임입니다."),
     BALANCE_GAME_CLOSED(400, "C0007", "이미 마감된 밸런스 게임입니다."),
     BALANCE_GAME_NOT_STARTED(400, "C0011", "아직 시작하지 않은 밸런스 게임입니다."),
+    BALANCE_GAME_START_AT_NOT_BEFORE_END_AT(400, "C0012", "시작 일시는 마감 일시보다 앞이어야 합니다."),
     COMMENT_RESTORE_EXPIRED(400, "C0008", "복구 가능 시간이 만료됐습니다."),
     CONTENT_SAVE_NOT_SUPPORTED(400, "C0008", "저장할 수 없는 게시물입니다."),
     BALANCE_GAME_END_AT_MUST_BE_FUTURE(400, "C0009", "마감 일시는 미래 시간이어야 합니다."),

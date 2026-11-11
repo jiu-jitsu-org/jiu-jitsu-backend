@@ -3,6 +3,8 @@ package com.jiujitsu.api.domain.community.balance_game.entity;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.global.entity.BaseEntity;
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -74,5 +76,15 @@ public class BalanceGame extends BaseEntity {
     // 마감됐는지 (마감 시각까지는 진행 중 — 기존 판정 그대로)
     public boolean isClosed(LocalDateTime now) {
         return endAt.isBefore(now);
+    }
+
+    // 투표할 수 있는지: 시작 전이면 BALANCE_GAME_NOT_STARTED, 마감 뒤면 BALANCE_GAME_CLOSED
+    public void validateVotable(LocalDateTime now) {
+        if (!isStarted(now)) {
+            throw new ErrorException(ErrorCode.BALANCE_GAME_NOT_STARTED);
+        }
+        if (isClosed(now)) {
+            throw new ErrorException(ErrorCode.BALANCE_GAME_CLOSED);
+        }
     }
 }

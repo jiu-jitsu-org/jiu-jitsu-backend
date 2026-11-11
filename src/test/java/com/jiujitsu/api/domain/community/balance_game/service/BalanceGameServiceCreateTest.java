@@ -189,7 +189,7 @@ class BalanceGameServiceCreateTest {
     }
 
     @Test
-    @DisplayName("마감을 직접 넣었는데 그날 00:30 보다 이르면(열릴 수 없는 게임) WRONG_PARAMETER, 시작을 같이 넣으면 그대로 쓴다")
+    @DisplayName("마감을 직접 넣었는데 그날 00:30 보다 이르면(열릴 수 없는 게임) C0012, 시작을 같이 넣으면 그대로 쓰고 진행일은 시작일")
     void create_endAtBeforeDefaultStart() {
         LocalDateTime earlyEndAt = LocalDate.now().plusDays(2).atTime(0, 10);
 
@@ -197,13 +197,13 @@ class BalanceGameServiceCreateTest {
                 "옵션A", null, "옵션B", null, earlyEndAt, null)))
                 .isInstanceOf(ErrorException.class)
                 .extracting(e -> ((ErrorException) e).getErrorCode())
-                .isEqualTo(ErrorCode.WRONG_PARAMETER);
+                .isEqualTo(ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT);
 
         LocalDateTime startAt = earlyEndAt.minusHours(1);
         givenCreateStubs();
         balanceGameService.create(new BalanceGameCreateRequest("옵션A", null, "옵션B", null, earlyEndAt, startAt));
 
-        verify(balanceGameFactory).createBalanceGame(any(), any(), any(), any(), any(), eq(startAt), eq(earlyEndAt), any());
+        verify(balanceGameFactory).createBalanceGame(any(), any(), any(), any(), any(), eq(startAt), eq(earlyEndAt), eq(startAt.toLocalDate()));
     }
 
     private void givenCreateStubs() {

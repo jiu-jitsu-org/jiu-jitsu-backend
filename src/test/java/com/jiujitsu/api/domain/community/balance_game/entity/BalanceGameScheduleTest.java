@@ -1,5 +1,7 @@
 package com.jiujitsu.api.domain.community.balance_game.entity;
 
+import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.exception.ErrorException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -7,6 +9,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class BalanceGameScheduleTest {
 
@@ -31,5 +35,17 @@ class BalanceGameScheduleTest {
         assertThat(game.isStarted(DAY.atTime(0, 30))).isTrue();
         assertThat(game.isClosed(DAY.atTime(23, 59, 59))).isFalse();
         assertThat(game.isClosed(DAY.plusDays(1).atStartOfDay())).isTrue();
+    }
+
+    @Test
+    @DisplayName("투표 가능 판정: 시작 전 C0011, 마감 뒤 C0007, 진행 중 통과")
+    void validateVotable() {
+        assertThatThrownBy(() -> game.validateVotable(DAY.atTime(0, 10)))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.BALANCE_GAME_NOT_STARTED);
+        assertThatThrownBy(() -> game.validateVotable(DAY.plusDays(1).atTime(0, 10)))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.BALANCE_GAME_CLOSED);
+        assertThatCode(() -> game.validateVotable(DAY.atTime(12, 0))).doesNotThrowAnyException();
     }
 }

@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -93,7 +94,7 @@ class BalanceGameServiceViewCountTest {
     void getCurrent_doesNotIncrementViewCount() {
         // given
         BalanceGame game = game();
-        given(balanceGameRepository.findTopByStartAtLessThanEqualAndEndAtGreaterThanEqualOrderByEndAtAsc(any(), any())).willReturn(Optional.of(game));
+        given(balanceGameRepository.findOpen(any())).willReturn(List.of(game));
         stubAggregations();
 
         // when

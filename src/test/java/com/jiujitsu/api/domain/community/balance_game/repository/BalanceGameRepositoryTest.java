@@ -43,7 +43,7 @@ class BalanceGameRepositoryTest {
         saveGame("A-나중", now.minusHours(10), now.plusHours(5));
         saveGame("A-시작전", now.plusHours(2), now.plusMinutes(30));       // 더 먼저 마감되지만 시작 전
 
-        Optional<BalanceGame> result = balanceGameRepository.findTopByStartAtLessThanEqualAndEndAtGreaterThanEqualOrderByEndAtAsc(now, now);
+        Optional<BalanceGame> result = balanceGameRepository.findOpen(now).stream().findFirst();
 
         assertThat(result).isPresent();
         assertThat(result.get().getId()).isEqualTo(soon.getId());
@@ -56,9 +56,9 @@ class BalanceGameRepositoryTest {
         LocalDateTime now = LocalDateTime.of(2026, 11, 11, 0, 30);
         BalanceGame startsNow = saveGame("A-지금시작", now, now.plusHours(23));
 
-        assertThat(balanceGameRepository.findTopByStartAtLessThanEqualAndEndAtGreaterThanEqualOrderByEndAtAsc(now, now))
+        assertThat(balanceGameRepository.findOpen(now).stream().findFirst())
                 .map(BalanceGame::getId).contains(startsNow.getId());
-        assertThat(balanceGameRepository.findTopByStartAtLessThanEqualAndEndAtGreaterThanEqualOrderByEndAtAsc(now.minusSeconds(1), now.minusSeconds(1)))
+        assertThat(balanceGameRepository.findOpen(now.minusSeconds(1)).stream().findFirst())
                 .isEmpty();
     }
 
@@ -70,9 +70,9 @@ class BalanceGameRepositoryTest {
         BalanceGame yesterday = saveGame("A-어제", now.minusDays(1), now.minusMinutes(11));
         saveGame("A-오늘", now.plusMinutes(20), now.plusHours(23));
 
-        assertThat(balanceGameRepository.findTopByEndAtAfterAndEndAtBeforeOrderByEndAtDesc(now.minusMinutes(30), now))
+        assertThat(balanceGameRepository.findClosedBetween(now.minusMinutes(30), now).stream().findFirst())
                 .map(BalanceGame::getId).contains(yesterday.getId());
-        assertThat(balanceGameRepository.findTopByEndAtAfterAndEndAtBeforeOrderByEndAtDesc(now.minusMinutes(5), now))
+        assertThat(balanceGameRepository.findClosedBetween(now.minusMinutes(5), now).stream().findFirst())
                 .isEmpty();
     }
 }
