@@ -75,4 +75,15 @@ class BalanceGameScheduleTest {
         assertThat(endsAt22.resultUntil(null)).isEqualTo(DAY.atTime(22, 30));
         assertThat(endsAtOddSecond.resultUntil(null)).isEqualTo(DAY.atTime(21, 46));
     }
+
+    @Test
+    @DisplayName("이어지는 다음 게임 판정 경계: 마감 + 하루 정각 시작까지 포함, 1초 넘으면 제외, 마감 이전 시작이면 제외")
+    void resultUntilNextGameWindow() {
+        LocalDateTime endAt = DAY.atTime(23, 59, 59);
+        LocalDateTime fallback = DAY.plusDays(1).atTime(0, 30);
+
+        assertThat(game.resultUntil(next(endAt.plusDays(1)))).isEqualTo(endAt.plusDays(1));
+        assertThat(game.resultUntil(next(endAt.plusDays(1).plusSeconds(1)))).isEqualTo(fallback);
+        assertThat(game.resultUntil(next(endAt))).isEqualTo(fallback);
+    }
 }

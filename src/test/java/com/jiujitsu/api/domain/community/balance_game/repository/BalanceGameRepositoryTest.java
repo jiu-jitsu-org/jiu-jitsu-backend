@@ -77,4 +77,31 @@ class BalanceGameRepositoryTest {
         assertThat(balanceGameRepository.findUpcoming(now, PageRequest.of(0, 1)))
                 .extracting(BalanceGame::getId).containsExactly(today.getId());
     }
+
+    @Test
+    @DisplayName("마감 경계: 마감 시각과 같으면 진행 중(findOpen 포함, findClosed 제외), 그 뒤부터 마감 — 엔티티 isClosed 와 같은 경계")
+    void endAtBoundary() {
+        LocalDateTime endAt = LocalDateTime.of(2026, 11, 11, 23, 59, 59);
+        BalanceGame game = saveGame("A", endAt.minusHours(23), endAt);
+
+        assertThat(balanceGameRepository.findOpen(endAt, PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(game.getId());
+        assertThat(balanceGameRepository.findClosed(endAt, PageRequest.of(0, 1))).isEmpty();
+        assertThat(balanceGameRepository.findClosed(endAt.plusSeconds(1), PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(game.getId());
+    }
+
+    @Test
+    @DisplayName("일정이 같은 게임이 둘이면 진행 중에 메인에 보인 게임이 버퍼 동안에도 결과로 나온다 (0표인 다른 게임 결과가 나가지 않게)")
+    void sameScheduleKeepsSameGame() {
+        LocalDateTime startAt = LocalDateTime.of(2026, 11, 11, 0, 30);
+        LocalDateTime endAt = LocalDateTime.of(2026, 11, 11, 23, 59, 59);
+        saveGame("A-1", startAt, endAt);
+        saveGame("A-2", startAt, endAt);
+
+        Long shownWhileOpen = balanceGameRepository.findOpen(endAt, PageRequest.of(0, 1)).get(0).getId();
+        Long shownInBuffer = balanceGameRepository.findClosed(endAt.plusMinutes(10), PageRequest.of(0, 1)).get(0).getId();
+
+        assertThat(shownInBuffer).isEqualTo(shownWhileOpen);
+    }
 }

@@ -24,10 +24,11 @@ public interface BalanceGameRepository extends JpaRepository<BalanceGame, Long> 
     List<BalanceGame> findOpen(@Param("now") LocalDateTime now, Pageable pageable);
 
     // 마감된 게임, 최근 마감 순 (게임 교체 버퍼 동안 결과 노출용). 메인은 첫 건을 쓴다
+    // 마감 시각이 같으면 findOpen 과 같은 id ASC — 진행 중에 메인에 보인 게임의 결과가 그대로 나오게
     @Query("""
     SELECT g FROM BalanceGame g
     WHERE g.endAt < :now
-    ORDER BY g.endAt DESC, g.id DESC
+    ORDER BY g.endAt DESC, g.id ASC
     """)
     List<BalanceGame> findClosed(@Param("now") LocalDateTime now, Pageable pageable);
 
