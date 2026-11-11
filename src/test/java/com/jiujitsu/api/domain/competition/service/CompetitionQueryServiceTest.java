@@ -6,6 +6,7 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.CompetitionAudience;
 import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
@@ -306,6 +307,8 @@ class CompetitionQueryServiceTest {
                 .fees(new ArrayList<>(List.of(new CompetitionFee("얼리버드", 60000, TODAY.plusDays(2)), new CompetitionFee("기본 참가비", 70000, null))))
                 .feeNote("성인 1종목 기준").lastVerifiedDate(TODAY.minusDays(1))
                 .uniforms(new LinkedHashSet<>(List.of(CompetitionUniform.NO_GI, CompetitionUniform.GI)))
+                .audience(CompetitionAudience.ADULT)
+                .viewCount(214)
                 .build());
         em.flush();
         em.clear();
@@ -321,6 +324,14 @@ class CompetitionQueryServiceTest {
 
         assertThat(detail.today()).isEqualTo(TODAY);
         assertThat(detail.competitionId()).isEqualTo(id);
+        assertThat(detail.name()).isEqualTo("서울 오픈");
+        assertThat(detail.region()).isEqualTo(CompetitionRegion.SEOUL);
+        assertThat(detail.openDate()).isEqualTo(TODAY.plusDays(20));
+        assertThat(detail.registrationStartDate()).isEqualTo(TODAY.minusDays(5));
+        assertThat(detail.registrationDeadline()).isEqualTo(TODAY.plusDays(10));
+        assertThat(detail.noticeUrl()).isEqualTo("https://example.com/notice");
+        assertThat(detail.audience()).isEqualTo(CompetitionAudience.ADULT);
+        assertThat(detail.viewCount()).isEqualTo(214);
         assertThat(detail.startTime()).isEqualTo(LocalTime.of(9, 0));
         assertThat(detail.place()).isEqualTo("서울 송파");
         assertThat(detail.venue()).isEqualTo("올림픽홀");
@@ -369,6 +380,10 @@ class CompetitionQueryServiceTest {
         competitionQueryService.getDetail(id);
         competitionQueryService.getDetail(id);
         em.clear();
-        assertThat(competitionQueryService.getDetail(id).viewCount()).isZero();
+        assertThat(competitionQueryService.getDetail(id).viewCount()).isEqualTo(214);
+        // 목록 항목에도 같은 조회수
+        assertThat(competitionQueryService.getList(request(null, null, 10)).competitions())
+                .filteredOn(item -> item.competitionId().equals(id))
+                .singleElement().extracting(CompetitionListItem::viewCount).isEqualTo(214L);
     }
 }

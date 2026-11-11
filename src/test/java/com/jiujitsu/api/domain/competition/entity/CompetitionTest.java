@@ -177,7 +177,7 @@ class CompetitionTest {
     }
 
     @Test
-    @DisplayName("참가비 단계: 1·2차 얼리버드처럼 여러 단계, 기본 참가비만, 참가비 모름(빈 목록)은 통과")
+    @DisplayName("참가비 단계: 1·2차 얼리버드처럼 여러 단계, 기본 참가비만(얼리버드 마감일 유무 상관없이), 무료, 참가비 모름(빈 목록)은 통과")
     void validateEventInfo_fees_valid() {
         LocalDate first = EARLY_BIRD.minusDays(14);
         assertThatCode(() -> event().fees(new ArrayList<>(List.of(
@@ -188,26 +188,38 @@ class CompetitionTest {
         assertThatCode(() -> event().build().validateEventInfo()).doesNotThrowAnyException();   // 얼리버드 마감일은 알고 참가비는 모름
         assertThatCode(() -> event().fees(new ArrayList<>(List.of(fee("얼리버드", 60000, EARLY_BIRD)))).build().validateEventInfo())
                 .doesNotThrowAnyException();   // 기본 참가비 미확인
+        assertThatCode(() -> event().fees(new ArrayList<>(List.of(fee("참가비", 70000, null)))).build().validateEventInfo())
+                .doesNotThrowAnyException();   // 얼리버드 마감일은 알지만 얼리버드 금액은 모름
+        assertThatCode(() -> event().earlyBirdDeadline(null).fees(new ArrayList<>(List.of(fee("참가비", 0, null)))).build().validateEventInfo())
+                .doesNotThrowAnyException();   // 무료 대회
     }
 
     @Test
-    @DisplayName("참가비 단계: 금액 0 이하·빈 이름, 기한 순서 어긋남·같은 기한, 기한 없는 단계가 중간, 접수 마감 뒤 기한이면 COMPETITION_INVALID_EVENT_INFO")
+    @DisplayName("참가비 단계: 음수 금액·빈 이름, 기한 순서 어긋남·같은 기한, 기한 없는 단계가 중간, 기한이 접수 기간 밖이면 COMPETITION_INVALID_EVENT_INFO")
     void validateEventInfo_fees_invalidTiers() {
-        assertInvalid(event().fees(new ArrayList<>(List.of(fee("얼리버드", 0, EARLY_BIRD), fee("기본", 70000, null)))).build());
+        assertInvalid(event().fees(new ArrayList<>(List.of(fee("얼리버드", -1, EARLY_BIRD), fee("기본", 70000, null)))).build());
         assertInvalid(event().fees(new ArrayList<>(List.of(fee(" ", 60000, EARLY_BIRD), fee("기본", 70000, null)))).build());
+        assertInvalid(event().fees(new ArrayList<>(List.of(fee("가".repeat(21), 60000, EARLY_BIRD), fee("기본", 70000, null)))).build());
         assertInvalid(event().fees(new ArrayList<>(List.of(fee("2차", 60000, EARLY_BIRD), fee("1차", 50000, EARLY_BIRD.minusDays(7))))).build());
         assertInvalid(event().fees(new ArrayList<>(List.of(fee("1차", 50000, EARLY_BIRD), fee("2차", 60000, EARLY_BIRD)))).build());
         assertInvalid(event().fees(new ArrayList<>(List.of(fee("기본", 70000, null), fee("얼리버드", 60000, EARLY_BIRD)))).build());
         assertInvalid(event().earlyBirdDeadline(DEADLINE)
-                .fees(new ArrayList<>(List.of(fee("얼리버드", 60000, DEADLINE.plusDays(1))))).build());
+                .fees(new ArrayList<>(List.of(fee("얼리버드", 60000, DEADLINE.plusDays(1))))).build());   // 접수 마감 뒤 (얼리버드 마감 일치 검사에서 걸림)
+        assertInvalid(event().fees(new ArrayList<>(List.of(
+                fee("1차", 50000, START.minusDays(1)), fee("얼리버드", 60000, EARLY_BIRD)))).build());          // 접수 시작 전
+        assertInvalid(event().registrationDeadline(null).fees(new ArrayList<>(List.of(
+                fee("얼리버드", 60000, EARLY_BIRD), fee("2차", 65000, OPEN_DATE.plusDays(1))))).build());      // 접수 마감 없으면 대회일 뒤 (같음)
     }
 
     @Test
-    @DisplayName("얼리버드 기준은 일정 하나: 기한 있는 단계가 있는데 얼리버드 마감일이 없거나, 마감일이 어느 단계 기한과도 다르면 COMPETITION_INVALID_EVENT_INFO")
+    @DisplayName("얼리버드 기준은 일정 하나: 기한 있는 단계가 있는데 얼리버드 마감일이 없거나, 마감일이 마지막 할인 단계 기한과 다르면 COMPETITION_INVALID_EVENT_INFO")
     void validateEventInfo_fees_earlyBirdDeadlineIsSingleSource() {
         assertInvalid(event().earlyBirdDeadline(null).fees(twoTiers()).build());
         assertInvalid(event().earlyBirdDeadline(EARLY_BIRD.minusDays(1)).fees(twoTiers()).build());
-        assertInvalid(event().fees(new ArrayList<>(List.of(fee("참가비", 70000, null)))).build());   // 마감일은 있는데 얼리버드 단계가 없음
+        assertInvalid(event().earlyBirdDeadline(EARLY_BIRD.minusDays(14)).fees(new ArrayList<>(List.of(
+                fee("1차 얼리버드", 50000, EARLY_BIRD.minusDays(14)), fee("2차 얼리버드", 60000, EARLY_BIRD), fee("기본", 70000, null)))).build());   // 1차 날짜 = 2차 할인 중에 얼리버드 끝난 것으로 보임
+        assertInvalid(event().earlyBirdDeadline(null)
+                .fees(new ArrayList<>(List.of(fee("참가비", 70000, DEADLINE)))).build());   // 기본 참가비에 기한을 넣으면 할인 단계로 봄 → 얼리버드 마감일 필요
     }
 
     @Test

@@ -238,19 +238,25 @@ public class Competition extends BaseEntity {
 
     /**
      * 참가비 단계 불변식 (단계가 없으면 = 참가비 모름, 검사할 것 없음)
-     * - 금액은 0보다 크고 이름이 비어 있지 않다
+     * - 금액은 0 이상(무료 대회·무료 단계 허용)이고 이름은 비어 있지 않고 20자 이하(넘으면 flush 시점 500 이 되므로 여기서 막음)
      * - 기한은 목록 순서대로 엄격히 오름차순이고, 기한 없는 단계(기본 참가비)는 맨 마지막 하나만
-     * - 기한은 접수 마감을 넘지 않는다
+     * - 기한은 접수 기간 안: 접수 시작 이상. 상한(접수 마감, 없으면 대회일 이하)은 따로 보지 않는다 —
+     *   일정 순서 검사가 얼리버드 마감 ≤ 접수 마감 ≤ 대회일을 먼저 보장하고, 기한은 오름차순에 마지막이 얼리버드 마감과 같아야 해서
+     *   상한을 넘는 기한은 아래 얼리버드 마감 일치 검사에서 걸린다
      * - 얼리버드 마감일은 일정의 earlyBirdDeadline 하나가 기준이다(상태·강조·알림이 쓰는 날짜).
-     *   기한 있는 단계가 있으면 earlyBirdDeadline 이 있어야 하고, 그 날짜는 어느 단계의 기한과 같아야 한다 —
-     *   일정과 참가비가 서로 다른 얼리버드 날짜를 보여 주지 않게
+     *   기한 있는 단계(= 할인 단계)가 있으면 earlyBirdDeadline 이 있어야 하고, 그 날짜는 **마지막 할인 단계의 기한**과 같아야 한다 —
+     *   할인이 끝나는 날이 얼리버드 마감. 1·2차 얼리버드에서 1차 날짜를 넣으면 2차 할인 중에 얼리버드가 끝난 것으로 보이므로 막는다.
+     *   기한 있는 단계가 없으면(기본 참가비만 앎) 얼리버드 마감일만 따로 있어도 된다
+     * fees 만 바꾸는 쓰기는 소유 엔티티 칸이 그대로라 @PreUpdate 가 돌지 않을 수 있다 —
+     * 참가비를 바꾸는 메서드를 만들면 그 안에서 validateEventInfo 를 직접 부를 것
      */
     private void validateFees() {
         LocalDate previousUntil = null;
         for (int i = 0; i < fees.size(); i++) {
             CompetitionFee fee = fees.get(i);
             boolean last = i == fees.size() - 1;
-            if (fee == null || fee.getAmount() <= 0 || fee.getLabel() == null || fee.getLabel().isBlank()) {
+            if (fee == null || fee.getAmount() < 0 || fee.getLabel() == null || fee.getLabel().isBlank()
+                    || fee.getLabel().length() > CompetitionFee.LABEL_MAX_LENGTH) {
                 throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
             }
             LocalDate until = fee.getUntil();
@@ -261,7 +267,7 @@ public class Competition extends BaseEntity {
                 continue;
             }
             if ((previousUntil != null && !until.isAfter(previousUntil))
-                    || (registrationDeadline != null && until.isAfter(registrationDeadline))) {
+                    || (registrationStartDate != null && until.isBefore(registrationStartDate))) {
                 throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
             }
             previousUntil = until;
@@ -271,8 +277,7 @@ public class Competition extends BaseEntity {
         if (hasDeadlineTier && earlyBirdDeadline == null) {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
-        if (earlyBirdDeadline != null && !fees.isEmpty()
-                && fees.stream().noneMatch(fee -> earlyBirdDeadline.equals(fee.getUntil()))) {
+        if (hasDeadlineTier && !earlyBirdDeadline.equals(previousUntil)) {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
     }

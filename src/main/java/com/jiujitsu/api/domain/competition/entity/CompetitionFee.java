@@ -25,8 +25,10 @@ public class CompetitionFee {
     private String label;       // 단계 이름 (예: "얼리버드", "기본 참가비")
 
     @Column(name = "amount", nullable = false)
-    private int amount;         // 금액 (원)
+    private int amount;         // 금액 (원, 0 = 무료)
 
     @Column(name = "until")
-    private LocalDate until;    // 이 금액의 마지막 날(당일 포함). null = 기한 없음(기본 참가비)
+    // 이 금액의 마지막 날(당일 포함). 할인 단계(얼리버드)에만 둔다 — 기한이 있으면 얼리버드로 본다
+    // 기본 참가비는 접수 마감까지라도 null (접수 마감을 넣으면 얼리버드 마감일과 맞춰야 해 거절된다)
+    private LocalDate until;
 }
