@@ -241,8 +241,8 @@ public class CommunityCommentsService {
         try {
             return transactionTemplate.execute(status -> toggleCommentLike(request));
         } catch (DataIntegrityViolationException e) {
-            // 그 밖의 제약 위반(FK·NOT NULL 등)은 동시 요청이 아니므로 그대로 드러낸다
-            if (!ConstraintViolationUtil.isViolationOf(e, CommentLike.UNIQUE_CONSTRAINT)) {
+            // comment_like 의 유니크는 (댓글, 사람) 하나뿐 → 유니크 위반이면 동시 요청. 그 밖의 위반(FK 등)은 그대로 드러낸다
+            if (!ConstraintViolationUtil.isUniqueViolation(e)) {
                 throw e;
             }
             return transactionTemplate.execute(status -> currentCommentLike(request));

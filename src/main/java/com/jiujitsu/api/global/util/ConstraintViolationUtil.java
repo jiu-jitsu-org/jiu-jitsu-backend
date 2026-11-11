@@ -2,22 +2,22 @@ package com.jiujitsu.api.global.util;
 
 import org.springframework.dao.DataIntegrityViolationException;
 
-import java.util.Locale;
+import java.sql.SQLException;
 
 public final class ConstraintViolationUtil {
+
+    private static final String UNIQUE_VIOLATION = "23505";   // SQL 표준 SQLState (PostgreSQL·H2 공통)
 
     private ConstraintViolationUtil() {
     }
 
     /**
-     * 무결성 오류가 이름을 지정한 제약(유니크 등)의 위반인지 확인한다.
-     * 제약 이름은 DB 메시지에 담긴다 (PostgreSQL: violates unique constraint "uk_...", H2: 대문자 UK_..._INDEX_x 라 대소문자 무시)
+     * 무결성 오류가 유니크 제약 위반인지 확인한다 (FK·NOT NULL·CHECK 위반은 false).
+     * 제약 이름이 아니라 SQLState 로 본다: DB 에 남은 제약 이름이 엔티티와 다를 수 있다 (예: 이름 없이 만들어진 옛 제약)
      */
-    public static boolean isViolationOf(DataIntegrityViolationException e, String constraintName) {
-        String name = constraintName.toLowerCase(Locale.ROOT);
+    public static boolean isUniqueViolation(DataIntegrityViolationException e) {
         for (Throwable cause = e; cause != null; cause = cause.getCause()) {
-            String message = cause.getMessage();
-            if (message != null && message.toLowerCase(Locale.ROOT).contains(name)) {
+            if (cause instanceof SQLException sql && UNIQUE_VIOLATION.equals(sql.getSQLState())) {
                 return true;
             }
         }

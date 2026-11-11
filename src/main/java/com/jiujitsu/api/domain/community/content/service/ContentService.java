@@ -47,7 +47,7 @@ public class ContentService {
 
     /**
      * 게시물 좋아요 등록/삭제
-     * 같은 사람의 요청이 동시에 들어와 늦은 쪽이 유니크 제약({@link ContentLike#UNIQUE_CONSTRAINT})에 걸리면,
+     * 같은 사람의 요청이 동시에 들어와 늦은 쪽이 (게시글, 사람) 유니크 제약에 걸리면,
      * 롤백하고 새 트랜잭션에서 지금 상태로 응답한다 (댓글 좋아요와 같음, #199)
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -55,8 +55,8 @@ public class ContentService {
         try {
             return transactionTemplate.execute(status -> toggleLike(id));
         } catch (DataIntegrityViolationException e) {
-            // 그 밖의 제약 위반(FK·NOT NULL 등)은 동시 요청이 아니므로 그대로 드러낸다
-            if (!ConstraintViolationUtil.isViolationOf(e, ContentLike.UNIQUE_CONSTRAINT)) {
+            // content_like 의 유니크는 (게시글, 사람) 하나뿐 → 유니크 위반이면 동시 요청. 그 밖의 위반(FK 등)은 그대로 드러낸다
+            if (!ConstraintViolationUtil.isUniqueViolation(e)) {
                 throw e;
             }
             return transactionTemplate.execute(status -> currentLike(id));

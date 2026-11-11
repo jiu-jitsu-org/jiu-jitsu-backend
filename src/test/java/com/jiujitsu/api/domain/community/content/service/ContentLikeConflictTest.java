@@ -2,7 +2,6 @@ package com.jiujitsu.api.domain.community.content.service;
 
 import com.jiujitsu.api.domain.community.content.dto.ContentLikeResponse;
 import com.jiujitsu.api.domain.community.content.entity.Content;
-import com.jiujitsu.api.domain.community.content.entity.ContentLike;
 import com.jiujitsu.api.domain.community.content.mapper.ContentLikeMapper;
 import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
@@ -20,6 +19,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,7 +63,7 @@ class ContentLikeConflictTest {
     @DisplayName("유니크 위반이 아닌 무결성 오류(FK 등)는 성공으로 숨기지 않고 그대로 던진다")
     void otherIntegrityError_rethrows() {
         DataIntegrityViolationException failure = new DataIntegrityViolationException("could not execute statement",
-                new RuntimeException("violates foreign key constraint \"fk_content_like_content\""));
+                new SQLException("violates foreign key constraint", "23503"));
         given(contentLikeRepository.save(any())).willThrow(failure);
 
         assertThatThrownBy(() -> contentService.like(10L)).isSameAs(failure);
@@ -74,7 +74,7 @@ class ContentLikeConflictTest {
     @DisplayName("유니크 위반 뒤 다시 읽었을 때 그 사이 같은 사람의 다음 요청이 취소했으면 취소 상태로 응답한다 (500 아님)")
     void uniqueViolation_thenCancelledMeanwhile_respondsCurrentState() {
         given(contentLikeRepository.save(any())).willThrow(new DataIntegrityViolationException("could not execute statement",
-                new RuntimeException("duplicate key value violates unique constraint \"" + ContentLike.UNIQUE_CONSTRAINT + "\"")));
+                new SQLException("duplicate key value violates unique constraint", "23505")));
         given(contentLikeRepository.countContentLikeByContentIds(List.of(10L))).willReturn(List.of());
         given(content.getId()).willReturn(10L);
 
