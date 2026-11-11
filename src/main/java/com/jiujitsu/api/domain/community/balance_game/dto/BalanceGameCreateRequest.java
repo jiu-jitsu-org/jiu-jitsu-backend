@@ -18,5 +18,7 @@ public record BalanceGameCreateRequest(
         @Schema(description = "선택지 B 이미지 파일 ID (선택)", example = "2")
             Long optionBImageFileId,
         @Schema(description = "마감 일시 (미입력 시 당일 한국 시간 23:59:59 자동 설정)", example = "2026-07-15T23:59:59", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-            LocalDateTime endAt
+            LocalDateTime endAt,
+        @Schema(description = "투표 시작 일시 (미입력 시 진행일 00:30 — 00:00~00:30 은 전날 결과를 보여 주는 버퍼). 마감보다 앞이어야 함", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+            LocalDateTime startAt
 ) { }

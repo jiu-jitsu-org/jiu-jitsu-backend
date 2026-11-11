@@ -20,9 +20,11 @@ public class BalanceGameMapper {
         return new BalanceGameResponse(
                 game.getContent().getId(),
                 game.getGameDate(),
+                game.getStartAt(),
                 game.getEndAt(),
                 now,                                    // serverTime (기기 시계 대체 기준점)
-                game.getEndAt().isBefore(now),          // closed
+                game.isStarted(now),                    // started
+                game.isClosed(now),                     // closed
                 new BalanceGameOptionResponse(
                         BalanceGameOption.A, game.getOptionAText(), ImageInfo.from(game.getOptionAImage()), voteCountA),
                 new BalanceGameOptionResponse(

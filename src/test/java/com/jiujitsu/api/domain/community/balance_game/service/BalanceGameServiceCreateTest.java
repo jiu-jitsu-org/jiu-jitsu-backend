@@ -57,17 +57,18 @@ class BalanceGameServiceCreateTest {
     void create_withNullEndAt_defaultsToEndOfDay() {
         // given
         BalanceGameCreateRequest request = new BalanceGameCreateRequest(
-                "옵션A", null, "옵션B", null, null);
+                "옵션A", null, "옵션B", null, null, null);
 
         Content content = Content.builder().contentType(ContentType.BALANCE).build();
         BalanceGame game = BalanceGame.builder()
                 .content(content).optionAText("옵션A").optionBText("옵션B")
                 .endAt(LocalDateTime.now().plusHours(1))
+                .startAt(LocalDateTime.of(2000, 1, 1, 0, 0))
                 .gameDate(LocalDate.now())
                 .build();
 
         given(balanceGameFactory.createContent()).willReturn(content);
-        given(balanceGameFactory.createBalanceGame(any(), any(), any(), any(), any(), any(), any())).willReturn(game);
+        given(balanceGameFactory.createBalanceGame(any(), any(), any(), any(), any(), any(), any(), any())).willReturn(game);
         given(balanceGameRepository.save(any())).willReturn(game);
         given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), any(), anyLong(), anyLong(), any(), any()))
                 .willReturn(null);
@@ -80,7 +81,7 @@ class BalanceGameServiceCreateTest {
         ArgumentCaptor<LocalDate> gameDateCaptor = ArgumentCaptor.forClass(LocalDate.class);
         verify(balanceGameFactory).createBalanceGame(
                 eq(content), eq("옵션A"), eq(null), eq("옵션B"), eq(null),
-                endAtCaptor.capture(), gameDateCaptor.capture());
+                any(), endAtCaptor.capture(), gameDateCaptor.capture());
 
         LocalDateTime capturedEndAt = endAtCaptor.getValue();
         assertThat(capturedEndAt.toLocalTime()).isEqualTo(LocalTime.of(23, 59, 59));
@@ -91,19 +92,20 @@ class BalanceGameServiceCreateTest {
     @DisplayName("endAt 입력 시 해당 값이 그대로 사용된다")
     void create_withExplicitEndAt_usesProvidedValue() {
         // given
-        LocalDateTime futureEndAt = LocalDateTime.now().plusDays(3);
+        LocalDateTime futureEndAt = LocalDate.now().plusDays(3).atTime(23, 59, 59);
         BalanceGameCreateRequest request = new BalanceGameCreateRequest(
-                "옵션A", null, "옵션B", null, futureEndAt);
+                "옵션A", null, "옵션B", null, futureEndAt, null);
 
         Content content = Content.builder().contentType(ContentType.BALANCE).build();
         BalanceGame game = BalanceGame.builder()
                 .content(content).optionAText("옵션A").optionBText("옵션B")
                 .endAt(futureEndAt)
+                .startAt(LocalDateTime.of(2000, 1, 1, 0, 0))
                 .gameDate(futureEndAt.toLocalDate())
                 .build();
 
         given(balanceGameFactory.createContent()).willReturn(content);
-        given(balanceGameFactory.createBalanceGame(any(), any(), any(), any(), any(), any(), any())).willReturn(game);
+        given(balanceGameFactory.createBalanceGame(any(), any(), any(), any(), any(), any(), any(), any())).willReturn(game);
         given(balanceGameRepository.save(any())).willReturn(game);
         given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), any(), anyLong(), anyLong(), any(), any()))
                 .willReturn(null);
@@ -114,7 +116,7 @@ class BalanceGameServiceCreateTest {
         // then
         ArgumentCaptor<LocalDateTime> endAtCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
         verify(balanceGameFactory).createBalanceGame(
-                any(), any(), any(), any(), any(), endAtCaptor.capture(), any());
+                any(), any(), any(), any(), any(), any(), endAtCaptor.capture(), any());
 
         assertThat(endAtCaptor.getValue()).isEqualTo(futureEndAt);
     }
@@ -127,17 +129,18 @@ class BalanceGameServiceCreateTest {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
         LocalDateTime tomorrowEndAt = tomorrow.atTime(23, 59, 59);
         BalanceGameCreateRequest request = new BalanceGameCreateRequest(
-                "옵션A", null, "옵션B", null, tomorrowEndAt);
+                "옵션A", null, "옵션B", null, tomorrowEndAt, null);
 
         Content content = Content.builder().contentType(ContentType.BALANCE).build();
         BalanceGame game = BalanceGame.builder()
                 .content(content).optionAText("옵션A").optionBText("옵션B")
                 .endAt(tomorrowEndAt)
+                .startAt(LocalDateTime.of(2000, 1, 1, 0, 0))
                 .gameDate(tomorrow)
                 .build();
 
         given(balanceGameFactory.createContent()).willReturn(content);
-        given(balanceGameFactory.createBalanceGame(any(), any(), any(), any(), any(), any(), any())).willReturn(game);
+        given(balanceGameFactory.createBalanceGame(any(), any(), any(), any(), any(), any(), any(), any())).willReturn(game);
         given(balanceGameRepository.save(any())).willReturn(game);
         given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), any(), anyLong(), anyLong(), any(), any()))
                 .willReturn(null);
@@ -148,7 +151,7 @@ class BalanceGameServiceCreateTest {
         // then - 오늘(등록일)이 아니라 내일(진행일)이 gameDate로 전달된다
         ArgumentCaptor<LocalDate> gameDateCaptor = ArgumentCaptor.forClass(LocalDate.class);
         verify(balanceGameFactory).createBalanceGame(
-                any(), any(), any(), any(), any(), any(), gameDateCaptor.capture());
+                any(), any(), any(), any(), any(), any(), any(), gameDateCaptor.capture());
 
         assertThat(gameDateCaptor.getValue()).isEqualTo(tomorrow);
         assertThat(gameDateCaptor.getValue()).isNotEqualTo(LocalDate.now());
@@ -160,12 +163,54 @@ class BalanceGameServiceCreateTest {
         // given
         LocalDateTime pastEndAt = LocalDateTime.now().minusHours(1);
         BalanceGameCreateRequest request = new BalanceGameCreateRequest(
-                "옵션A", null, "옵션B", null, pastEndAt);
+                "옵션A", null, "옵션B", null, pastEndAt, null);
 
         // when & then
         assertThatThrownBy(() -> balanceGameService.create(request))
                 .isInstanceOf(ErrorException.class)
                 .extracting(e -> ((ErrorException) e).getErrorCode())
                 .isEqualTo(ErrorCode.BALANCE_GAME_END_AT_MUST_BE_FUTURE);
+    }
+
+    @Test
+    @DisplayName("startAt 미입력 시 진행일 00:30 으로 저장된다 (00:00~00:30 은 전날 결과 버퍼)")
+    void create_defaultStartAt() {
+        BalanceGameCreateRequest request = new BalanceGameCreateRequest(
+                "옵션A", null, "옵션B", null, null, null);
+        givenCreateStubs();
+
+        balanceGameService.create(request);
+
+        ArgumentCaptor<LocalDateTime> startAtCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<LocalDate> gameDateCaptor = ArgumentCaptor.forClass(LocalDate.class);
+        verify(balanceGameFactory).createBalanceGame(
+                any(), any(), any(), any(), any(), startAtCaptor.capture(), any(), gameDateCaptor.capture());
+        assertThat(startAtCaptor.getValue()).isEqualTo(gameDateCaptor.getValue().atTime(0, 30));
+    }
+
+    @Test
+    @DisplayName("마감을 직접 넣었는데 그날 00:30 보다 이르면(열릴 수 없는 게임) WRONG_PARAMETER, 시작을 같이 넣으면 그대로 쓴다")
+    void create_endAtBeforeDefaultStart() {
+        LocalDateTime earlyEndAt = LocalDate.now().plusDays(2).atTime(0, 10);
+
+        assertThatThrownBy(() -> balanceGameService.create(new BalanceGameCreateRequest(
+                "옵션A", null, "옵션B", null, earlyEndAt, null)))
+                .isInstanceOf(ErrorException.class)
+                .extracting(e -> ((ErrorException) e).getErrorCode())
+                .isEqualTo(ErrorCode.WRONG_PARAMETER);
+
+        LocalDateTime startAt = earlyEndAt.minusHours(1);
+        givenCreateStubs();
+        balanceGameService.create(new BalanceGameCreateRequest("옵션A", null, "옵션B", null, earlyEndAt, startAt));
+
+        verify(balanceGameFactory).createBalanceGame(any(), any(), any(), any(), any(), eq(startAt), eq(earlyEndAt), any());
+    }
+
+    private void givenCreateStubs() {
+        Content content = Content.builder().contentType(ContentType.BALANCE).build();
+        BalanceGame game = BalanceGame.builder().content(content).build();
+        given(balanceGameFactory.createContent()).willReturn(content);
+        given(balanceGameFactory.createBalanceGame(any(), any(), any(), any(), any(), any(), any(), any())).willReturn(game);
+        given(balanceGameRepository.save(any())).willReturn(game);
     }
 }

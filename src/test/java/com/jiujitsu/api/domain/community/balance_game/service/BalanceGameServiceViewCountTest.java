@@ -59,6 +59,7 @@ class BalanceGameServiceViewCountTest {
                 .optionAText("옵션A")
                 .optionBText("옵션B")
                 .endAt(LocalDateTime.now().plusHours(1))
+                .startAt(LocalDateTime.of(2000, 1, 1, 0, 0))
                 .build();
     }
 
@@ -92,7 +93,7 @@ class BalanceGameServiceViewCountTest {
     void getCurrent_doesNotIncrementViewCount() {
         // given
         BalanceGame game = game();
-        given(balanceGameRepository.findTopByEndAtAfterOrderByEndAtAsc(any())).willReturn(Optional.of(game));
+        given(balanceGameRepository.findTopByStartAtLessThanEqualAndEndAtGreaterThanEqualOrderByEndAtAsc(any(), any())).willReturn(Optional.of(game));
         stubAggregations();
 
         // when

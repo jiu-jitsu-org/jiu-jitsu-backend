@@ -19,14 +19,15 @@ class BalanceGameRepositoryTest {
     @Autowired
     private BalanceGameRepository balanceGameRepository;
 
-    private BalanceGame saveGame(String aText, String bText, LocalDateTime endAt) {
+    private BalanceGame saveGame(String aText, LocalDateTime startAt, LocalDateTime endAt) {
         Content content = Content.builder()
                 .contentType(ContentType.BALANCE)
                 .build();
         BalanceGame game = BalanceGame.builder()
                 .content(content)
                 .optionAText(aText)
-                .optionBText(bText)
+                .optionBText("B")
+                .startAt(startAt)
                 .endAt(endAt)
                 .gameDate(endAt.toLocalDate())
                 .build();
@@ -34,29 +35,44 @@ class BalanceGameRepositoryTest {
     }
 
     @Test
-    @DisplayName("마감 전 게임 중 가장 먼저 마감되는(=현재 진행중) 1건을 반환한다")
-    void findCurrent() {
-        LocalDateTime now = LocalDateTime.now();
-        saveGame("A-과거", "B-과거", now.minusHours(1));            // 이미 마감
-        BalanceGame soon = saveGame("A-곧마감", "B-곧마감", now.plusHours(1));
-        saveGame("A-나중", "B-나중", now.plusHours(5));
+    @DisplayName("진행 중: 시작했고 마감 전인 게임 중 가장 먼저 마감되는 1건 (시작 전 게임은 빠짐)")
+    void findOpen() {
+        LocalDateTime now = LocalDateTime.of(2026, 11, 11, 12, 0);
+        saveGame("A-과거", now.minusDays(1), now.minusHours(1));            // 이미 마감
+        BalanceGame soon = saveGame("A-곧마감", now.minusHours(10), now.plusHours(1));
+        saveGame("A-나중", now.minusHours(10), now.plusHours(5));
+        saveGame("A-시작전", now.plusHours(2), now.plusMinutes(30));       // 더 먼저 마감되지만 시작 전
 
-        Optional<BalanceGame> result = balanceGameRepository.findTopByEndAtAfterOrderByEndAtAsc(now);
+        Optional<BalanceGame> result = balanceGameRepository.findTopByStartAtLessThanEqualAndEndAtGreaterThanEqualOrderByEndAtAsc(now, now);
 
         assertThat(result).isPresent();
         assertThat(result.get().getId()).isEqualTo(soon.getId());
-        assertThat(result.get().getOptionAText()).isEqualTo("A-곧마감");
         assertThat(result.get().getContent().getContentType()).isEqualTo(ContentType.BALANCE);
     }
 
     @Test
-    @DisplayName("진행중인 게임이 없으면 빈 Optional 을 반환한다")
-    void findCurrent_empty() {
-        LocalDateTime now = LocalDateTime.now();
-        saveGame("A", "B", now.minusHours(1)); // 마감된 것만 존재
+    @DisplayName("진행 중: 시작 시각과 같으면 진행 중, 진행 중인 게임이 없으면 빈 Optional")
+    void findOpen_boundaryAndEmpty() {
+        LocalDateTime now = LocalDateTime.of(2026, 11, 11, 0, 30);
+        BalanceGame startsNow = saveGame("A-지금시작", now, now.plusHours(23));
 
-        Optional<BalanceGame> result = balanceGameRepository.findTopByEndAtAfterOrderByEndAtAsc(now);
+        assertThat(balanceGameRepository.findTopByStartAtLessThanEqualAndEndAtGreaterThanEqualOrderByEndAtAsc(now, now))
+                .map(BalanceGame::getId).contains(startsNow.getId());
+        assertThat(balanceGameRepository.findTopByStartAtLessThanEqualAndEndAtGreaterThanEqualOrderByEndAtAsc(now.minusSeconds(1), now.minusSeconds(1)))
+                .isEmpty();
+    }
 
-        assertThat(result).isEmpty();
+    @Test
+    @DisplayName("최근 마감: 기준 시각 뒤에 마감된 게임 중 가장 최근 1건, 아직 마감 전 게임은 빠짐")
+    void findRecentlyClosed() {
+        LocalDateTime now = LocalDateTime.of(2026, 11, 11, 0, 10);
+        saveGame("A-그제", now.minusDays(2), now.minusDays(1));
+        BalanceGame yesterday = saveGame("A-어제", now.minusDays(1), now.minusMinutes(11));
+        saveGame("A-오늘", now.plusMinutes(20), now.plusHours(23));
+
+        assertThat(balanceGameRepository.findTopByEndAtAfterAndEndAtBeforeOrderByEndAtDesc(now.minusMinutes(30), now))
+                .map(BalanceGame::getId).contains(yesterday.getId());
+        assertThat(balanceGameRepository.findTopByEndAtAfterAndEndAtBeforeOrderByEndAtDesc(now.minusMinutes(5), now))
+                .isEmpty();
     }
 }

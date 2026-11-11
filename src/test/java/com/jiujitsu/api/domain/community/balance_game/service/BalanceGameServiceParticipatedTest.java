@@ -80,6 +80,7 @@ class BalanceGameServiceParticipatedTest {
                 .optionAText("옵션A-" + id)
                 .optionBText("옵션B-" + id)
                 .endAt(endAt)
+                .startAt(LocalDateTime.of(2000, 1, 1, 0, 0))
                 .gameDate(endAt.toLocalDate())
                 .build();
     }

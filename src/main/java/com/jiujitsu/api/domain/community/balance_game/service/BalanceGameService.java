@@ -52,13 +52,22 @@ public class BalanceGameService {
 
     /**
      * 커뮤니티 메인 - 현재 진행중인 밸런스 게임 조회
-     * 진행중인 게임이 없으면 null 을 반환한다. (메인 화면에서 미노출 처리)
+     * 진행중인 게임이 없으면 마감된 지 버퍼(30분)가 안 된 게임을 결과로 보여 준다 (00:00~00:30, 투표하지 않은 사람도 결과를 보게)
+     * 둘 다 없으면 null 을 반환한다. (메인 화면에서 미노출 처리)
      */
     @Transactional(readOnly = true)
     public BalanceGameResponse getCurrent() {
-        return balanceGameRepository.findTopByEndAtAfterOrderByEndAtAsc(LocalDateTime.now())
+        return findCurrent(LocalDateTime.now())
                 .map(this::toResponseWithVotes)
                 .orElse(null);
+    }
+
+    // 지금 메인에 보일 게임: 진행 중 → 없으면 버퍼 안에 마감된 게임
+    // 마감은 23:59:59(그날 마지막 초)라 1초를 더 봐서, 00:30 에 다음 게임이 시작할 때까지 끊기지 않게 한다
+    Optional<BalanceGame> findCurrent(LocalDateTime now) {
+        return balanceGameRepository.findTopByStartAtLessThanEqualAndEndAtGreaterThanEqualOrderByEndAtAsc(now, now)
+                .or(() -> balanceGameRepository.findTopByEndAtAfterAndEndAtBeforeOrderByEndAtDesc(
+                        now.minus(BalanceGame.RESULT_BUFFER).minusSeconds(1), now));
     }
 
     /**
@@ -92,7 +101,11 @@ public class BalanceGameService {
         BalanceGame game = balanceGameRepository.findByContentId(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND));
 
-        if (game.getEndAt().isBefore(LocalDateTime.now())) {
+        LocalDateTime now = LocalDateTime.now();
+        if (!game.isStarted(now)) {
+            throw new ErrorException(ErrorCode.BALANCE_GAME_NOT_STARTED);
+        }
+        if (game.isClosed(now)) {
             throw new ErrorException(ErrorCode.BALANCE_GAME_CLOSED);
         }
 
@@ -179,15 +192,22 @@ public class BalanceGameService {
      * endAt 미입력 시 당일 한국 시간 23:59:59 자동 설정.
      * 자동 설정된 값이 이미 과거라면(심야 요청) 다음 날 23:59:59로 설정.
      * gameDate(진행일)는 확정된 endAt 의 날짜를 그대로 고정 저장한다.
+     * startAt 미입력 시 진행일 00:30 (00:00~00:30 은 전날 결과 버퍼). startAt 이 endAt 보다 앞이 아니면 WRONG_PARAMETER
      */
     public BalanceGameResponse create(BalanceGameCreateRequest request) {
         LocalDateTime endAt = resolveEndAt(request.endAt());
+        LocalDateTime startAt = request.startAt() != null ? request.startAt() : BalanceGame.defaultStartAt(endAt.toLocalDate());
+        // 마감을 직접 넣었는데 그날 00:30 보다 이르거나, 시작을 마감 뒤로 넣으면 열릴 수 없는 게임이 된다
+        if (!startAt.isBefore(endAt)) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+        }
 
         Content content = balanceGameFactory.createContent();
         BalanceGame game = balanceGameFactory.createBalanceGame(
                 content,
                 request.optionAText(), request.optionAImageFileId(),
                 request.optionBText(), request.optionBImageFileId(),
+                startAt,
                 endAt,
                 endAt.toLocalDate()     // 진행일 = 마감일의 날짜 (하루 1회 정책)
         );
