@@ -75,6 +75,7 @@ public class BoardMapper {
                 CommunityProfileInfo.from(board.getCreatedBy(), authorProfile),
                 isAuthor,
                 TimeAgoUtil.format(board.getCreatedAt()),
+                board.getCompetitionId(),
                 competition
         );
     }
@@ -107,6 +108,7 @@ public class BoardMapper {
                 CommunityProfileInfo.from(author, authorProfile),
                 true,
                 TimeAgoUtil.format(board.getCreatedAt()),
+                board.getCompetitionId(),
                 competition
         );
     }

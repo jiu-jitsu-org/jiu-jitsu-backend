@@ -23,7 +23,7 @@ public record BoardCreateRequest(
             List<Long> imageFileIdList,
         @Schema(description = "태그 목록", example = "[\"BJJ\", \"운동\"]")
             List<String> tags,
-        @Schema(description = "연결할 대회 ID (선택, 공개 대회만). 카테고리와 상관없이 받음 — 대회 고르기는 GET /competitions/picker", example = "1")
+        @Schema(description = "연결할 대회 ID (선택, 공개 대회만). 카테고리와 상관없이 받음 — 대회 고르기는 GET /competitions/picker")
             Long competitionId
 ) {
     public List<Long> imageFileIdListOrEmpty() {

@@ -31,6 +31,7 @@ public record BoardResponse(
         @Schema(description = "작성자 프로필") CommunityProfileInfo author,
         @Schema(description = "작성여부") Boolean isAuthor,
         @Schema(description = "등록 경과 시간") String timeAgo,
+        @Schema(description = "연결된 대회 ID. 대회가 비공개로 바뀌어도 채워짐 — 수정 요청에 그대로 다시 보내면 연결이 유지됨. 연결 없으면 null", nullable = true) Long competitionId,
         @Schema(description = "연결된 대회 카드 (대회 탭 목록과 같은 정보). 연결이 없거나 대회가 비공개면 null", nullable = true) CompetitionListItem competition
 ) {
 

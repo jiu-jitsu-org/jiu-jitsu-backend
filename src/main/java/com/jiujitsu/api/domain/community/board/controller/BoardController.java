@@ -67,17 +67,20 @@ public class BoardController {
         return boardService.getById(id);
     }
 
-    @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다.")
+    @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다. competitionId 로 공개 대회를 연결할 수 있습니다(선택, 카테고리와 무관).")
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER})
+    @ApiErrorCodeExamples({ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER, ErrorCode.COMPETITION_NOT_FOUND})
     @PostMapping
     public BoardResponse create(@Valid @RequestBody BoardCreateRequest request) {
         return boardService.create(request);
     }
 
-    @Operation(summary = "게시글 수정", description = "게시글을 수정합니다.")
+    @Operation(summary = "게시글 수정", description = "게시글을 수정합니다.\n\n"
+            + "- categoryId·title·body·tags 는 null 이면 그대로 둡니다\n"
+            + "- competitionId 는 다릅니다: 보낸 값으로 교체하고 null·생략이면 연결을 해제합니다. 수정 화면은 상세 응답의 competitionId 를 항상 다시 보냅니다\n"
+            + "- 지금 연결된 대회 id 를 그대로 보내면 대회가 비공개로 바뀌었어도 연결이 유지됩니다")
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND, ErrorCode.BOARD_CATEGORY_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND, ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.COMPETITION_NOT_FOUND})
     @PutMapping("/{id}")
     public BoardResponse update(
             @Parameter(name = "id", description = "컨텐츠 ID (게시글의 contentId)", required = true) @PathVariable Long id,
