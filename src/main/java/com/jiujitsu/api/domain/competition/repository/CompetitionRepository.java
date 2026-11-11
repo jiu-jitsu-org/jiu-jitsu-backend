@@ -49,6 +49,8 @@ public interface CompetitionRepository extends JpaRepository<Competition, Long>,
     // 대회 탭에 노출되는 공개 대회만 (미공개 카탈로그 엔트리는 없는 대회로 본다)
     Optional<Competition> findByIdAndPublishedTrue(Long id);
 
+    List<Competition> findAllByIdInAndPublishedTrue(Collection<Long> ids);
+
     // 조회수 +1 을 DB 에서 한 번에 (읽고 +1 해 저장하면 동시 요청 시 증가가 빠진다). 공개 대회만, 바뀐 행 수 반환
     // 벌크 UPDATE 라 updated_at·@PreUpdate 를 건드리지 않는다 — 조회는 대회 정보 수정이 아니다
     @Modifying(clearAutomatically = true)

@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
 import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
@@ -20,16 +21,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.jiujitsu.api.domain.competition.repository.CompetitionSpecifications.*;
 
 /**
- * 대회 탭 읽기 모델 (목록, 이후 상세). 대회 정보에 관심 수·내 관심 여부를 붙여 응답 하나로 화면을 채운다
+ * 대회 탭 읽기 모델 (목록, 상세, 글쓰기 대회 고르기, 게시글 대회 카드). 대회 정보에 관심 수·내 관심 여부를 붙여 응답 하나로 화면을 채운다
  * 카탈로그·자동완성(CompetitionService), 관심 쓰기(CompetitionInterestService)와 분리
+ * 커뮤니티(게시글)는 getPublished·getCards 로만 대회를 본다 — 대회 도메인은 커뮤니티를 모른다
  */
 @Service
 @RequiredArgsConstructor
@@ -38,6 +43,7 @@ public class CompetitionQueryService {
 
     private static final Sort ASCENDING = Sort.by(Sort.Order.asc("openDate"), Sort.Order.asc("id"));
     private static final Sort DESCENDING = Sort.by(Sort.Order.desc("openDate"), Sort.Order.desc("id"));
+    private static final int PICKER_LIMIT = 20;
 
     private final CompetitionRepository competitionRepository;
     private final CompetitionInterestService competitionInterestService;
@@ -96,8 +102,7 @@ public class CompetitionQueryService {
      * 없거나 미공개면 COMPETITION_NOT_FOUND
      */
     public CompetitionDetailResponse getDetail(Long competitionId) {
-        Competition competition = competitionRepository.findByIdAndPublishedTrue(competitionId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.COMPETITION_NOT_FOUND));
+        Competition competition = getPublished(competitionId);
         LocalDate today = LocalDate.now(clock);
         Long userId = authenticationFacade.getCurrentUserOptional().map(User::getId).orElse(null);
 
@@ -105,6 +110,53 @@ public class CompetitionQueryService {
         long interestCount = competitionInterestService.getInterestCounts(ids).getOrDefault(competitionId, 0L);
         boolean interested = userId != null && competitionInterestService.getInterestedIds(userId, ids).contains(competitionId);
         return competitionMapper.toDetail(competition, today, interestCount, interested);
+    }
+
+    /**
+     * 글쓰기 대회 고르기 (비로그인 가능). 공개 대회를 이름으로 찾아 다가오는 대회(오늘 포함, 가까운 순) → 끝난 대회(최근 순)로 최대 20개
+     * 대회 전 질문과 대회 뒤 후기를 모두 고를 수 있어야 해서, 기준일 앞뒤로 나뉘는 목록(getList) 대신 오늘에 가까운 대회부터 준다
+     * 검색어가 비면 이름 조건 없이 같은 순서
+     */
+    public CompetitionPickerResponse getPicker(String keyword) {
+        LocalDate today = LocalDate.now(clock);
+        Long userId = authenticationFacade.getCurrentUserOptional().map(User::getId).orElse(null);
+
+        Specification<Competition> filter = published();
+        String normalized = Competition.normalize(keyword);
+        if (!normalized.isEmpty()) {
+            filter = filter.and(searchNameLike("%" + CompetitionService.escapeLike(normalized) + "%"));
+        }
+
+        // 기준 (today, 0) 뒤 = 오늘 포함 이후, 앞 = 어제까지 (id 는 1부터)
+        CompetitionCursor todayStart = CompetitionCursor.startOf(today);
+        List<Competition> picked = new ArrayList<>(competitionRepository.findBy(filter.and(boundary(todayStart)),
+                q -> q.sortBy(ASCENDING).limit(PICKER_LIMIT).all()));
+        if (picked.size() < PICKER_LIMIT) {
+            picked.addAll(competitionRepository.findBy(filter.and(boundary(todayStart.opposite())),
+                    q -> q.sortBy(DESCENDING).limit(PICKER_LIMIT - picked.size()).all()));
+        }
+        return new CompetitionPickerResponse(today, toItems(picked, today, userId));
+    }
+
+    /**
+     * 공개 대회 (게시글에 대회를 연결할 때). 없거나 미공개면 COMPETITION_NOT_FOUND
+     */
+    public Competition getPublished(Long competitionId) {
+        return competitionRepository.findByIdAndPublishedTrue(competitionId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.COMPETITION_NOT_FOUND));
+    }
+
+    /**
+     * 게시글 대회 카드 일괄 조회 (대회 탭 목록 항목과 같음). 미공개·없는 대회는 결과에 없다 (= 카드 없음)
+     */
+    public Map<Long, CompetitionListItem> getCards(Collection<Long> competitionIds) {
+        if (competitionIds.isEmpty()) {
+            return Map.of();
+        }
+        LocalDate today = LocalDate.now(clock);
+        Long userId = authenticationFacade.getCurrentUserOptional().map(User::getId).orElse(null);
+        return toItems(competitionRepository.findAllByIdInAndPublishedTrue(competitionIds), today, userId).stream()
+                .collect(Collectors.toMap(CompetitionListItem::competitionId, Function.identity()));
     }
 
     private Specification<Competition> filter(CompetitionListRequest request, LocalDate today, Long userId) {

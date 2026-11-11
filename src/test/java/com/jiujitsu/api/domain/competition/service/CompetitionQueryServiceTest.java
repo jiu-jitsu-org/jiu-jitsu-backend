@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionFeeResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionAudience;
 import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
@@ -38,6 +39,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -385,5 +387,91 @@ class CompetitionQueryServiceTest {
         assertThat(competitionQueryService.getList(request(null, null, 10)).competitions())
                 .filteredOn(item -> item.competitionId().equals(id))
                 .singleElement().extracting(CompetitionListItem::viewCount).isEqualTo(214L);
+    }
+
+    private static List<String> names(CompetitionPickerResponse response) {
+        return response.competitions().stream().map(CompetitionListItem::name).toList();
+    }
+
+    @Test
+    @DisplayName("대회 고르기: 공개 대회만, 다가오는 대회(오늘 포함, 가까운 순) 다음에 끝난 대회(최근 순)")
+    void picker_order() {
+        seedTimeline();
+
+        CompetitionPickerResponse response = competitionQueryService.getPicker(null);
+
+        assertThat(response.today()).isEqualTo(TODAY);
+        assertThat(names(response)).containsExactly("오늘1", "오늘2", "미래1", "미래2", "미래3", "과거2", "과거1");
+    }
+
+    @Test
+    @DisplayName("대회 고르기: 이름 일부(공백·대소문자 무시)로 찾고, 빈 검색어는 전체")
+    void picker_keyword() {
+        save("서울 오픈", TODAY.plusDays(3));
+        save("서울오픈 윈터", TODAY.minusDays(3));
+        save("부산 오픈", TODAY.plusDays(1));
+        save("Seoul Open", TODAY.plusDays(2));
+        em.flush();
+
+        assertThat(names(competitionQueryService.getPicker(" 서울오 "))).containsExactly("서울 오픈", "서울오픈 윈터");
+        assertThat(names(competitionQueryService.getPicker("seoulopen"))).containsExactly("Seoul Open");
+        assertThat(names(competitionQueryService.getPicker("  "))).hasSize(4);
+        assertThat(names(competitionQueryService.getPicker("없는대회"))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("대회 고르기: 최대 20개 — 다가오는 대회가 20개를 채우면 끝난 대회는 안 나오고, 모자라면 끝난 대회로 채운다")
+    void picker_limit() {
+        for (int i = 1; i <= 18; i++) {
+            save("미래" + i, TODAY.plusDays(i));
+        }
+        for (int i = 1; i <= 4; i++) {
+            save("과거" + i, TODAY.minusDays(i));
+        }
+        em.flush();
+
+        assertThat(names(competitionQueryService.getPicker(null)))
+                .hasSize(20)
+                .endsWith("미래18", "과거1", "과거2");
+
+        for (int i = 19; i <= 22; i++) {
+            save("미래" + i, TODAY.plusDays(i));
+        }
+        em.flush();
+        assertThat(names(competitionQueryService.getPicker(null)))
+                .hasSize(20)
+                .noneMatch(name -> name.startsWith("과거"));
+    }
+
+    @Test
+    @DisplayName("게시글 대회 카드: 공개 대회만 카드로, 관심 수·내 관심 여부 포함")
+    void cards() {
+        Competition published = save("서울 오픈", TODAY.plusDays(3));
+        Long catalog = em.persist(Competition.of("카탈로그", 2026)).getId();
+        em.persist(new CompetitionInterest(em.find(Competition.class, published.getId()), me));
+        em.flush();
+        login();
+
+        Map<Long, CompetitionListItem> cards = competitionQueryService.getCards(List.of(published.getId(), catalog, -1L));
+
+        assertThat(cards).containsOnlyKeys(published.getId());
+        CompetitionListItem card = cards.get(published.getId());
+        assertThat(card.name()).isEqualTo("서울 오픈");
+        assertThat(card.interestCount()).isEqualTo(1);
+        assertThat(card.interested()).isTrue();
+        assertThat(competitionQueryService.getCards(List.of())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("게시글 연결용 공개 대회: 없거나 미공개면 COMPETITION_NOT_FOUND")
+    void getPublished() {
+        Long id = save("서울 오픈", TODAY).getId();
+        Long catalog = em.persist(Competition.of("카탈로그", 2026)).getId();
+        em.flush();
+
+        assertThat(competitionQueryService.getPublished(id).getId()).isEqualTo(id);
+        assertThatThrownBy(() -> competitionQueryService.getPublished(catalog))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
     }
 }

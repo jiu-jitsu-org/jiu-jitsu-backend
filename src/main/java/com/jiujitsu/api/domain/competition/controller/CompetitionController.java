@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.competition.controller;
 import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionViewResponse;
 import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
@@ -81,6 +82,22 @@ public class CompetitionController {
             @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId
     ) {
         return competitionViewService.increase(competitionId);
+    }
+
+    @Operation(
+            summary = "글쓰기 대회 고르기",
+            description = "게시글에 연결할 공개 대회를 대회명 일부로 찾습니다. 비로그인도 조회할 수 있습니다.\n\n"
+                    + "- 공백·대소문자를 무시한 부분 일치. 검색어가 비면 이름 조건 없이 같은 순서\n"
+                    + "- 다가오는 대회(오늘 포함, 대회일 가까운 순) 다음에 끝난 대회(최근 순), 최대 20개\n"
+                    + "- 항목은 대회 목록과 같은 카드. status·earlyBirdOpen 은 응답 today 기준\n"
+                    + "- 대회 기록용 자동완성(/competitions/autocomplete)과 다릅니다 — 그쪽은 미공개 카탈로그를 포함하고 지난 대회만 줍니다"
+    )
+    @GetMapping("/picker")
+    public CompetitionPickerResponse picker(
+            @Parameter(description = "검색어 (대회명 일부, 선택)")
+            @RequestParam(required = false) String keyword
+    ) {
+        return competitionQueryService.getPicker(keyword);
     }
 
     @Operation(
