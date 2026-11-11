@@ -9,9 +9,4 @@ import java.util.Map;
  */
 public record FcmPushRequestedEvent(Long recipientUserId, FcmPushType pushType, Map<String, String> data,
                                     String title, String body) {
-
-    // 제목·본문이 푸시 종류마다 고정인 알림 (커뮤니티)
-    public FcmPushRequestedEvent(Long recipientUserId, FcmPushType pushType, Map<String, String> data) {
-        this(recipientUserId, pushType, data, pushType.getTitle(), pushType.getBody());
-    }
 }

@@ -24,6 +24,8 @@ import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -147,6 +149,30 @@ class CommunityCommentsNoticeDeepLinkTest {
                 .containsExactlyInAnyOrder(
                         org.assertj.core.groups.Tuple.tuple(FcmPushType.NEW_COMMENTS, "오늘 오픈매트 후기"),
                         org.assertj.core.groups.Tuple.tuple(FcmPushType.NEW_CHILD_COMMENTS, "저도 그 기술 배워보고 싶어요"));
+    }
+
+    @ParameterizedTest(name = "부모 댓글 {0}")
+    @ValueSource(strings = {"삭제", "숨김"})
+    @DisplayName("대댓글 푸시 본문: 부모 댓글이 삭제·숨김이면 비운다 — 알림함 미리보기와 같음, 지운 글이 잠금화면에 다시 뜨지 않게 (#196)")
+    void createComment_pushBody_deletedOrHiddenParent_empty(String state) {
+        // given - 대댓글이 있는 댓글은 soft delete·신고 숨김이라 body 가 남아 있다
+        Content content = stubContent(ContentType.BALANCE);  // 글쓴이 알림 없이 대댓글 알림만 본다
+        CommunityComments parent = stubComment(100L, THIRD_ID);
+        org.mockito.Mockito.lenient().when(parent.getBody()).thenReturn("지운 댓글 원문");
+        if (state.equals("삭제")) {
+            given(parent.isDeleted()).willReturn(true);
+        } else {
+            given(parent.isHidden()).willReturn(true);
+        }
+        stubCreateComment(content, parent);
+
+        // when
+        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 100L, "대댓글"));
+
+        // then
+        CommentNoticeEvent event = capturePublishedEvents(1).get(0);
+        assertThat(event.pushType()).isEqualTo(FcmPushType.NEW_CHILD_COMMENTS);
+        assertThat(event.pushBody()).isNull();
     }
 
     @Test

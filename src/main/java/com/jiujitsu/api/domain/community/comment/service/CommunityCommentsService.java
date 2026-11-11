@@ -218,7 +218,7 @@ public class CommunityCommentsService {
                                "data", content.getId().toString()),
                         user.getId(),
                         communityComments.getId(),
-                        parentComments.get().getBody()
+                        previewBody(parentComments.get())
                 ));
             }
         }
@@ -550,4 +550,8 @@ public class CommunityCommentsService {
         }
     }
 
+    // 푸시 본문용 댓글 내용 — 알림함 미리보기(NoticeService.computeBody)와 같이 삭제·숨김(신고 포함) 댓글은 비운다 (#196)
+    private static String previewBody(CommunityComments comment) {
+        return comment.isDeleted() || comment.isHidden() ? null : comment.getBody();
+    }
 }
