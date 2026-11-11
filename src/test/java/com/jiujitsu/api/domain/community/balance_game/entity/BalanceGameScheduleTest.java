@@ -48,4 +48,31 @@ class BalanceGameScheduleTest {
                 .extracting("errorCode").isEqualTo(ErrorCode.BALANCE_GAME_CLOSED);
         assertThatCode(() -> game.validateVotable(DAY.atTime(12, 0))).doesNotThrowAnyException();
     }
+
+    private BalanceGame next(LocalDateTime startAt) {
+        return BalanceGame.builder().startAt(startAt).endAt(startAt.plusHours(20)).gameDate(startAt.toLocalDate()).build();
+    }
+
+    @Test
+    @DisplayName("결과 노출 끝: 이어지는 다음 게임(하루 안 시작)이 있으면 그 시작, 없거나 며칠 뒤면 마감 + 30분(00:30:00)")
+    void resultUntil() {
+        LocalDate nextDay = DAY.plusDays(1);
+
+        assertThat(game.resultUntil(next(nextDay.atTime(0, 30)))).isEqualTo(nextDay.atTime(0, 30));
+        assertThat(game.resultUntil(next(nextDay.atTime(1, 0)))).isEqualTo(nextDay.atTime(1, 0));
+        assertThat(game.resultUntil(null)).isEqualTo(nextDay.atTime(0, 30));
+        assertThat(game.resultUntil(next(DAY.plusDays(3).atTime(0, 30)))).isEqualTo(nextDay.atTime(0, 30));
+    }
+
+    @Test
+    @DisplayName("다음 게임이 없을 때 마감을 직접 넣은 게임: 22:00:00 → 22:30:00 (1초 어긋나지 않음), 21:15:30 → 21:46:00 (분 단위 올림)")
+    void resultUntilCustomEndAt() {
+        BalanceGame endsAt22 = BalanceGame.builder()
+                .startAt(DAY.atTime(0, 30)).endAt(DAY.atTime(22, 0)).gameDate(DAY).build();
+        BalanceGame endsAtOddSecond = BalanceGame.builder()
+                .startAt(DAY.atTime(0, 30)).endAt(DAY.atTime(21, 15, 30)).gameDate(DAY).build();
+
+        assertThat(endsAt22.resultUntil(null)).isEqualTo(DAY.atTime(22, 30));
+        assertThat(endsAtOddSecond.resultUntil(null)).isEqualTo(DAY.atTime(21, 46));
+    }
 }

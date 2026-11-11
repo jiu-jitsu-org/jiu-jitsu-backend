@@ -94,7 +94,7 @@ class BalanceGameServiceViewCountTest {
     void getCurrent_doesNotIncrementViewCount() {
         // given
         BalanceGame game = game();
-        given(balanceGameRepository.findOpen(any())).willReturn(List.of(game));
+        given(balanceGameRepository.findOpen(any(), any())).willReturn(List.of(game));
         stubAggregations();
 
         // when

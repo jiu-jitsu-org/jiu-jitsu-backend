@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "balance_game")
@@ -94,13 +95,18 @@ public class BalanceGame extends BaseEntity {
     /**
      * 마감 뒤 메인에 이 게임 결과를 보여 주는 끝 시각 (이 시각부터 메인에서 빠진다)
      * - 이어지는 다음 게임(마감 뒤 하루 안에 시작)이 있으면 그 시작 시각 — 결과 노출과 다음 게임 시작 사이에 빈틈·겹침이 없게
-     * - 없으면 마감 + 버퍼. 마감이 23:59:59(그날 마지막 초)라 1초를 더해 00:30:00 에 맞춘다
+     * - 없으면 마감(분 단위로 올림) + 버퍼. 기본 마감 23:59:59 는 다음 날 00:30:00(다음 게임 기본 시작)에 맞고,
+     *   22:00:00 처럼 직접 넣은 마감은 22:30:00 그대로
      */
     public LocalDateTime resultUntil(BalanceGame nextGame) {
         if (nextGame != null && nextGame.getStartAt().isAfter(endAt)
                 && !nextGame.getStartAt().isAfter(endAt.plus(NEXT_GAME_WINDOW))) {
             return nextGame.getStartAt();
         }
-        return endAt.plus(RESULT_BUFFER).plusSeconds(1);
+        LocalDateTime closedMinute = endAt.truncatedTo(ChronoUnit.MINUTES);
+        if (closedMinute.isBefore(endAt)) {
+            closedMinute = closedMinute.plusMinutes(1);
+        }
+        return closedMinute.plus(RESULT_BUFFER);
     }
 }

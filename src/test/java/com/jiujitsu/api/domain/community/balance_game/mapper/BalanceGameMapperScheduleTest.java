@@ -48,4 +48,15 @@ class BalanceGameMapperScheduleTest {
         assertThat(at(DAY.atTime(12, 0))).extracting(BalanceGameResponse::started, BalanceGameResponse::closed)
                 .containsExactly(true, false);
     }
+
+    @Test
+    @DisplayName("메인에서 마감 게임을 결과로 줄 때 resultUntil 이 응답에 실리고, 그 외(10인자)는 null")
+    void resultUntil() {
+        LocalDateTime now = DAY.plusDays(1).atTime(0, 10);
+        LocalDateTime until = DAY.plusDays(1).atTime(0, 30);
+
+        assertThat(mapper.toResponse(game, 0, 0, false, false, null, 0, 0, null, now, until).resultUntil())
+                .isEqualTo(until);
+        assertThat(at(now).resultUntil()).isNull();
+    }
 }

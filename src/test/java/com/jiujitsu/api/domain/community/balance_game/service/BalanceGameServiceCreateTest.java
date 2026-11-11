@@ -206,6 +206,29 @@ class BalanceGameServiceCreateTest {
         verify(balanceGameFactory).createBalanceGame(any(), any(), any(), any(), any(), eq(startAt), eq(earlyEndAt), eq(startAt.toLocalDate()));
     }
 
+    @Test
+    @DisplayName("startAt 만 넣으면 마감은 시작일 23:59:59 — 다음 날 게임을 미리 등록할 수 있다 (C0012 아님)")
+    void create_startAtOnly_endAtIsStartDayEnd() {
+        LocalDateTime startAt = LocalDate.now().plusDays(1).atTime(0, 30);
+        givenCreateStubs();
+
+        balanceGameService.create(new BalanceGameCreateRequest("옵션A", null, "옵션B", null, null, startAt));
+
+        verify(balanceGameFactory).createBalanceGame(any(), any(), any(), any(), any(),
+                eq(startAt), eq(startAt.toLocalDate().atTime(23, 59, 59)), eq(startAt.toLocalDate()));
+    }
+
+    @Test
+    @DisplayName("startAt 만 넣었는데 시작일 23:59:59 가 이미 지났으면 C0009")
+    void create_startAtOnly_pastDay() {
+        LocalDateTime startAt = LocalDate.now().minusDays(1).atTime(0, 30);
+
+        assertThatThrownBy(() -> balanceGameService.create(new BalanceGameCreateRequest("옵션A", null, "옵션B", null, null, startAt)))
+                .isInstanceOf(ErrorException.class)
+                .extracting(e -> ((ErrorException) e).getErrorCode())
+                .isEqualTo(ErrorCode.BALANCE_GAME_END_AT_MUST_BE_FUTURE);
+    }
+
     private void givenCreateStubs() {
         Content content = Content.builder().contentType(ContentType.BALANCE).build();
         BalanceGame game = BalanceGame.builder().content(content).build();

@@ -44,7 +44,7 @@ class BalanceGameRepositoryTest {
         saveGame("A-나중", now.minusHours(10), now.plusHours(5));
         saveGame("A-시작전", now.plusHours(2), now.plusMinutes(30));       // 더 먼저 마감되지만 시작 전
 
-        Optional<BalanceGame> result = balanceGameRepository.findOpen(now).stream().findFirst();
+        Optional<BalanceGame> result = balanceGameRepository.findOpen(now, PageRequest.of(0, 1)).stream().findFirst();
 
         assertThat(result).isPresent();
         assertThat(result.get().getId()).isEqualTo(soon.getId());
@@ -57,9 +57,9 @@ class BalanceGameRepositoryTest {
         LocalDateTime now = LocalDateTime.of(2026, 11, 11, 0, 30);
         BalanceGame startsNow = saveGame("A-지금시작", now, now.plusHours(23));
 
-        assertThat(balanceGameRepository.findOpen(now).stream().findFirst())
+        assertThat(balanceGameRepository.findOpen(now, PageRequest.of(0, 1)).stream().findFirst())
                 .map(BalanceGame::getId).contains(startsNow.getId());
-        assertThat(balanceGameRepository.findOpen(now.minusSeconds(1)).stream().findFirst())
+        assertThat(balanceGameRepository.findOpen(now.minusSeconds(1), PageRequest.of(0, 1)).stream().findFirst())
                 .isEmpty();
     }
 

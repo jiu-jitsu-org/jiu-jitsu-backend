@@ -59,14 +59,20 @@ public class BalanceGameService {
      */
     @Transactional(readOnly = true)
     public BalanceGameResponse getCurrent() {
-        return findCurrent(LocalDateTime.now())
-                .map(current -> toResponseWithVotes(current.game(), current.resultUntil()))
+        return getCurrent(LocalDateTime.now());
+    }
+
+    // 게임 고르기와 응답(closed·started·serverTime)을 같은 now 로 판정한다.
+    // 시각을 따로 읽으면 마감 직전에 고른 진행 중 게임이 응답에선 closed=true·resultUntil=null 로 나가 앱이 다시 조회할 시각을 잃는다
+    BalanceGameResponse getCurrent(LocalDateTime now) {
+        return findCurrent(now)
+                .map(current -> toResponseWithVotes(current.game(), now, current.resultUntil()))
                 .orElse(null);
     }
 
     // 지금 메인에 보일 게임: 진행 중 → 없으면 결과 노출 시간 안의 가장 최근 마감 게임 (resultUntil 포함)
-    Optional<CurrentGame> findCurrent(LocalDateTime now) {
-        Optional<BalanceGame> open = balanceGameRepository.findOpen(now).stream().findFirst();
+    private Optional<CurrentGame> findCurrent(LocalDateTime now) {
+        Optional<BalanceGame> open = balanceGameRepository.findOpen(now, FIRST).stream().findFirst();
         if (open.isPresent()) {
             return open.map(game -> new CurrentGame(game, null));
         }
@@ -77,7 +83,7 @@ public class BalanceGameService {
     }
 
     // 메인에 보일 게임과, 마감된 게임이면 결과를 보여 주는 끝 시각 (진행 중이면 null)
-    record CurrentGame(BalanceGame game, LocalDateTime resultUntil) {
+    private record CurrentGame(BalanceGame game, LocalDateTime resultUntil) {
     }
 
     /**
@@ -193,13 +199,13 @@ public class BalanceGameService {
      * [임시] 관리자 밸런스 게임 등록 (테스트 데이터용)
      * 추후 정식 관리자 등록 기능으로 대체 예정.
      *
-     * endAt 미입력 시 당일 한국 시간 23:59:59 자동 설정.
-     * 자동 설정된 값이 이미 과거라면(심야 요청) 다음 날 23:59:59로 설정.
+     * endAt 미입력 시 당일 한국 시간 23:59:59 자동 설정. 자동 설정된 값이 이미 과거라면(심야 요청) 다음 날 23:59:59로 설정.
+     * startAt 만 넣으면 endAt 은 시작일 23:59:59 (다음 날 게임을 미리 등록할 수 있게).
      * startAt 미입력 시 마감일 00:30 (00:00~00:30 은 전날 결과 버퍼). startAt 이 endAt 보다 앞이 아니면 BALANCE_GAME_START_AT_NOT_BEFORE_END_AT
      * gameDate(진행일)는 시작일 — 기본 일정에선 마감일과 같고, 시작을 넣어 날짜를 넘기는 게임은 시작한 날이 진행일
      */
     public BalanceGameResponse create(BalanceGameCreateRequest request) {
-        LocalDateTime endAt = resolveEndAt(request.endAt());
+        LocalDateTime endAt = resolveEndAt(request.endAt(), request.startAt());
         LocalDateTime startAt = request.startAt() != null ? request.startAt() : BalanceGame.defaultStartAt(endAt.toLocalDate());
         // 마감을 직접 넣었는데 그날 00:30 보다 이르거나, 시작을 마감 뒤로 넣으면 열릴 수 없는 게임이 된다
         if (!startAt.isBefore(endAt)) {
@@ -221,14 +227,17 @@ public class BalanceGameService {
     }
 
     /**
-     * endAt이 null이면 당일 23:59:59를 기본값으로 사용한다.
-     * 기본값이 이미 과거라면(심야 요청) 다음 날로 넘긴다.
-     * 명시적으로 입력된 endAt이 과거이면 예외를 던진다.
+     * endAt이 null이면 시작일(startAt 미입력이면 당일) 23:59:59를 기본값으로 사용한다.
+     * startAt 없이 정한 기본값이 이미 과거라면(심야 요청) 다음 날로 넘긴다.
+     * 명시적으로 입력된 endAt, 또는 startAt 으로 정한 기본값이 과거이면 예외를 던진다.
      * (JVM 타임존이 Asia/Seoul로 고정되어 있으므로 별도 ZoneId 지정 불필요)
      */
-    private LocalDateTime resolveEndAt(LocalDateTime endAt) {
+    private LocalDateTime resolveEndAt(LocalDateTime endAt, LocalDateTime startAt) {
         LocalDateTime now = LocalDateTime.now();
 
+        if (endAt == null && startAt != null) {
+            endAt = startAt.toLocalDate().atTime(END_OF_DAY);
+        }
         if (endAt != null) {
             if (!endAt.isAfter(now)) {
                 throw new ErrorException(ErrorCode.BALANCE_GAME_END_AT_MUST_BE_FUTURE);
@@ -244,11 +253,11 @@ public class BalanceGameService {
 
     // 득표수/내 투표/댓글수 + 좋아요 지표를 채워 응답으로 변환
     private BalanceGameResponse toResponseWithVotes(BalanceGame game) {
-        return toResponseWithVotes(game, null);
+        return toResponseWithVotes(game, LocalDateTime.now(), null);
     }
 
-    // resultUntil: 메인에서 마감된 게임을 결과로 보여 줄 때만 (그 외 null)
-    private BalanceGameResponse toResponseWithVotes(BalanceGame game, LocalDateTime resultUntil) {
+    // now: 응답의 serverTime·started·closed 기준 시각. resultUntil: 메인에서 마감된 게임을 결과로 보여 줄 때만 (그 외 null)
+    private BalanceGameResponse toResponseWithVotes(BalanceGame game, LocalDateTime now, LocalDateTime resultUntil) {
         Long balanceGameId = game.getId();
         Long contentId = game.getContent().getId();
         List<Long> contentIds = List.of(contentId);
@@ -284,6 +293,6 @@ public class BalanceGameService {
                 .orElse(null);
 
         return balanceGameMapper.toResponse(game, commentCount, likeCount, isLiked,
-                isCommented, noticeEnabled, voteCountA, voteCountB, myVote, LocalDateTime.now(), resultUntil);
+                isCommented, noticeEnabled, voteCountA, voteCountB, myVote, now, resultUntil);
     }
 }
