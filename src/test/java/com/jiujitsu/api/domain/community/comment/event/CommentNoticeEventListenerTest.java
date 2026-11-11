@@ -49,6 +49,27 @@ class CommentNoticeEventListenerTest {
         verify(noticeService).saveNotice(2L, FcmPushType.NEW_COMMENTS, data, 1L, 100L);
     }
 
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"차단", "숨김", "신고"})
+    @DisplayName("보낸 사람을 차단했거나 글을 숨기거나 신고했으면 푸시·저장 없이, 본문도 조회하지 않는다")
+    void filtered_skipsPreviewLookup(String reason) {
+        CommentNoticeEvent event = new CommentNoticeEvent(2L, 10L, FcmPushType.NEW_COMMENTS, data, 1L, 100L);
+        given(noticeService.isContentNoticeEnabled(2L, 10L)).willReturn(true);
+        switch (reason) {
+            case "차단" -> given(userBlockRepository.existsByBlockerIdAndBlockedId(2L, 1L)).willReturn(true);
+            case "숨김" -> given(boardHideRepository.findByCreatedByIdAndContentId(2L, 10L))
+                    .willReturn(java.util.Optional.of(org.mockito.Mockito.mock(com.jiujitsu.api.domain.community.board.entity.BoardHide.class)));
+            default -> given(reportRepository.existsByCreatedByIdAndReportTypeAndTargetId(
+                    2L, com.jiujitsu.api.domain.community.report.entity.ReportType.BOARD, 10L)).willReturn(true);
+        }
+
+        listener.handle(event);
+
+        verifyNoInteractions(noticePreview, fcmPushEventPublisher);
+        verify(noticeService, org.mockito.Mockito.never()).saveNotice(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
     @Test
     @DisplayName("게시물 알림을 껐으면 푸시도 없고 본문도 조회하지 않는다")
     void noticeOff_skipsPreviewLookup() {

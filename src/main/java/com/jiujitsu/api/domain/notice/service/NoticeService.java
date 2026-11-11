@@ -402,42 +402,23 @@ public class NoticeService {
     }
 
     /**
-     * 알림 body 동적 계산 — 규칙은 NoticePreview 와 같다 (푸시 본문도 같은 값, #196)
-     * - NEW_COMMENTS        : 현재 게시글 제목 (밸런스 게임이면 null)
-     * - NEW_CHILD_COMMENTS  : 부모 댓글 본문 (삭제/숨김이면 null)
-     * - CONTENTS_LIKE       : 좋아요 받은 게시글 제목 (밸런스 게임이면 null)
-     * - COMMENTS_LIKE       : 좋아요 받은 댓글 본문 (삭제/숨김이면 null)
-     * - 대회 마감 알림       : 발송 때 저장한 본문
-     * - 그 외                : null
+     * 알림 body 동적 계산
+     * - 커뮤니티 알림 : NoticePreview.body (푸시 본문과 같은 규칙 — 게시글 제목 / 댓글 내용, 삭제·숨김 댓글은 null, #196)
+     * - 대회 마감 알림 : 발송 때 저장한 본문
      */
     private String computeBody(Notice notice,
                                Map<Long, String> boardTitleByContentId,
                                Map<Long, CommunityComments> commentByRefId,
                                Map<Long, CommunityComments> parentCommentById) {
         return switch (notice.getPushType()) {
-            case NEW_COMMENTS -> {
-                if (notice.getData() == null) yield null;
-                yield boardTitleByContentId.get(Long.parseLong(notice.getData()));
-            }
-            case NEW_CHILD_COMMENTS -> {
-                if (notice.getRefId() == null) yield null;
-                CommunityComments reply = commentByRefId.get(notice.getRefId());
-                if (reply == null || reply.getParentId() == null || reply.getParentId() == 0) yield null;
-                yield NoticePreview.commentPreview(parentCommentById.get(reply.getParentId()));
-            }
-            // 좋아요 카드: 좋아요 받은 게시글 제목 (밸런스 게임이면 null)
-            case CONTENTS_LIKE -> {
-                if (notice.getData() == null) yield null;
-                yield boardTitleByContentId.get(Long.parseLong(notice.getData()));
-            }
-            // 좋아요 카드: 좋아요 받은 댓글 본문 (삭제·숨김이면 null)
-            case COMMENTS_LIKE -> {
-                if (notice.getRefId() == null) yield null;
-                yield NoticePreview.commentPreview(commentByRefId.get(notice.getRefId()));
-            }
             // 대회 이름·마감 단계가 들어간 문구를 발송 때 저장해 둔다
             case COMPETITION_EARLY_BIRD_DEADLINE, COMPETITION_REGISTRATION_DEADLINE -> notice.getBody();
-            default -> null;
+            // 커뮤니티 알림: 푸시 본문과 같은 규칙 (NoticePreview.body), 값은 화면 단위 일괄 조회 결과에서
+            default -> NoticePreview.body(notice.getPushType(),
+                    notice.getData() == null ? null : Long.parseLong(notice.getData()),
+                    notice.getRefId(),
+                    boardTitleByContentId::get,
+                    id -> commentByRefId.containsKey(id) ? commentByRefId.get(id) : parentCommentById.get(id));
         };
     }
 
