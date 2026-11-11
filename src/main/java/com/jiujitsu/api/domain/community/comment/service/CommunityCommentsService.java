@@ -202,8 +202,7 @@ public class CommunityCommentsService {
                     Map.of("type", actionType.name(),
                            "data", content.getId().toString()),
                     user.getId(),
-                    communityComments.getId(),
-                    boardRepository.findByContent_Id(content.getId()).map(Board::getTitle).orElse(null)
+                    communityComments.getId()
             ));
         }
 
@@ -217,8 +216,7 @@ public class CommunityCommentsService {
                         Map.of("type", actionType.name(),
                                "data", content.getId().toString()),
                         user.getId(),
-                        communityComments.getId(),
-                        previewBody(parentComments.get())
+                        communityComments.getId()
                 ));
             }
         }
@@ -548,10 +546,5 @@ public class CommunityCommentsService {
         public boolean hasPrevious() {
             return false;
         }
-    }
-
-    // 푸시 본문용 댓글 내용 — 알림함 미리보기(NoticeService.computeBody)와 같이 삭제·숨김(신고 포함) 댓글은 비운다 (#196)
-    private static String previewBody(CommunityComments comment) {
-        return comment.isDeleted() || comment.isHidden() ? null : comment.getBody();
     }
 }

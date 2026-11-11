@@ -402,7 +402,7 @@ public class NoticeService {
     }
 
     /**
-     * 알림 body 동적 계산
+     * 알림 body 동적 계산 — 규칙은 NoticePreview 와 같다 (푸시 본문도 같은 값, #196)
      * - NEW_COMMENTS        : 현재 게시글 제목 (밸런스 게임이면 null)
      * - NEW_CHILD_COMMENTS  : 부모 댓글 본문 (삭제/숨김이면 null)
      * - CONTENTS_LIKE       : 좋아요 받은 게시글 제목 (밸런스 게임이면 null)
@@ -423,9 +423,7 @@ public class NoticeService {
                 if (notice.getRefId() == null) yield null;
                 CommunityComments reply = commentByRefId.get(notice.getRefId());
                 if (reply == null || reply.getParentId() == null || reply.getParentId() == 0) yield null;
-                CommunityComments parent = parentCommentById.get(reply.getParentId());
-                if (parent == null || parent.isDeleted() || parent.isHidden()) yield null;
-                yield parent.getBody();
+                yield NoticePreview.commentPreview(parentCommentById.get(reply.getParentId()));
             }
             // 좋아요 카드: 좋아요 받은 게시글 제목 (밸런스 게임이면 null)
             case CONTENTS_LIKE -> {
@@ -435,9 +433,7 @@ public class NoticeService {
             // 좋아요 카드: 좋아요 받은 댓글 본문 (삭제·숨김이면 null)
             case COMMENTS_LIKE -> {
                 if (notice.getRefId() == null) yield null;
-                CommunityComments comment = commentByRefId.get(notice.getRefId());
-                if (comment == null || comment.isDeleted() || comment.isHidden()) yield null;
-                yield comment.getBody();
+                yield NoticePreview.commentPreview(commentByRefId.get(notice.getRefId()));
             }
             // 대회 이름·마감 단계가 들어간 문구를 발송 때 저장해 둔다
             case COMPETITION_EARLY_BIRD_DEADLINE, COMPETITION_REGISTRATION_DEADLINE -> notice.getBody();

@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.comment.event;
 import com.jiujitsu.api.domain.community.board.repository.BoardHideRepository;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.repository.ReportRepository;
+import com.jiujitsu.api.domain.notice.service.NoticePreview;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.repository.UserBlockRepository;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
@@ -18,6 +19,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class CommentNoticeEventListener {
 
     private final NoticeService noticeService;
+    private final NoticePreview noticePreview;
     private final FcmPushEventPublisher fcmPushEventPublisher;
     private final UserBlockRepository userBlockRepository;
     private final BoardHideRepository boardHideRepository;
@@ -43,9 +45,9 @@ public class CommentNoticeEventListener {
                 event.recipientUserId(), ReportType.BOARD, event.contentId())) {
             return;
         }
-        // 본문은 알림함 미리보기와 같은 값 (새 댓글 = 게시글 제목, 대댓글 = 내 댓글, #196)
+        // 본문은 알림함 미리보기와 같은 값 (NoticePreview, #196). 위에서 거른 뒤에만 조회한다
         fcmPushEventPublisher.publish(event.recipientUserId(), event.pushType(), event.pushData(),
-                event.pushType().getTitle(), event.pushBody());
+                event.pushType().getTitle(), noticePreview.of(event.pushType(), event.contentId(), event.refId()));
         noticeService.saveNotice(event.recipientUserId(), event.pushType(), event.pushData(),
                 event.senderUserId(), event.refId());
     }

@@ -67,7 +67,7 @@ class LikeNoticeServiceTest {
 
     private final LikeNoticeService service = new LikeNoticeService(
             noticeRepository, new NoticeFactory(), noticeService, boardHideRepository, reportRepository,
-            contentLikeRepository, commentLikeRepository, boardRepository, communityCommentsRepository, fcmPushEventPublisher,
+            contentLikeRepository, commentLikeRepository, new NoticePreview(boardRepository, communityCommentsRepository), fcmPushEventPublisher,
             new LikePushProperties(List.of(1, 5, 10), 10), CLOCK);
 
     private Notice card;
@@ -207,10 +207,15 @@ class LikeNoticeServiceTest {
                 eq("내 댓글에 좋아요가 5개 달렸어요"), eq("저도 그 기술 배워보고 싶어요"));
     }
 
-    @Test
+    @org.junit.jupiter.params.ParameterizedTest(name = "댓글 {0}")
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"삭제", "숨김"})
     @DisplayName("좋아요 받은 댓글이 그사이 삭제·숨김됐으면 푸시 본문은 비운다 (알림함 미리보기와 같음)")
-    void commentLike_deletedComment_noBody() {
-        given(comment.isDeleted()).willReturn(true);
+    void commentLike_deletedOrHiddenComment_noBody(String state) {
+        if (state.equals("삭제")) {
+            given(comment.isDeleted()).willReturn(true);
+        } else {
+            given(comment.isHidden()).willReturn(true);
+        }
         commentLikes(1);
 
         assertThat(service.handle(commentLike())).isTrue();
