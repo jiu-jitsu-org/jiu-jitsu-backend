@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
 import com.jiujitsu.api.domain.community.board.entity.BoardTag;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
+import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -32,11 +33,12 @@ public class BoardFactory {
         return content;
     }
 
-    public Board createBoard(BoardCategory category, Content content, String title, String body, List<String> tagNames) {
+    public Board createBoard(BoardCategory category, Content content, Competition competition, String title, String body, List<String> tagNames) {
         // 게시물 생성
         Board board = Board.builder()
                 .category(category)
                 .content(content)
+                .competition(competition)
                 .title(title)
                 .body(body)
                 .build();

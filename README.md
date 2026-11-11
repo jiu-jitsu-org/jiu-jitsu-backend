@@ -92,10 +92,10 @@ src/main/java/com/jiujitsu/api/
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/board/category` | 카테고리 목록 조회 |
-| GET | `/board` | 게시글 목록 조회 (카테고리 필터, 페이징) |
+| GET | `/board` | 게시글 목록 조회 (카테고리 필터, 페이징). 연결된 대회는 `competition` 카드 |
 | GET | `/board/{id}` | 게시글 단건 조회 |
-| POST | `/board` | 게시글 생성 |
-| PUT | `/board/{id}` | 게시글 수정 |
+| POST | `/board` | 게시글 생성 (`competitionId` 로 공개 대회 연결 선택) |
+| PUT | `/board/{id}` | 게시글 수정 (`competitionId` 는 보낸 값으로 교체, null = 연결 해제) |
 | DELETE | `/board/{id}` | 게시글 삭제 |
 | PUT | `/board/like/{id}` | 게시글 좋아요 등록/취소 |
 | PUT | `/board/save/{id}` | 게시글 저장/취소 |
@@ -145,6 +145,8 @@ src/main/java/com/jiujitsu/api/
 | GET | `/competitions` | 대회 탭 목록 (공개 대회, 대회일순). 기준일 `date` + 양방향 커서(`nextCursor`·`previousCursor`), 필터 `region`·`status`·`interested`·`keyword`. 비로그인 가능 |
 | GET | `/competitions/{competitionId}` | 대회 상세 (공개 대회, 일정·참가비 단계·관심 수·조회수). 비로그인 가능, 조회수는 오르지 않음 |
 | POST | `/competitions/{competitionId}/views` | 대회 조회수 +1 (앱이 상세를 열 때, 중복 방지 없음) |
+| GET | `/competitions/picker?keyword=` | 글쓰기 대회 고르기 (공개 대회, 다가오는 대회 → 끝난 대회, 최대 20개). 비로그인 가능 |
+| GET | `/competitions/{competitionId}/stories` | 대회 이야기 (이 대회를 고른 글 최대 5개: 반응 많은 2개 + 최신). 비로그인 가능 |
 | GET | `/competitions/autocomplete?keyword=` | 등록 대회 검색 (프로필 대회 기록용 대회명 자동완성, 지난 대회까지) |
 | PUT | `/competitions/{competitionId}/interest` | 대회 관심 등록 (멱등, 처리 후 관심 상태·관심 수) |
 | DELETE | `/competitions/{competitionId}/interest` | 대회 관심 해제 (멱등, 미공개로 바뀐 대회도 해제 가능) |

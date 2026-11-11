@@ -12,6 +12,7 @@ import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
+import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
@@ -57,6 +58,7 @@ class BoardServiceAuthorProfileTest {
     @Mock private ReportService reportService;
     @Mock private BoardHideService boardHideService;
     @Mock private CommunityProfileService communityProfileService;
+    @Mock private CompetitionQueryService competitionQueryService;
 
     @Test
     @DisplayName("목록은 페이지 작성자들의 프로필을 한 번에 조회해 각 글의 author 에 넘긴다")
@@ -82,9 +84,9 @@ class BoardServiceAuthorProfileTest {
 
         // then - 글마다가 아니라 페이지당 1번
         verify(communityProfileService, times(1)).getProfilesByUserIds(any());
-        verify(boardMapper).toBoardListResponse(eq(first), eq(blueProfile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean());
-        verify(boardMapper).toBoardListResponse(eq(second), isNull(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean());
-        verify(boardMapper).toBoardListResponse(eq(third), eq(blueProfile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean());
+        verify(boardMapper).toBoardListResponse(eq(first), eq(blueProfile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
+        verify(boardMapper).toBoardListResponse(eq(second), isNull(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
+        verify(boardMapper).toBoardListResponse(eq(third), eq(blueProfile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
     }
 
     @Test
@@ -101,7 +103,7 @@ class BoardServiceAuthorProfileTest {
         boardService.getById(100L);
 
         // then
-        verify(boardMapper).toResponse(eq(board), eq(profile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), any(), anyBoolean());
+        verify(boardMapper).toResponse(eq(board), eq(profile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), any(), anyBoolean(), isNull());
     }
 
     @Test
@@ -113,15 +115,15 @@ class BoardServiceAuthorProfileTest {
         Board board = board(100L, User.builder().id(2L).build());
         CommunityProfile profile = CommunityProfile.builder().user(author).build();
         given(authenticationFacade.getCurrentUser()).willReturn(author);
-        given(boardFactory.createBoard(any(), any(), any(), any(), any())).willReturn(board);
+        given(boardFactory.createBoard(any(), any(), any(), any(), any(), any())).willReturn(board);
         given(boardRepository.save(board)).willReturn(board);
         given(communityProfileService.findProfile(author)).willReturn(Optional.of(profile));
 
         // when
-        boardService.create(new BoardCreateRequest(1L, "제목", "본문", null, null));
+        boardService.create(new BoardCreateRequest(1L, "제목", "본문", null, null, null));
 
         // then
-        verify(boardMapper).toResponse(board, author, profile);
+        verify(boardMapper).toResponse(board, author, profile, null);
     }
 
     @Test
@@ -137,7 +139,7 @@ class BoardServiceAuthorProfileTest {
         boardService.update(100L, new BoardUpdateRequest());
 
         // then
-        verify(boardMapper).toResponse(board, author, null);
+        verify(boardMapper).toResponse(board, author, null, null);
     }
 
     private User user(Long id) {

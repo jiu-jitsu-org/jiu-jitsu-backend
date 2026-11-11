@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.community.board.dto;
 
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileInfo;
+import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -29,7 +30,8 @@ public record BoardResponse(
         @Schema(description = "게시물 알림 활성화 여부", example = "true") Boolean noticeEnabled,
         @Schema(description = "작성자 프로필") CommunityProfileInfo author,
         @Schema(description = "작성여부") Boolean isAuthor,
-        @Schema(description = "등록 경과 시간") String timeAgo
+        @Schema(description = "등록 경과 시간") String timeAgo,
+        @Schema(description = "연결된 대회 카드 (대회 탭 목록과 같은 정보). 연결이 없거나 대회가 비공개면 null", nullable = true) CompetitionListItem competition
 ) {
 
 }
