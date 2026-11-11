@@ -26,10 +26,12 @@ public enum ErrorCode {
     COMMENT_RESTORE_EXPIRED(400, "C0008", "복구 가능 시간이 만료됐습니다."),
     CONTENT_SAVE_NOT_SUPPORTED(400, "C0008", "저장할 수 없는 게시물입니다."),
     BALANCE_GAME_END_AT_MUST_BE_FUTURE(400, "C0009", "마감 일시는 미래 시간이어야 합니다."),
-    COMPETITION_NOT_FOUND(404, "C0010", "존재하지 않는 등록 대회입니다."),
+    COMPETITION_NOT_FOUND(404, "C0010", "존재하지 않는 대회입니다."),
     EMAIL_DUPLICATED(400, "R0006", "이미 사용중인 이메일입니다."),
     COMPETITION_PIN_LIMIT_EXCEEDED(400, "R0007", "대표 기록은 3개까지 고정할 수 있습니다."),
     COMPETITION_DUPLICATED(400, "R0008", "같은 연도에 같은 이름의 대회가 중복되었습니다."),
+    COMPETITION_INVALID_EVENT_INFO(400, "R0009", "대회 일정·참가비 정보가 올바르지 않습니다."),
+    COMPETITION_INFO_REPORT_LIMIT_EXCEEDED(400, "R0010", "같은 대회의 같은 항목은 하루 3번까지 제보할 수 있습니다."),
 
 
     /**

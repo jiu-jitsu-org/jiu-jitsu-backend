@@ -22,6 +22,10 @@ public class FcmPushService {
     private final PushSendLogService pushSendLogService;
 
     public void send(User user, FcmPushType pushType, Map<String, String> data) {
+        send(user, pushType, data, pushType.getTitle(), pushType.getBody());
+    }
+
+    public void send(User user, FcmPushType pushType, Map<String, String> data, String title, String body) {
         String actionType = data.get("type");
         String pushData = data.get("data");
 
@@ -36,8 +40,8 @@ public class FcmPushService {
                         .setToken(appInfo.getToken())
                         .setNotification(
                                 Notification.builder()
-                                        .setTitle(pushType.getTitle())
-                                        .setBody(pushType.getBody())
+                                        .setTitle(title)
+                                        .setBody(body)
                                         .build()
                         )
                         .putData("type", actionType)
@@ -62,8 +66,8 @@ public class FcmPushService {
                     .errorCode(errorCode)
                     .errorMessage(errorMessage)
                     .pushType(pushType)
-                    .title(pushType.getTitle())
-                    .body(pushType.getBody())
+                    .title(title)
+                    .body(body)
                     .pushActionType(PushActionType.from(data.get("type")))
                     .data(pushData)
                     .userAppInfo(appInfo)

@@ -8,7 +8,8 @@ public record NoticeSettingRequest(
         @Schema(description = "계정보안알림") Boolean securityEnabled,
         @Schema(description = "서비스공지알림") Boolean serviceEnabled,
         @Schema(description = "커뮤니티활동알림") Boolean communityEnabled,
-        @Schema(description = "마케팅정보알림") Boolean marketingEnabled
+        @Schema(description = "마케팅정보알림") Boolean marketingEnabled,
+        @Schema(description = "관심 대회 알림 (얼리버드·접수 마감 전날). 보내지 않으면 그대로", nullable = true) Boolean competitionEnabled
 ) {
     public UserNoticeSetting toEntity() {
         return UserNoticeSetting.builder()
@@ -16,6 +17,7 @@ public record NoticeSettingRequest(
                 .serviceEnabled(this.serviceEnabled)
                 .communityEnabled(this.communityEnabled)
                 .marketingEnabled(this.marketingEnabled)
+                .competitionEnabled(this.competitionEnabled)
                 .build();
     }
 }

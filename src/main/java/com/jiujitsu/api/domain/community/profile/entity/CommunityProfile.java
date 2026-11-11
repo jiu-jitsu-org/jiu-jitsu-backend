@@ -1,6 +1,6 @@
 package com.jiujitsu.api.domain.community.profile.entity;
 
-import com.jiujitsu.api.domain.community.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDto;
 import com.jiujitsu.api.domain.user.entity.User;
 import jakarta.persistence.*;

@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.community.board.entity.BoardTag;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileInfo;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
+import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.global.util.TimeAgoUtil;
@@ -20,7 +21,7 @@ public class BoardMapper {
     /**
      * 목록 response
      */
-    public BoardListResponse toBoardListResponse(Board board, CommunityProfile authorProfile, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, boolean isAuthor) {
+    public BoardListResponse toBoardListResponse(Board board, CommunityProfile authorProfile, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, boolean isAuthor, CompetitionListItem competition) {
         Content content = board.getContent();
 
         return new BoardListResponse(
@@ -42,14 +43,15 @@ public class BoardMapper {
                 getTagNames(board),
                 CommunityProfileInfo.from(board.getCreatedBy(), authorProfile),
                 isAuthor,
-                TimeAgoUtil.format(board.getCreatedAt())
+                TimeAgoUtil.format(board.getCreatedAt()),
+                competition
         );
     }
 
     /**
      * 상세 response
      */
-    public BoardResponse toResponse(Board board, CommunityProfile authorProfile, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, Boolean noticeEnabled, boolean isAuthor) {
+    public BoardResponse toResponse(Board board, CommunityProfile authorProfile, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, Boolean noticeEnabled, boolean isAuthor, CompetitionListItem competition) {
         Content content = board.getContent();
         return new BoardResponse(
                 content.getId(),
@@ -72,7 +74,9 @@ public class BoardMapper {
                 noticeEnabled,
                 CommunityProfileInfo.from(board.getCreatedBy(), authorProfile),
                 isAuthor,
-                TimeAgoUtil.format(board.getCreatedAt())
+                TimeAgoUtil.format(board.getCreatedAt()),
+                board.getCompetitionId(),
+                competition
         );
     }
 
@@ -80,7 +84,7 @@ public class BoardMapper {
      * 작성·수정 직후 response
      * - author: 작성 직후 board.getCreatedBy() 는 감사(AuditorAware)가 넣은 id 만 있는 User 라 실제 작성자를 받는다
      */
-    public BoardResponse toResponse(Board board, User author, CommunityProfile authorProfile) {
+    public BoardResponse toResponse(Board board, User author, CommunityProfile authorProfile, CompetitionListItem competition) {
         Content content = board.getContent();
         return new BoardResponse(
                 content.getId(),
@@ -103,7 +107,9 @@ public class BoardMapper {
                 null,
                 CommunityProfileInfo.from(author, authorProfile),
                 true,
-                TimeAgoUtil.format(board.getCreatedAt())
+                TimeAgoUtil.format(board.getCreatedAt()),
+                board.getCompetitionId(),
+                competition
         );
     }
 

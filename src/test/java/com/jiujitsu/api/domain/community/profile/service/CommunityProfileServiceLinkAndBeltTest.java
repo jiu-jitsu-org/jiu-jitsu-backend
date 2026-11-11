@@ -1,7 +1,7 @@
 package com.jiujitsu.api.domain.community.profile.service;
 
-import com.jiujitsu.api.domain.community.competition.entity.Competition;
-import com.jiujitsu.api.domain.community.competition.service.CompetitionService;
+import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.service.CompetitionService;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileRequest;
 import com.jiujitsu.api.domain.community.profile.dto.CommunityProfileResponse;
 import com.jiujitsu.api.domain.community.profile.dto.CompetitionDivisionDto;

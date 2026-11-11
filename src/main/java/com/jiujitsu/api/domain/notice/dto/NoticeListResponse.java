@@ -12,12 +12,12 @@ public record NoticeListResponse(
         @Schema(description = "제목", example = "타이틀입니다.") String title,
         @Schema(description = "내용", example = "내용입니다.") String body,
         @Schema(description = "알림 타입", example = "NEW_COMMENTS") FcmPushType pushType,
-        @Schema(description = "알림 동작 타입 (대상 컨텐츠 타입이 결정: 게시글=BOARD_DETAIL, 밸런스 게임=BALANCE_DETAIL)", example = "BOARD_DETAIL") PushActionType actionType,
-        @Schema(description = "데이터값", example = "1") String data,
+        @Schema(description = "알림 동작 타입 (대상 타입이 결정: 게시글=BOARD_DETAIL, 밸런스 게임=BALANCE_DETAIL, 대회=COMPETITION_DETAIL)", example = "BOARD_DETAIL") PushActionType actionType,
+        @Schema(description = "데이터값. 게시글·밸런스 게임 = contentId, 대회 = 대회 id (\"이 대회 알림 받지 않기\" = DELETE /competitions/{data}/notice, 이미 꺼져 있어도 같은 결과)", example = "1") String data,
         @Schema(description = "읽음여부", example = "true") Boolean isRead,
         @Schema(description = "생성 일시") LocalDateTime createdAt,
-        @Schema(description = "대상 삭제 상태. null=정상, BOARD=게시글 삭제, COMMENT=댓글 삭제, REPLY=대댓글 삭제",
-                allowableValues = {"BOARD", "COMMENT", "REPLY"}, nullable = true)
+        @Schema(description = "대상 삭제 상태. null=정상, BOARD=게시글 삭제, COMMENT=댓글 삭제, REPLY=대댓글 삭제, COMPETITION=대회가 없거나 비공개",
+                allowableValues = {"BOARD", "COMMENT", "REPLY", "COMPETITION"}, nullable = true)
         String deletedStatus
 ) {
 }

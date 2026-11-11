@@ -15,6 +15,9 @@ import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
+import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
+import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
@@ -25,6 +28,8 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +56,10 @@ public class BoardService {
     private final ReportService reportService;
     private final BoardHideService boardHideService;
     private final CommunityProfileService communityProfileService;
+    private final CompetitionQueryService competitionQueryService;
+
+    private static final int COMPETITION_STORY_LIMIT = 5;
+    private static final int COMPETITION_STORY_REACTION_LIMIT = 2;
 
     /**
      * 게시물 목록 조회
@@ -58,27 +67,43 @@ public class BoardService {
     @Transactional(readOnly = true)
     public Page<BoardListResponse> getList(BoardListRequest boardListRequest, Pageable pageable) {
         BoardListType boardListType = boardListRequest.boardListType();
-        List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
-        List<Long> reportedContentIds = reportService.getReportedTargetIds(ReportType.BOARD);
-        List<Long> hiddenContentIds = boardHideService.getHiddenContentIds();
-
-        // 빈 리스트일 때 IN 절 오류 방지용 sentinel
-        List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
-        List<Long> mergedExcludedContentIds = Stream.concat(reportedContentIds.stream(), hiddenContentIds.stream())
-                .distinct().toList();
-        List<Long> excludedContentIds = mergedExcludedContentIds.isEmpty() ? List.of(-1L) : mergedExcludedContentIds;
+        FeedExclusions excluded = getFeedExclusions();
 
         Page<Board> page = switch (boardListType) {
             case CATEGORY -> boardRepository.findAllByCategoryFiltered(
-                    boardListRequest.categoryId(), excludedAuthorIds, excludedContentIds, pageable);
+                    boardListRequest.categoryId(), excluded.authorIds(), excluded.contentIds(), pageable);
             case SEARCH -> {
                 String keyword = StringUtils.trimToEmpty(boardListRequest.searchKeyword()).toUpperCase(Locale.ROOT);
-                yield boardRepository.findByTitleBodyKeywordFiltered(keyword, excludedAuthorIds, excludedContentIds, pageable);
+                yield boardRepository.findByTitleBodyKeywordFiltered(keyword, excluded.authorIds(), excluded.contentIds(), pageable);
             }
-            default -> boardRepository.findAllFiltered(excludedAuthorIds, excludedContentIds, pageable);
+            default -> boardRepository.findAllFiltered(excluded.authorIds(), excluded.contentIds(), pageable);
         };
 
         return mapBoardsToResponse(page);
+    }
+
+    /**
+     * 대회 이야기 (대회 상세, 비로그인 가능) — 이 대회를 고른 글 최대 5개
+     * 반응(댓글 + 좋아요)이 있는 글 중 많은 순 2개를 먼저, 나머지는 최신순으로 채운다 (겹치지 않게). 반응이 없으면 최신순
+     * 피드와 같은 글이 빠진다 (숨김·차단 작성자·내가 신고·내가 숨김). 없거나 미공개 대회면 COMPETITION_NOT_FOUND
+     */
+    @Transactional(readOnly = true)
+    public List<BoardListResponse> getCompetitionStories(Long competitionId) {
+        competitionQueryService.getPublished(competitionId);
+        FeedExclusions excluded = getFeedExclusions();
+
+        List<Board> stories = new ArrayList<>(boardRepository.findCompetitionStoriesByReaction(
+                competitionId, excluded.authorIds(), excluded.contentIds(), PageRequest.of(0, COMPETITION_STORY_REACTION_LIMIT)));
+        // 반응 상위 글이 최신 글에도 들 수 있어 최대 개수만큼 가져와 겹치는 글을 건너뛴다
+        Set<Long> pickedIds = stories.stream().map(Board::getId).collect(Collectors.toSet());
+        boardRepository.findCompetitionStoriesLatest(
+                        competitionId, excluded.authorIds(), excluded.contentIds(), PageRequest.of(0, COMPETITION_STORY_LIMIT))
+                .stream()
+                .filter(board -> !pickedIds.contains(board.getId()))
+                .limit(COMPETITION_STORY_LIMIT - stories.size())
+                .forEach(stories::add);
+
+        return mapBoardsToResponses(stories);
     }
 
     /**
@@ -137,6 +162,9 @@ public class BoardService {
         // 작성자 프로필 조회
         CommunityProfile authorProfile = getAuthorProfile(board);
 
+        // 연결된 대회 카드
+        CompetitionListItem competition = getCompetitionCard(board);
+
         // dto 생성
         return boardMapper.toResponse(
                 board,
@@ -148,7 +176,8 @@ public class BoardService {
                 likedContentIds.contains(contentId),
                 savedContentIds.contains(contentId),
                 noticeEnabled,
-                isAuthor
+                isAuthor,
+                competition
                 );
     }
 
@@ -162,15 +191,18 @@ public class BoardService {
         // 등록 카테고리 조회
         BoardCategory category = boardCategoryService.findActiveCategory(request.categoryId());
 
+        // 연결 대회 조회 (선택, 공개 대회만)
+        Competition competition = request.competitionId() == null ? null : competitionQueryService.getPublished(request.competitionId());
+
         // content 생성
         Content content = boardFactory.createContent(request.imageFileIdListOrEmpty());
 
         // Board 생성
-        Board board = boardFactory.createBoard(category, content, request.title(), request.body(), request.tagsOrEmpty());
+        Board board = boardFactory.createBoard(category, content, competition, request.title(), request.body(), request.tagsOrEmpty());
         board = boardRepository.save(board);
 
         // dto 생성
-        return boardMapper.toResponse(board, user, communityProfileService.findProfile(user).orElse(null));
+        return boardMapper.toResponse(board, user, communityProfileService.findProfile(user).orElse(null), getCompetitionCard(board));
     }
 
     /**
@@ -211,6 +243,12 @@ public class BoardService {
             boardFactory.replaceTags(board, request.getTags());
         }
 
+        // 대회 연결은 보낸 값으로 교체 (null = 해제). 지금 연결과 같으면 그대로 — 연결 뒤 미공개로 바뀐 대회도 유지
+        if (!Objects.equals(request.getCompetitionId(), board.getCompetitionId())) {
+            board.changeCompetition(request.getCompetitionId() == null
+                    ? null : competitionQueryService.getPublished(request.getCompetitionId()));
+        }
+
         // 이미지·태그만 바꾼 경우 Board 엔티티가 dirty 상태가 되지 않아
         // @LastModifiedDate 가 갱신되지 않으므로, 항상 touch() 로 dirty 상태를 보장한다.
         board.touch();
@@ -219,7 +257,7 @@ public class BoardService {
         boardRepository.flush();
 
         // dto 생성
-        return boardMapper.toResponse(board, board.getCreatedBy(), getAuthorProfile(board));
+        return boardMapper.toResponse(board, board.getCreatedBy(), getAuthorProfile(board), getCompetitionCard(board));
     }
 
     /**
@@ -287,8 +325,12 @@ public class BoardService {
     }
 
     private Page<BoardListResponse> mapBoardsToResponse(Page<Board> boardPage) {
+        return new PageImpl<>(mapBoardsToResponses(boardPage.getContent()), boardPage.getPageable(), boardPage.getTotalElements());
+    }
+
+    private List<BoardListResponse> mapBoardsToResponses(List<Board> boards) {
         // 컨텐츠(공통) 조회
-        List<Long> contentIds = boardPage.getContent().stream()
+        List<Long> contentIds = boards.stream()
                 .map(b -> b.getContent().getId())
                 .toList();
 
@@ -322,17 +364,25 @@ public class BoardService {
 
         // 작성자 프로필 일괄 조회
         Map<Long, CommunityProfile> authorProfileMap = communityProfileService.getProfilesByUserIds(
-                boardPage.getContent().stream()
+                boards.stream()
                         .map(Board::getCreatedBy)
                         .filter(Objects::nonNull)
                         .map(User::getId)
                         .collect(Collectors.toSet())
         );
 
+        // 연결된 대회 카드 일괄 조회 (미공개 대회는 카드 없음)
+        Map<Long, CompetitionListItem> competitionCards = competitionQueryService.getCards(
+                boards.stream()
+                        .map(Board::getCompetitionId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet())
+        );
+
         Set<Long> finalCommentedContentIds = commentedContentIds;
         Set<Long> finalLikedContentIds = likedContentIds;
         Set<Long> finalSavedContentIds = savedContentIds;
-        return boardPage.map(board -> {
+        return boards.stream().map(board -> {
                     Long contentId = board.getContent().getId();
 
                     return boardMapper.toBoardListResponse(
@@ -344,10 +394,36 @@ public class BoardService {
                             finalCommentedContentIds.contains(contentId),
                             finalLikedContentIds.contains(contentId),
                             finalSavedContentIds.contains(contentId),
-                            Objects.equals(board.getCreatedBy(), user.orElse(null))
+                            Objects.equals(board.getCreatedBy(), user.orElse(null)),
+                            board.getCompetitionId() == null ? null : competitionCards.get(board.getCompetitionId())
                     );
                 }
-        );
+        ).toList();
+    }
+
+    // 연결된 대회 카드 (연결 없거나 미공개면 null)
+    private CompetitionListItem getCompetitionCard(Board board) {
+        Long competitionId = board.getCompetitionId();
+        return competitionId == null ? null : competitionQueryService.getCards(List.of(competitionId)).get(competitionId);
+    }
+
+    /**
+     * 피드에서 빼는 글: 내가 차단한 작성자, 내가 신고한 글, 내가 숨긴 글 (비로그인은 없음)
+     * 빈 리스트일 때 IN 절 오류 방지용 sentinel(-1)
+     */
+    private FeedExclusions getFeedExclusions() {
+        List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
+        List<Long> reportedContentIds = reportService.getReportedTargetIds(ReportType.BOARD);
+        List<Long> hiddenContentIds = boardHideService.getHiddenContentIds();
+
+        List<Long> excludedAuthorIds = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
+        List<Long> mergedExcludedContentIds = Stream.concat(reportedContentIds.stream(), hiddenContentIds.stream())
+                .distinct().toList();
+        List<Long> excludedContentIds = mergedExcludedContentIds.isEmpty() ? List.of(-1L) : mergedExcludedContentIds;
+        return new FeedExclusions(excludedAuthorIds, excludedContentIds);
+    }
+
+    private record FeedExclusions(List<Long> authorIds, List<Long> contentIds) {
     }
 
     // 작성자 커뮤니티 프로필 (미작성 시 null)

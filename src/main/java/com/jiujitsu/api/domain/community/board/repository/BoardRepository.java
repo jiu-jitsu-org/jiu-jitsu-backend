@@ -57,6 +57,46 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
             @Param("excludedBoardContentIds") List<Long> excludedBoardContentIds,
             Pageable pageable);
 
+    /**
+     * 대회 이야기 — 반응(댓글 수 + 좋아요 수)이 있는 글을 반응 많은 순(같으면 최신)으로
+     * 댓글 수는 피드 commentCount 와 같은 집계(숨김·삭제 제외, 대댓글 포함). 제외 조건은 피드(findAllFiltered)와 같다
+     */
+    @Query("""
+    SELECT b FROM Board b
+    WHERE b.competition.id = :competitionId
+      AND b.hiddenAt IS NULL
+      AND b.createdBy.id NOT IN :excludedAuthorIds
+      AND b.content.id NOT IN :excludedBoardContentIds
+      AND (SELECT COUNT(c) FROM CommunityComments c
+           WHERE c.content = b.content AND c.hiddenAt IS NULL AND c.deletedAt IS NULL)
+        + (SELECT COUNT(l) FROM ContentLike l WHERE l.content = b.content) > 0
+    ORDER BY (SELECT COUNT(c) FROM CommunityComments c
+              WHERE c.content = b.content AND c.hiddenAt IS NULL AND c.deletedAt IS NULL)
+           + (SELECT COUNT(l) FROM ContentLike l WHERE l.content = b.content) DESC,
+             b.createdAt DESC,
+             b.id DESC
+    """)
+    List<Board> findCompetitionStoriesByReaction(
+            @Param("competitionId") Long competitionId,
+            @Param("excludedAuthorIds") List<Long> excludedAuthorIds,
+            @Param("excludedBoardContentIds") List<Long> excludedBoardContentIds,
+            Pageable pageable);
+
+    // 대회 이야기 — 최신순. 제외 조건은 피드와 같다
+    @Query("""
+    SELECT b FROM Board b
+    WHERE b.competition.id = :competitionId
+      AND b.hiddenAt IS NULL
+      AND b.createdBy.id NOT IN :excludedAuthorIds
+      AND b.content.id NOT IN :excludedBoardContentIds
+    ORDER BY b.createdAt DESC, b.id DESC
+    """)
+    List<Board> findCompetitionStoriesLatest(
+            @Param("competitionId") Long competitionId,
+            @Param("excludedAuthorIds") List<Long> excludedAuthorIds,
+            @Param("excludedBoardContentIds") List<Long> excludedBoardContentIds,
+            Pageable pageable);
+
     @Query("""
     SELECT b FROM Board b
     WHERE b.createdBy = :createdBy

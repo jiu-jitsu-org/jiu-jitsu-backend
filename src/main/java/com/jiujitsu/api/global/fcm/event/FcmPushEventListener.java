@@ -28,7 +28,7 @@ public class FcmPushEventListener {
                 .ifPresentOrElse(
                         user -> {
                             if (isNoticeEnabled(user, event.pushType())) {
-                                fcmPushService.send(user, event.pushType(), event.data());
+                                fcmPushService.send(user, event.pushType(), event.data(), event.title(), event.body());
                             }
                         },
                         () -> log.warn("FCM push skipped: user not found. userId={}", event.recipientUserId())

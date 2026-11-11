@@ -9,6 +9,9 @@ import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
+import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
+import com.jiujitsu.api.domain.notice.dto.CompetitionNoticePromptRequest;
 import com.jiujitsu.api.domain.notice.dto.BoardNoticeSettingResponse;
 import com.jiujitsu.api.domain.notice.dto.NoticeListResponse;
 import com.jiujitsu.api.domain.notice.dto.NoticeSettingRequest;
@@ -27,10 +30,13 @@ import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
+import com.jiujitsu.api.global.fcm.entity.PushActionType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -53,6 +59,8 @@ public class NoticeService {
     private final UserBlockService userBlockService;
     private final BoardHideService boardHideService;
     private final ReportService reportService;
+    private final CompetitionRepository competitionRepository;
+    private final Clock clock;
 
     /**
      * 안 읽은 알림 수 조회 (종 아이콘 dot 용)
@@ -88,6 +96,7 @@ public class NoticeService {
 
         // 존재하는 contentId 일괄 조회
         Set<Long> contentIds = notices.stream()
+                .filter(n -> !isCompetitionNotice(n))
                 .map(Notice::getData)
                 .filter(Objects::nonNull)
                 .map(Long::parseLong)
@@ -127,9 +136,24 @@ public class NoticeService {
                 : communityCommentsRepository.findAllById(parentIds).stream()
                         .collect(Collectors.toMap(CommunityComments::getId, c -> c));
 
+        // 대회 알림: 지금 공개인 대회 id (없거나 미공개면 deletedStatus COMPETITION)
+        Set<Long> competitionIds = notices.stream()
+                .filter(NoticeService::isCompetitionNotice)
+                .map(Notice::getData)
+                .filter(Objects::nonNull)
+                .map(Long::parseLong)
+                .collect(Collectors.toSet());
+        Set<Long> publishedCompetitionIds = competitionIds.isEmpty()
+                ? Set.of()
+                : competitionRepository.findAllByIdInAndPublishedTrue(competitionIds).stream()
+                        .map(Competition::getId)
+                        .collect(Collectors.toSet());
+
         return notices.stream()
                 .map(n -> NoticeMapper.toNoticeListResponse(n,
-                        computeDeletedStatus(n, existingContentIds, commentByRefId),
+                        isCompetitionNotice(n)
+                                ? computeCompetitionDeletedStatus(n, publishedCompetitionIds)
+                                : computeDeletedStatus(n, existingContentIds, commentByRefId),
                         computeBody(n, boardTitleByContentId, commentByRefId, parentCommentById)))
                 .toList();
     }
@@ -178,6 +202,13 @@ public class NoticeService {
     }
 
     /**
+     * 알림 저장 — 제목·본문을 발송 지점이 정하는 알림 (대회 마감 알림)
+     */
+    public void saveNoticeWithText(Long userId, FcmPushType pushType, Map<String, String> pushData, String title, String body) {
+        noticeRepository.save(noticeFactory.createNotice(userId, pushType, pushData, null, null, title, body));
+    }
+
+    /**
      * 알림 수신동의여부 조회
      */
     public NoticeSettingResponse getNoticeSetting() {
@@ -196,6 +227,17 @@ public class NoticeService {
 
         userNoticeSettingRepository.save(userNoticeSetting);
 
+        return NoticeMapper.toNoticeSettingResponse(userNoticeSetting);
+    }
+
+    /**
+     * 처음 관심 등록 때 관심 대회 알림 질문의 답 저장 (알림 받기 / 나중에). 물어봤음을 남겨 다시 묻지 않게 한다
+     */
+    public NoticeSettingResponse answerCompetitionNoticePrompt(CompetitionNoticePromptRequest request) {
+        User user = authenticationFacade.getCurrentUser();
+        UserNoticeSetting userNoticeSetting = user.getUserNoticeSetting();
+        userNoticeSetting.answerCompetitionNoticePrompt(request.enabled(), LocalDateTime.now(clock));
+        userNoticeSettingRepository.save(userNoticeSetting);
         return NoticeMapper.toNoticeSettingResponse(userNoticeSetting);
     }
 
@@ -274,8 +316,16 @@ public class NoticeService {
         return Stream.concat(hidden.stream(), reported.stream()).collect(Collectors.toSet());
     }
 
-    /** 차단·숨기기·신고 기준으로 알림 노출 여부 판단 */
+    // 대회 알림은 data 가 대회 id 다 (게시글·밸런스 게임은 contentId)
+    private static boolean isCompetitionNotice(Notice n) {
+        return n.getPushActionType() == PushActionType.COMPETITION_DETAIL;
+    }
+
+    /** 차단·숨기기·신고 기준으로 알림 노출 여부 판단 (게시글 기준이라 대회 알림은 대상 아님) */
     private boolean isVisible(Notice n, List<Long> blockedUserIds, Set<Long> excludedContentIds) {
+        if (isCompetitionNotice(n)) {
+            return true;
+        }
         if (n.getSenderUserId() != null && blockedUserIds.contains(n.getSenderUserId())) {
             return false;
         }
@@ -308,8 +358,16 @@ public class NoticeService {
                 if (parent == null || parent.isDeleted() || parent.isHidden()) yield null;
                 yield parent.getBody();
             }
+            // 대회 이름·마감 단계가 들어간 문구를 발송 때 저장해 둔다
+            case COMPETITION_EARLY_BIRD_DEADLINE, COMPETITION_REGISTRATION_DEADLINE -> notice.getBody();
             default -> null;
         };
+    }
+
+    // 대회 알림 대상 상태: 대회가 없거나 미공개면 COMPETITION (앱은 상세로 보내지 않음)
+    private String computeCompetitionDeletedStatus(Notice notice, Set<Long> publishedCompetitionIds) {
+        if (notice.getData() == null) return null;
+        return publishedCompetitionIds.contains(Long.parseLong(notice.getData())) ? null : "COMPETITION";
     }
 
     /**

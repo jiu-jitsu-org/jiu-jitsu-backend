@@ -92,10 +92,10 @@ src/main/java/com/jiujitsu/api/
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/board/category` | 카테고리 목록 조회 |
-| GET | `/board` | 게시글 목록 조회 (카테고리 필터, 페이징) |
+| GET | `/board` | 게시글 목록 조회 (카테고리 필터, 페이징). 연결된 대회는 `competition` 카드 |
 | GET | `/board/{id}` | 게시글 단건 조회 |
-| POST | `/board` | 게시글 생성 |
-| PUT | `/board/{id}` | 게시글 수정 |
+| POST | `/board` | 게시글 생성 (`competitionId` 로 공개 대회 연결 선택) |
+| PUT | `/board/{id}` | 게시글 수정 (`competitionId` 는 보낸 값으로 교체, null = 연결 해제) |
 | DELETE | `/board/{id}` | 게시글 삭제 |
 | PUT | `/board/like/{id}` | 게시글 좋아요 등록/취소 |
 | PUT | `/board/save/{id}` | 게시글 저장/취소 |
@@ -119,7 +119,6 @@ src/main/java/com/jiujitsu/api/
 | GET | `/community/profile` | 내 커뮤니티 프로필 조회 |
 | GET | `/community/profile/{userId}` | 다른 회원 공개 프로필 조회 (비로그인 가능, 체급·특기 제외) |
 | POST | `/community/profile` | 커뮤니티 프로필 생성/수정 (항목별: 도장, 벨트·체급, 벨트만, 스타일, 대회, 지도 정보) |
-| GET | `/community/competitions?keyword=` | 등록 대회 검색 (대회명 자동완성, 올해까지) |
 
 > 커뮤니티 프로필 포함 정보: 벨트 등급, 스트라이프, 성별, 선호 포지션/기술/서브미션, 대회 출전 이력
 
@@ -139,11 +138,28 @@ src/main/java/com/jiujitsu/api/
 | PATCH | `/admin/reports/board/{contentId}/unhide` | 게시글 숨김 해제 |
 | PATCH | `/admin/reports/comment/{commentId}/unhide` | 댓글 숨김 해제 |
 
+### 대회 (`/api/competitions`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/competitions` | 대회 탭 목록 (공개 대회, 대회일순). 기준일 `date` + 양방향 커서(`nextCursor`·`previousCursor`), 필터 `region`·`status`·`interested`·`keyword`. 비로그인 가능 |
+| GET | `/competitions/{competitionId}` | 대회 상세 (공개 대회, 일정·참가비 단계·관심 수·조회수). 비로그인 가능, 조회수는 오르지 않음 |
+| POST | `/competitions/{competitionId}/views` | 대회 조회수 +1 (앱이 상세를 열 때, 중복 방지 없음) |
+| GET | `/competitions/picker?keyword=` | 글쓰기 대회 고르기 (공개 대회, 다가오는 대회 → 끝난 대회, 최대 20개). 비로그인 가능 |
+| GET | `/competitions/{competitionId}/stories` | 대회 이야기 (이 대회를 고른 글 최대 5개: 반응 많은 2개 + 최신). 비로그인 가능 |
+| GET | `/competitions/autocomplete?keyword=` | 등록 대회 검색 (프로필 대회 기록용 대회명 자동완성, 지난 대회까지) |
+| PUT | `/competitions/{competitionId}/interest` | 대회 관심 등록 (멱등, 처리 후 관심 상태·관심 수) |
+| DELETE | `/competitions/{competitionId}/interest` | 대회 관심 해제 (멱등, 미공개로 바뀐 대회도 해제 가능) |
+| PUT | `/competitions/{competitionId}/notice` | 이 대회 마감 알림 켜기 (관심 없으면 관심도 등록) |
+| DELETE | `/competitions/{competitionId}/notice` | 이 대회 마감 알림 끄기 (관심 유지) |
+| POST | `/competitions/{competitionId}/info-reports` | 대회 정보 제보 (정보가 달라요, 공개 대회. 같은 항목은 하루 3번까지) |
+
 ### 관리자 등록 대회 (`/api/admin/competitions`)
 
 | Method | Path | 설명 |
 |--------|----------|------|
 | POST | `/admin/competitions` | 등록 대회 일괄 등록 (회차 = 대회명 + 연도, 중복은 건너뜀) |
+| GET | `/admin/competitions/info-reports` | 대회 정보 제보 목록 (최신순 페이지) |
 
 ### 관리자 관장/사범 인증 (`/api/admin/owner-requests`)
 
@@ -157,9 +173,12 @@ src/main/java/com/jiujitsu/api/
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/notice` | 알림 목록 조회 |
+| GET | `/notice` | 알림 목록 조회 (커뮤니티 알림 + 관심 대회 마감 알림) |
 | PUT | `/notice` | 모든 알림 읽음 처리 |
 | PUT | `/notice/{id}` | 개별 알림 읽음 처리 |
+| PUT | `/notice/setting/competition` | 처음 관심 등록 때 관심 대회 알림 질문 답 저장 |
+
+관심 대회 마감 알림은 매일 18시(`competition.deadline-notice.cron`) 내일 끝나는 얼리버드(할인 단계)·접수 마감을 관심 등록한 유저에게 보낸다 (`CompetitionDeadlineNoticeRunService`). 놓친 날은 같은 날 자정 전에 관리자 `POST /admin/competitions/deadline-notices`로 다시 돌린다 (이미 받은 유저는 건너뜀, 자정이 지나면 다음 날 마감을 보내게 됨)
 
 ### 앱 버전 (`/api/bootstrap`)
 

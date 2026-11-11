@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.notice.controller;
 
 import com.jiujitsu.api.domain.notice.dto.BoardNoticeSettingResponse;
+import com.jiujitsu.api.domain.notice.dto.CompetitionNoticePromptRequest;
 import com.jiujitsu.api.domain.notice.dto.NoticeListResponse;
 import com.jiujitsu.api.domain.notice.dto.NoticeSettingRequest;
 import com.jiujitsu.api.domain.notice.dto.NoticeSettingResponse;
@@ -12,6 +13,7 @@ import com.jiujitsu.api.global.exception.annotation.LoginErrorExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -62,6 +64,21 @@ public class NoticeController {
     @PostMapping("/setting")
     public NoticeSettingResponse settingNotice(@RequestBody NoticeSettingRequest request) {
         return noticeService.saveNoticeSetting(request);
+    }
+
+    @Operation(
+            summary = "관심 대회 알림 질문 답 저장",
+            description = "처음 관심 등록 때 묻는 \"이 대회 마감 알림을 받을까요?\"의 답을 저장합니다. 응답은 알림 설정 전체\n\n"
+                    + "- 앱은 관심 등록 때 competitionEnabled = false 이고 competitionNoticeAsked = false 일 때만 묻습니다 (설정에서 이미 켠 사람에겐 묻지 않음)\n"
+                    + "- 알림 받기 = enabled true: 관심 대회 알림(competitionEnabled)을 켭니다\n"
+                    + "- 나중에 = enabled false: 관심 대회 알림은 그대로(꺼진 채) 둡니다. 켜져 있었다면 끄지 않습니다\n"
+                    + "- 어느 쪽이든 competitionNoticeAsked 가 true 가 되어 다시 묻지 않습니다 (기기를 바꿔도)"
+    )
+    @LoginErrorExamples
+    @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER})
+    @PutMapping("/setting/competition")
+    public NoticeSettingResponse answerCompetitionNoticePrompt(@Valid @RequestBody CompetitionNoticePromptRequest request) {
+        return noticeService.answerCompetitionNoticePrompt(request);
     }
 
     @Operation(summary = "알림 설정 조회", description = "알림 타입별 수신여부를 조회합니다.")
