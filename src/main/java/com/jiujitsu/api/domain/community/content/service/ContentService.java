@@ -21,6 +21,7 @@ import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import com.jiujitsu.api.global.util.ConstraintViolationUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,6 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -55,10 +57,13 @@ public class ContentService {
         try {
             return transactionTemplate.execute(status -> toggleLike(id));
         } catch (DataIntegrityViolationException e) {
-            // content_like 의 유니크는 (게시글, 사람) 하나뿐 → 유니크 위반이면 동시 요청. 그 밖의 위반(FK 등)은 그대로 드러낸다
+            // 이 트랜잭션이 쓰는 유니크는 (게시글, 사람)뿐이다 (PK 는 IDENTITY 라 충돌하지 않는다는 전제) → 유니크 위반이면 동시 요청.
+            // 그 밖의 위반(FK 등)은 그대로 드러낸다. 전제가 깨진 경우(PK 시퀀스 어긋남 등)를 추적할 수 있게 원인을 남긴다
             if (!ConstraintViolationUtil.isUniqueViolation(e)) {
                 throw e;
             }
+            log.info("게시글 좋아요 동시 요청 충돌 → 지금 상태로 응답 contentId={} cause={}",
+                    id, e.getMostSpecificCause().getMessage());
             return transactionTemplate.execute(status -> currentLike(id));
         }
     }

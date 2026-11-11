@@ -37,6 +37,7 @@ import com.jiujitsu.api.global.fcm.entity.PushActionType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import com.jiujitsu.api.global.util.ConstraintViolationUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -55,6 +56,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -241,10 +243,13 @@ public class CommunityCommentsService {
         try {
             return transactionTemplate.execute(status -> toggleCommentLike(request));
         } catch (DataIntegrityViolationException e) {
-            // comment_like 의 유니크는 (댓글, 사람) 하나뿐 → 유니크 위반이면 동시 요청. 그 밖의 위반(FK 등)은 그대로 드러낸다
+            // 이 트랜잭션이 쓰는 유니크는 (댓글, 사람)뿐이다 (PK 는 IDENTITY 라 충돌하지 않는다는 전제) → 유니크 위반이면 동시 요청.
+            // 그 밖의 위반(FK 등)은 그대로 드러낸다. 전제가 깨진 경우(PK 시퀀스 어긋남 등)를 추적할 수 있게 원인을 남긴다
             if (!ConstraintViolationUtil.isUniqueViolation(e)) {
                 throw e;
             }
+            log.info("댓글 좋아요 동시 요청 충돌 → 지금 상태로 응답 commentId={} cause={}",
+                    request.commentId(), e.getMostSpecificCause().getMessage());
             return transactionTemplate.execute(status -> currentCommentLike(request));
         }
     }
