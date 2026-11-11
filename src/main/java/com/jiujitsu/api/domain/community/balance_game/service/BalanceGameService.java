@@ -40,6 +40,7 @@ import java.util.Set;
 public class BalanceGameService {
 
     private static final LocalTime END_OF_DAY = LocalTime.of(23, 59, 59);
+    private static final Pageable FIRST = PageRequest.of(0, 1);
 
     private final BalanceGameRepository balanceGameRepository;
     private final BalanceGameVoteRepository balanceGameVoteRepository;
@@ -52,22 +53,31 @@ public class BalanceGameService {
 
     /**
      * 커뮤니티 메인 - 현재 진행중인 밸런스 게임 조회
-     * 진행중인 게임이 없으면 마감된 지 버퍼(30분)가 안 된 게임을 결과로 보여 준다 (00:00~00:30, 투표하지 않은 사람도 결과를 보게)
+     * 진행중인 게임이 없으면 방금 마감된 게임을 결과로 보여 준다 (00:00~00:30 버퍼, 투표하지 않은 사람도 결과를 보게).
+     * 결과는 다음 게임이 시작할 때까지(없으면 마감 + 30분) 보여 주고, 그 시각을 resultUntil 로 내려 앱이 그때 다시 조회한다.
      * 둘 다 없으면 null 을 반환한다. (메인 화면에서 미노출 처리)
      */
     @Transactional(readOnly = true)
     public BalanceGameResponse getCurrent() {
         return findCurrent(LocalDateTime.now())
-                .map(this::toResponseWithVotes)
+                .map(current -> toResponseWithVotes(current.game(), current.resultUntil()))
                 .orElse(null);
     }
 
-    // 지금 메인에 보일 게임: 진행 중 → 없으면 버퍼 안에 마감된 게임
-    // 마감은 23:59:59(그날 마지막 초)라 1초를 더 봐서, 00:30 에 다음 게임이 시작할 때까지 끊기지 않게 한다
-    Optional<BalanceGame> findCurrent(LocalDateTime now) {
-        return balanceGameRepository.findOpen(now).stream().findFirst()
-                .or(() -> balanceGameRepository.findClosedBetween(
-                        now.minus(BalanceGame.RESULT_BUFFER).minusSeconds(1), now).stream().findFirst());
+    // 지금 메인에 보일 게임: 진행 중 → 없으면 결과 노출 시간 안의 가장 최근 마감 게임 (resultUntil 포함)
+    Optional<CurrentGame> findCurrent(LocalDateTime now) {
+        Optional<BalanceGame> open = balanceGameRepository.findOpen(now).stream().findFirst();
+        if (open.isPresent()) {
+            return open.map(game -> new CurrentGame(game, null));
+        }
+        return balanceGameRepository.findClosed(now, FIRST).stream().findFirst()
+                .map(closed -> new CurrentGame(closed, closed.resultUntil(
+                        balanceGameRepository.findUpcoming(now, FIRST).stream().findFirst().orElse(null))))
+                .filter(current -> now.isBefore(current.resultUntil()));
+    }
+
+    // 메인에 보일 게임과, 마감된 게임이면 결과를 보여 주는 끝 시각 (진행 중이면 null)
+    record CurrentGame(BalanceGame game, LocalDateTime resultUntil) {
     }
 
     /**
@@ -235,6 +245,11 @@ public class BalanceGameService {
 
     // 득표수/내 투표/댓글수 + 좋아요 지표를 채워 응답으로 변환
     private BalanceGameResponse toResponseWithVotes(BalanceGame game) {
+        return toResponseWithVotes(game, null);
+    }
+
+    // resultUntil: 메인에서 마감된 게임을 결과로 보여 줄 때만 (그 외 null)
+    private BalanceGameResponse toResponseWithVotes(BalanceGame game, LocalDateTime resultUntil) {
         Long balanceGameId = game.getId();
         Long contentId = game.getContent().getId();
         List<Long> contentIds = List.of(contentId);
@@ -270,6 +285,6 @@ public class BalanceGameService {
                 .orElse(null);
 
         return balanceGameMapper.toResponse(game, commentCount, likeCount, isLiked,
-                isCommented, noticeEnabled, voteCountA, voteCountB, myVote, LocalDateTime.now());
+                isCommented, noticeEnabled, voteCountA, voteCountB, myVote, LocalDateTime.now(), resultUntil);
     }
 }

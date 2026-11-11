@@ -30,7 +30,8 @@ public class BalanceGameController {
             summary = "오늘의 밸런스 게임 조회",
             description = "커뮤니티 메인에 노출할 밸런스 게임을 조회합니다.\n\n"
                     + "- 진행 중(startAt 이후, endAt 까지)인 게임\n"
-                    + "- 게임 교체 버퍼(00:00~00:30) 동안은 방금 마감된 전날 게임(closed=true, 결과)을 줍니다. 새 게임은 00:30 부터\n"
+                    + "- 진행 중인 게임이 없으면 방금 마감된 게임(closed=true, 결과)을 줍니다. 기본 일정에선 00:00~00:30 (새 게임은 00:30 부터)\n"
+                    + "- 그때 resultUntil = 결과를 보여 주는 끝 시각(다음 게임 시작, 없으면 마감 + 30분). 앱은 serverTime 기준 그 시각에 다시 조회합니다\n"
                     + "- 둘 다 없으면 data 가 null 입니다"
     )
     @GetMapping

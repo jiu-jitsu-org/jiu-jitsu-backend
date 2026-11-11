@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.community.balance_game.repository;
 
 import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGame;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,13 +23,21 @@ public interface BalanceGameRepository extends JpaRepository<BalanceGame, Long> 
     """)
     List<BalanceGame> findOpen(@Param("now") LocalDateTime now);
 
-    // closedAfter 뒤, now 전에 마감된 게임, 최근 마감 순 (게임 교체 버퍼 동안 결과 노출용). 메인은 첫 건을 쓴다
+    // 마감된 게임, 최근 마감 순 (게임 교체 버퍼 동안 결과 노출용). 메인은 첫 건을 쓴다
     @Query("""
     SELECT g FROM BalanceGame g
-    WHERE g.endAt > :closedAfter AND g.endAt < :now
+    WHERE g.endAt < :now
     ORDER BY g.endAt DESC, g.id DESC
     """)
-    List<BalanceGame> findClosedBetween(@Param("closedAfter") LocalDateTime closedAfter, @Param("now") LocalDateTime now);
+    List<BalanceGame> findClosed(@Param("now") LocalDateTime now, Pageable pageable);
+
+    // 아직 시작 전인 게임, 먼저 시작하는 순 (마감된 게임 결과를 언제까지 보여 줄지 정하는 다음 게임)
+    @Query("""
+    SELECT g FROM BalanceGame g
+    WHERE g.startAt > :now
+    ORDER BY g.startAt ASC, g.id ASC
+    """)
+    List<BalanceGame> findUpcoming(@Param("now") LocalDateTime now, Pageable pageable);
 
     // 상세/투표 - contentId 로 조회 (마감된 게임도 조회 가능)
     Optional<BalanceGame> findByContentId(Long contentId);

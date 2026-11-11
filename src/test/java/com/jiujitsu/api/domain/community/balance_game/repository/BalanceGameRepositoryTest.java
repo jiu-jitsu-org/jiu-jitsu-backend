@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -63,16 +64,17 @@ class BalanceGameRepositoryTest {
     }
 
     @Test
-    @DisplayName("최근 마감: 기준 시각 뒤에 마감된 게임 중 가장 최근 1건, 아직 마감 전 게임은 빠짐")
-    void findRecentlyClosed() {
+    @DisplayName("최근 마감 순 / 시작 전 다음 게임: 마감 게임은 최근 것부터, 시작 전 게임은 먼저 시작하는 것부터")
+    void findClosedAndUpcoming() {
         LocalDateTime now = LocalDateTime.of(2026, 11, 11, 0, 10);
         saveGame("A-그제", now.minusDays(2), now.minusDays(1));
         BalanceGame yesterday = saveGame("A-어제", now.minusDays(1), now.minusMinutes(11));
-        saveGame("A-오늘", now.plusMinutes(20), now.plusHours(23));
+        BalanceGame today = saveGame("A-오늘", now.plusMinutes(20), now.plusHours(23));
+        saveGame("A-내일", now.plusDays(1), now.plusDays(2));
 
-        assertThat(balanceGameRepository.findClosedBetween(now.minusMinutes(30), now).stream().findFirst())
-                .map(BalanceGame::getId).contains(yesterday.getId());
-        assertThat(balanceGameRepository.findClosedBetween(now.minusMinutes(5), now).stream().findFirst())
-                .isEmpty();
+        assertThat(balanceGameRepository.findClosed(now, PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(yesterday.getId());
+        assertThat(balanceGameRepository.findUpcoming(now, PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(today.getId());
     }
 }

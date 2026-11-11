@@ -25,6 +25,9 @@ public class BalanceGame extends BaseEntity {
     // 게임 교체 뒤 결과를 보여 주는 시간 (00:00~00:30). 다음 게임의 기본 시작이 진행일 00:30 인 이유
     public static final Duration RESULT_BUFFER = Duration.ofMinutes(30);
 
+    // 다음 게임이 이 안에 시작하면 "이어지는 다음 게임"으로 보고 그 시작까지 결과를 보여 준다 (며칠 뒤 게임까지 지난 결과를 붙잡지 않게)
+    private static final Duration NEXT_GAME_WINDOW = Duration.ofDays(1);
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -86,5 +89,18 @@ public class BalanceGame extends BaseEntity {
         if (isClosed(now)) {
             throw new ErrorException(ErrorCode.BALANCE_GAME_CLOSED);
         }
+    }
+
+    /**
+     * 마감 뒤 메인에 이 게임 결과를 보여 주는 끝 시각 (이 시각부터 메인에서 빠진다)
+     * - 이어지는 다음 게임(마감 뒤 하루 안에 시작)이 있으면 그 시작 시각 — 결과 노출과 다음 게임 시작 사이에 빈틈·겹침이 없게
+     * - 없으면 마감 + 버퍼. 마감이 23:59:59(그날 마지막 초)라 1초를 더해 00:30:00 에 맞춘다
+     */
+    public LocalDateTime resultUntil(BalanceGame nextGame) {
+        if (nextGame != null && nextGame.getStartAt().isAfter(endAt)
+                && !nextGame.getStartAt().isAfter(endAt.plus(NEXT_GAME_WINDOW))) {
+            return nextGame.getStartAt();
+        }
+        return endAt.plus(RESULT_BUFFER).plusSeconds(1);
     }
 }

@@ -70,7 +70,7 @@ class BalanceGameServiceViewCountTest {
         given(authenticationFacade.getCurrentUserOptional()).willReturn(Optional.empty());
         given(communityCommentsService.getCountComments(CONTENT_ID)).willReturn(0L);
         given(contentService.getContentLikeCount(any())).willReturn(Map.of());
-        given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), any(), anyLong(), anyLong(), any(), any()))
+        given(balanceGameMapper.toResponse(any(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), any(), anyLong(), anyLong(), any(), any(), any()))
                 .willReturn(null);
     }
 

@@ -15,6 +15,7 @@ public record BalanceGameResponse(
         @Schema(description = "서버 응답 시각 (기기 시계 대신 이 값을 기준으로 남은 시간 계산)") LocalDateTime serverTime,
         @Schema(description = "투표 시작 여부 (false면 아직 시작 전, 투표 불가 — 서버 시각 기준)", example = "true") boolean started,
         @Schema(description = "마감 여부 (true면 결과만 노출, 투표 불가)", example = "false") boolean closed,
+        @Schema(description = "메인(오늘의 게임)에서 마감된 게임을 결과로 보여 줄 때, 결과를 보여 주는 끝 시각 — 이 시각(serverTime 기준)에 메인을 다시 조회하면 다음 게임. 진행 중 게임·상세·목록에선 null", nullable = true) LocalDateTime resultUntil,
         @Schema(description = "선택지 A") BalanceGameOptionResponse optionA,
         @Schema(description = "선택지 B") BalanceGameOptionResponse optionB,
         @Schema(description = "전체 득표 수", example = "10") long totalVoteCount,

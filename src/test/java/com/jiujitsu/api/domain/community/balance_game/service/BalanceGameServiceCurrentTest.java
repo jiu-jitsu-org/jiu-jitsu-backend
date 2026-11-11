@@ -41,18 +41,26 @@ class BalanceGameServiceCurrentTest {
 
     // 그날의 게임: 00:30 시작, 23:59:59 마감 (기본 일정)
     private BalanceGame dayGame(LocalDate day) {
+        return game(day, BalanceGame.defaultStartAt(day));
+    }
+
+    private BalanceGame game(LocalDate day, LocalDateTime startAt) {
         return em.persist(BalanceGame.builder()
                 .content(Content.builder().contentType(ContentType.BALANCE).build())
                 .optionAText(day + " A")
                 .optionBText(day + " B")
-                .startAt(BalanceGame.defaultStartAt(day))
+                .startAt(startAt)
                 .endAt(day.atTime(23, 59, 59))
                 .gameDate(day)
                 .build());
     }
 
     private String current(LocalDateTime now) {
-        return balanceGameService.findCurrent(now).map(BalanceGame::getOptionAText).orElse(null);
+        return balanceGameService.findCurrent(now).map(current -> current.game().getOptionAText()).orElse(null);
+    }
+
+    private LocalDateTime resultUntil(LocalDateTime now) {
+        return balanceGameService.findCurrent(now).map(BalanceGameService.CurrentGame::resultUntil).orElse(null);
     }
 
     @Test
@@ -79,5 +87,41 @@ class BalanceGameServiceCurrentTest {
         assertThat(current(TODAY.atTime(0, 10))).isEqualTo("2026-11-10 A");
         assertThat(current(TODAY.atTime(0, 31))).isNull();
         assertThat(current(TODAY.plusDays(1).atTime(0, 10))).isNull();
+    }
+
+    @Test
+    @DisplayName("결과는 다음 게임이 시작할 때까지 — 오늘 게임을 01:00 시작으로 넣으면 00:30~01:00 에도 어제 결과 (빈틈 없음), resultUntil = 01:00")
+    void untilNextGameStart() {
+        dayGame(TODAY.minusDays(1));
+        game(TODAY, TODAY.atTime(1, 0));
+        em.flush();
+
+        assertThat(current(TODAY.atTime(0, 45))).isEqualTo("2026-11-10 A");
+        assertThat(resultUntil(TODAY.atTime(0, 45))).isEqualTo(TODAY.atTime(1, 0));
+        assertThat(current(TODAY.atTime(1, 0))).isEqualTo("2026-11-11 A");
+        assertThat(resultUntil(TODAY.atTime(1, 0))).isNull();
+    }
+
+    @Test
+    @DisplayName("기본 일정: 버퍼 동안 resultUntil = 다음 게임 시작 00:30, 다음 게임이 없으면 마감 + 30분(00:30:00)")
+    void resultUntilDefault() {
+        dayGame(TODAY.minusDays(1));
+        em.flush();
+        assertThat(resultUntil(TODAY.atTime(0, 10))).isEqualTo(TODAY.atTime(0, 30));
+
+        dayGame(TODAY);
+        em.flush();
+        assertThat(resultUntil(TODAY.atTime(0, 10))).isEqualTo(TODAY.atTime(0, 30));
+    }
+
+    @Test
+    @DisplayName("다음 게임이 며칠 뒤면 이어지는 게임으로 보지 않고 마감 + 30분까지만 결과 (지난 결과를 며칠 붙잡지 않음)")
+    void farNextGame() {
+        dayGame(TODAY.minusDays(1));
+        dayGame(TODAY.plusDays(3));
+        em.flush();
+
+        assertThat(current(TODAY.atTime(0, 10))).isEqualTo("2026-11-10 A");
+        assertThat(current(TODAY.atTime(0, 31))).isNull();
     }
 }

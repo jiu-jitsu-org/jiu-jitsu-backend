@@ -17,6 +17,15 @@ public class BalanceGameMapper {
                                           boolean isCommented, Boolean noticeEnabled,
                                           long voteCountA, long voteCountB,
                                           BalanceGameOption myVote, LocalDateTime now) {
+        return toResponse(game, commentCount, likeCount, isLiked, isCommented, noticeEnabled, voteCountA, voteCountB, myVote, now, null);
+    }
+
+    // resultUntil: 메인에서 마감된 게임을 결과로 보여 줄 때 그 끝 시각 (그 외 null)
+    public BalanceGameResponse toResponse(BalanceGame game, long commentCount,
+                                          long likeCount, boolean isLiked,
+                                          boolean isCommented, Boolean noticeEnabled,
+                                          long voteCountA, long voteCountB,
+                                          BalanceGameOption myVote, LocalDateTime now, LocalDateTime resultUntil) {
         return new BalanceGameResponse(
                 game.getContent().getId(),
                 game.getGameDate(),
@@ -25,6 +34,7 @@ public class BalanceGameMapper {
                 now,                                    // serverTime (기기 시계 대체 기준점)
                 game.isStarted(now),                    // started
                 game.isClosed(now),                     // closed
+                resultUntil,
                 new BalanceGameOptionResponse(
                         BalanceGameOption.A, game.getOptionAText(), ImageInfo.from(game.getOptionAImage()), voteCountA),
                 new BalanceGameOptionResponse(
