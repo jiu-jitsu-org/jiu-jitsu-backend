@@ -1,10 +1,13 @@
 package com.jiujitsu.api.domain.competition.controller;
 
+import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionViewResponse;
 import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
 import com.jiujitsu.api.domain.competition.service.CompetitionService;
+import com.jiujitsu.api.domain.competition.service.CompetitionViewService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
@@ -17,6 +20,8 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,6 +37,7 @@ public class CompetitionController {
 
     private final CompetitionService competitionService;
     private final CompetitionQueryService competitionQueryService;
+    private final CompetitionViewService competitionViewService;
 
     @Operation(
             summary = "대회 목록 (대회 탭)",
@@ -48,6 +54,33 @@ public class CompetitionController {
     // @ParameterObject: Swagger 에 조건을 객체 하나가 아닌 쿼리 파라미터 각각으로 보여 준다
     public CompetitionListResponse getList(@Valid @ParameterObject @ModelAttribute CompetitionListRequest request) {
         return competitionQueryService.getList(request);
+    }
+
+    @Operation(
+            summary = "대회 상세 (대회 탭)",
+            description = "공개 대회의 상세 정보를 반환합니다. 비로그인도 조회할 수 있습니다.\n\n"
+                    + "- 이 조회로는 조회수가 오르지 않습니다. 앱은 상세 화면을 열 때 POST /competitions/{competitionId}/views 를 한 번 부릅니다\n"
+                    + "- status·earlyBirdOpen 은 응답 today(서버 기준일) 기준. 가장 가까운 마감 = earlyBirdOpen 이면 얼리버드 마감, 아니면 접수 마감\n"
+                    + "- fees 는 입력 순서대로, until 이 null 인 단계가 기본 참가비. 참가비가 확인되지 않았으면 빈 배열"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND})
+    @GetMapping("/{competitionId}")
+    public CompetitionDetailResponse getDetail(
+            @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId
+    ) {
+        return competitionQueryService.getDetail(competitionId);
+    }
+
+    @Operation(
+            summary = "대회 조회수 올리기",
+            description = "조회수를 1 올리고 올린 뒤 값을 반환합니다. 비로그인도 부를 수 있고, 부를 때마다 올라갑니다(중복 방지 없음)."
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND})
+    @PostMapping("/{competitionId}/views")
+    public CompetitionViewResponse increaseView(
+            @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId
+    ) {
+        return competitionViewService.increase(competitionId);
     }
 
     @Operation(

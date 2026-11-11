@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.competition.service;
 
+import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
@@ -87,6 +88,23 @@ public class CompetitionQueryService {
         }
 
         return new CompetitionListResponse(today, toItems(page, today, userId), previousCursor, nextCursor);
+    }
+
+    /**
+     * 대회 상세 (비로그인 가능). 조회수는 올리지 않는다 — 공유 미리보기·웹 서버 렌더링도 이 조회를 불러서,
+     * 여기서 올리면 사람이 보지 않아도 숫자가 오른다. 조회수는 CompetitionViewService(POST)
+     * 없거나 미공개면 COMPETITION_NOT_FOUND
+     */
+    public CompetitionDetailResponse getDetail(Long competitionId) {
+        Competition competition = competitionRepository.findByIdAndPublishedTrue(competitionId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.COMPETITION_NOT_FOUND));
+        LocalDate today = LocalDate.now(clock);
+        Long userId = authenticationFacade.getCurrentUserOptional().map(User::getId).orElse(null);
+
+        List<Long> ids = List.of(competitionId);
+        long interestCount = competitionInterestService.getInterestCounts(ids).getOrDefault(competitionId, 0L);
+        boolean interested = userId != null && competitionInterestService.getInterestedIds(userId, ids).contains(competitionId);
+        return competitionMapper.toDetail(competition, today, interestCount, interested);
     }
 
     private Specification<Competition> filter(CompetitionListRequest request, LocalDate today, Long userId) {

@@ -1,9 +1,12 @@
 package com.jiujitsu.api.domain.competition.service;
 
+import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionFeeResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.entity.CompetitionStatus;
@@ -29,6 +32,7 @@ import org.springframework.context.annotation.Import;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -209,6 +213,7 @@ class CompetitionQueryServiceTest {
         assertThat(anonymous.earlyBirdOpen()).isTrue();
         assertThat(anonymous.uniforms()).containsExactly(CompetitionUniform.GI, CompetitionUniform.NO_GI);
         assertThat(anonymous.interestCount()).isEqualTo(2);
+        assertThat(anonymous.viewCount()).isZero();
         assertThat(anonymous.interested()).isFalse();
 
         login();
@@ -287,5 +292,83 @@ class CompetitionQueryServiceTest {
             assertThat(item.status()).isEqualTo(CompetitionStatus.OPEN);
             assertThat(item.region()).isEqualTo(CompetitionRegion.SEOUL);
         });
+    }
+
+    // --- 상세 ---
+
+    private Competition saveDetailed() {
+        Competition competition = em.persist(Competition.builder()
+                .name("서울 오픈").searchName("서울오픈").competitionYear(2026).published(true)
+                .region(CompetitionRegion.SEOUL).place("서울 송파").venue("올림픽홀")
+                .openDate(TODAY.plusDays(20)).startTime(LocalTime.of(9, 0))
+                .host("서울 협회").noticeUrl("https://example.com/notice")
+                .registrationStartDate(TODAY.minusDays(5)).earlyBirdDeadline(TODAY.plusDays(2)).registrationDeadline(TODAY.plusDays(10))
+                .fees(new ArrayList<>(List.of(new CompetitionFee("얼리버드", 60000, TODAY.plusDays(2)), new CompetitionFee("기본 참가비", 70000, null))))
+                .feeNote("성인 1종목 기준").lastVerifiedDate(TODAY.minusDays(1))
+                .uniforms(new LinkedHashSet<>(List.of(CompetitionUniform.NO_GI, CompetitionUniform.GI)))
+                .build());
+        em.flush();
+        em.clear();
+        return competition;
+    }
+
+    @Test
+    @DisplayName("상세: 기본 정보·일정·참가비 단계(입력 순서)·기준일·상태·today 를 담는다")
+    void detail_fields() {
+        Long id = saveDetailed().getId();
+
+        CompetitionDetailResponse detail = competitionQueryService.getDetail(id);
+
+        assertThat(detail.today()).isEqualTo(TODAY);
+        assertThat(detail.competitionId()).isEqualTo(id);
+        assertThat(detail.startTime()).isEqualTo(LocalTime.of(9, 0));
+        assertThat(detail.place()).isEqualTo("서울 송파");
+        assertThat(detail.venue()).isEqualTo("올림픽홀");
+        assertThat(detail.host()).isEqualTo("서울 협회");
+        assertThat(detail.uniforms()).containsExactly(CompetitionUniform.GI, CompetitionUniform.NO_GI);
+        assertThat(detail.status()).isEqualTo(CompetitionStatus.OPEN);
+        assertThat(detail.earlyBirdOpen()).isTrue();
+        assertThat(detail.earlyBirdDeadline()).isEqualTo(TODAY.plusDays(2));
+        assertThat(detail.fees()).containsExactly(
+                new CompetitionFeeResponse("얼리버드", 60000, TODAY.plusDays(2)),
+                new CompetitionFeeResponse("기본 참가비", 70000, null));
+        assertThat(detail.feeNote()).isEqualTo("성인 1종목 기준");
+        assertThat(detail.lastVerifiedDate()).isEqualTo(TODAY.minusDays(1));
+    }
+
+    @Test
+    @DisplayName("상세: 관심 수는 누구나, 내 관심 여부는 로그인했을 때만 true")
+    void detail_interest() {
+        Competition competition = saveDetailed();
+        Competition managed = em.find(Competition.class, competition.getId());
+        em.persist(new CompetitionInterest(managed, me));
+        em.flush();
+
+        CompetitionDetailResponse anonymous = competitionQueryService.getDetail(competition.getId());
+        assertThat(anonymous.interestCount()).isEqualTo(1);
+        assertThat(anonymous.interested()).isFalse();
+
+        login();
+        assertThat(competitionQueryService.getDetail(competition.getId()).interested()).isTrue();
+    }
+
+    @Test
+    @DisplayName("상세: 없거나 미공개면 COMPETITION_NOT_FOUND, 상세를 조회해도 조회수는 오르지 않는다")
+    void detail_notFound_andNoViewSideEffect() {
+        Long id = saveDetailed().getId();
+        Long catalog = em.persist(Competition.of("카탈로그", 2026)).getId();
+        em.flush();
+
+        assertThatThrownBy(() -> competitionQueryService.getDetail(catalog))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+        assertThatThrownBy(() -> competitionQueryService.getDetail(-1L))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+
+        competitionQueryService.getDetail(id);
+        competitionQueryService.getDetail(id);
+        em.clear();
+        assertThat(competitionQueryService.getDetail(id).viewCount()).isZero();
     }
 }

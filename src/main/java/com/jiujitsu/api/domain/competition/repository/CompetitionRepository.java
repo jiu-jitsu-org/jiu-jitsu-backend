@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.competition.entity.Competition;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -47,4 +48,13 @@ public interface CompetitionRepository extends JpaRepository<Competition, Long>,
 
     // 대회 탭에 노출되는 공개 대회만 (미공개 카탈로그 엔트리는 없는 대회로 본다)
     Optional<Competition> findByIdAndPublishedTrue(Long id);
+
+    // 조회수 +1 을 DB 에서 한 번에 (읽고 +1 해 저장하면 동시 요청 시 증가가 빠진다). 공개 대회만, 바뀐 행 수 반환
+    // 벌크 UPDATE 라 updated_at·@PreUpdate 를 건드리지 않는다 — 조회는 대회 정보 수정이 아니다
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Competition c SET c.viewCount = c.viewCount + 1 WHERE c.id = :id AND c.published = true")
+    int incrementViewCount(@Param("id") Long id);
+
+    @Query("SELECT c.viewCount FROM Competition c WHERE c.id = :id")
+    long findViewCountById(@Param("id") Long id);
 }

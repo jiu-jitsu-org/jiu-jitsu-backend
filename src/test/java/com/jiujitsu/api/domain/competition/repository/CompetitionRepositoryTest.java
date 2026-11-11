@@ -200,6 +200,21 @@ class CompetitionRepositoryTest {
     }
 
     @Test
+    @DisplayName("incrementViewCount: DB 에서 +1, 미공개 카탈로그 엔트리는 바뀌지 않고 0행")
+    void incrementViewCount() {
+        Long published = competitionRepository.saveAndFlush(publishedEvent("서울 오픈", TODAY.plusDays(7))).getId();
+        Long catalog = competitionRepository.saveAndFlush(Competition.of("부산 오픈", 2025)).getId();
+
+        assertThat(competitionRepository.incrementViewCount(published)).isEqualTo(1);
+        assertThat(competitionRepository.incrementViewCount(published)).isEqualTo(1);
+        assertThat(competitionRepository.incrementViewCount(catalog)).isZero();
+        assertThat(competitionRepository.incrementViewCount(-1L)).isZero();
+
+        assertThat(competitionRepository.findViewCountById(published)).isEqualTo(2);
+        assertThat(competitionRepository.findViewCountById(catalog)).isZero();
+    }
+
+    @Test
     @DisplayName("불변식을 어긴 대회는 저장 직전에 COMPETITION_INVALID_EVENT_INFO 로 막는다")
     void rejectsInvalidEventInfoOnPersist() {
         Competition noOpenDate = Competition.builder()

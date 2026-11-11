@@ -35,6 +35,8 @@ public record CompetitionListItem(
             LocalDate earlyBirdDeadline,
         @Schema(description = "접수 마감일", nullable = true)
             LocalDate registrationDeadline,
+        @Schema(description = "조회수", example = "214")
+            long viewCount,
         @Schema(description = "관심 수 (익명 집계)", example = "12")
             long interestCount,
         @Schema(description = "내 관심 여부 (비로그인은 false)")
