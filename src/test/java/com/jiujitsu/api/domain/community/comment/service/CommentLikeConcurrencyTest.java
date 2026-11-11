@@ -20,6 +20,7 @@ import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
+import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.security.AuditorAwareImpl;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
@@ -47,6 +48,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -88,14 +90,15 @@ class CommentLikeConcurrencyTest {
     @MockBean private CommentMapper commentMapper;
     @MockBean private CommunityProfileService communityProfileService;
 
+    private User author;
     private User me;
     private Long commentId;
 
     @BeforeEach
     void setUp() {
-        noticeEvents.count.set(0);
+        noticeEvents.events.clear();
         tx.executeWithoutResult(status -> {
-            User author = saveUser();
+            author = saveUser();
             me = saveUser();
             Content content = Content.builder().contentType(ContentType.BOARD).build();
             em.persist(content);
@@ -123,7 +126,7 @@ class CommentLikeConcurrencyTest {
     }
 
     @Test
-    @DisplayName("좋아요 → 취소 → 좋아요 토글과 개수")
+    @DisplayName("좋아요 → 취소 → 좋아요 토글과 개수, 좋아요가 저장될 때마다 알림 이벤트 (푸시 여부는 LikeNoticeService 가 개수 기준으로 거름)")
     void toggle() {
         User other = tx.execute(status -> saveUser());
         tx.executeWithoutResult(status -> insertLike(other));
@@ -131,11 +134,11 @@ class CommentLikeConcurrencyTest {
         assertThat(like()).isEqualTo(new CommentLikeResponse(commentId, true, 2L));
         assertThat(like()).isEqualTo(new CommentLikeResponse(commentId, false, 1L));
         assertThat(like()).isEqualTo(new CommentLikeResponse(commentId, true, 2L));
-        assertThat(noticeEvents.count.get()).isEqualTo(2);
+        assertThat(noticeEvents.events).hasSize(2);
     }
 
     @Test
-    @DisplayName("동시에 들어온 좋아요 두 번은 한 건만 저장되고, 둘 다 '좋아요한 상태'로 응답하며 알림은 한 번 나간다")
+    @DisplayName("동시에 들어온 좋아요 두 번은 한 건만 저장되고, 둘 다 '좋아요한 상태'로 응답하며 알림 이벤트는 한 번 나간다")
     void concurrentLike_savesOnce() throws Exception {
         bothSeeSameStateBeforeWriting();
 
@@ -143,7 +146,11 @@ class CommentLikeConcurrencyTest {
 
         assertThat(responses).containsOnly(new CommentLikeResponse(commentId, true, 1L));
         assertThat(likeRows()).isEqualTo(1);
-        assertThat(noticeEvents.count.get()).isEqualTo(1);
+        assertThat(noticeEvents.events).singleElement().satisfies(event -> {
+            assertThat(event.recipientUserId()).isEqualTo(author.getId());
+            assertThat(event.commentId()).isEqualTo(commentId);
+            assertThat(event.pushType()).isEqualTo(FcmPushType.COMMENTS_LIKE);
+        });
     }
 
     @Test
@@ -269,11 +276,11 @@ class CommentLikeConcurrencyTest {
     // 커밋된 요청이 보낸 좋아요 알림 이벤트만 센다 (실제 리스너 LikeNoticeEventListener 와 같은 AFTER_COMMIT)
     @TestConfiguration
     static class NoticeEventCounter {
-        final AtomicInteger count = new AtomicInteger();
+        final List<LikeNoticeEvent> events = new CopyOnWriteArrayList<>();
 
         @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
         void on(LikeNoticeEvent event) {
-            count.incrementAndGet();
+            events.add(event);
         }
     }
 }
