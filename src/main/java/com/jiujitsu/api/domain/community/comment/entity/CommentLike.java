@@ -15,7 +15,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
         name = "comment_like",
         indexes = {
                 @Index(name = "idx_comment_like", columnList = "comment_id")
-        }
+        },
+        // 한 사람이 한 댓글에 좋아요 하나 (#199). 이름을 고정해 dev 배포 후 생성 여부를 확인할 수 있게 한다
+        uniqueConstraints = @UniqueConstraint(name = "uk_comment_like_comment_user", columnNames = {"comment_id", "created_by"})
 )
 @Getter
 @Builder

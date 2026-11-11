@@ -22,6 +22,9 @@ import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,6 +33,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class ContentService {
+    private final TransactionTemplate transactionTemplate;
     private final AuthenticationFacade authenticationFacade;
     private final ContentRepository contentRepository;
     private final ContentLikeRepository contentLikeRepository;
@@ -42,8 +46,19 @@ public class ContentService {
 
     /**
      * 게시물 좋아요 등록/삭제
+     * 같은 사람의 요청이 동시에 들어와 늦은 쪽이 유니크 제약에 걸리면, 롤백하고 새 트랜잭션에서
+     * "이미 좋아요한 상태"로 응답한다 (댓글 좋아요와 같음, #199)
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ContentLikeResponse like(Long id) {
+        try {
+            return transactionTemplate.execute(status -> toggleLike(id));
+        } catch (DataIntegrityViolationException e) {
+            return transactionTemplate.execute(status -> alreadyLiked(id, e));
+        }
+    }
+
+    private ContentLikeResponse toggleLike(Long id) {
         // 로그인 유저 정보 조회
         User user = authenticationFacade.getCurrentUser();
 
@@ -53,11 +68,9 @@ public class ContentService {
 
         // 기존 좋아요 조회
         ContentLike newLike = null;
-        Optional<ContentLike> existLike = contentLikeRepository.findByContentIdAndCreatedBy(id, user);
-
-        if (existLike.isPresent()) {
+        if (contentLikeRepository.existsByContentIdAndCreatedById(id, user.getId())) {
             // 좋아요 취소
-            contentLikeRepository.delete(existLike.get());
+            contentLikeRepository.deleteByContentIdAndUserId(id, user.getId());
         } else {
             // 좋아요 등록
             newLike = ContentLike.builder().content(content).build();
@@ -88,6 +101,20 @@ public class ContentService {
                 .getOrDefault(content.getId(), 0L);
 
         return contentLikeMapper.toContentLikeResponse(content, newLike, likeCount);
+    }
+
+    // 동시 요청이 먼저 좋아요를 저장해 유니크 제약에 걸린 경우 → 지금 상태로 응답 (#199)
+    private ContentLikeResponse alreadyLiked(Long id, DataIntegrityViolationException cause) {
+        User user = authenticationFacade.getCurrentUser();
+        Content content = contentRepository.findById(id)
+                .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
+
+        // 좋아요가 없으면 동시 요청이 아닌 다른 무결성 오류 → 숨기지 않는다
+        if (!contentLikeRepository.existsByContentIdAndCreatedById(id, user.getId())) {
+            throw cause;
+        }
+        return contentLikeMapper.toContentLikeResponse(content, true,
+                getContentLikeCount(List.of(id)).getOrDefault(id, 0L));
     }
 
     /**

@@ -37,6 +37,7 @@ import com.jiujitsu.api.global.fcm.entity.PushActionType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -45,7 +46,9 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -56,6 +59,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class CommunityCommentsService {
 
+    private final TransactionTemplate transactionTemplate;
     private final CommentLikeRepository commentLikeRepository;
     private final CommunityCommentsRepository communityCommentsRepository;
     private final ContentRepository contentRepository;
@@ -225,9 +229,21 @@ public class CommunityCommentsService {
     }
 
     /**
-     * 댓글 좋아요 등록
+     * 댓글 좋아요 등록/취소 (토글)
+     * 같은 사람의 요청이 동시에 들어와 둘 다 "좋아요 없음"으로 보고 저장하면, 늦은 쪽은 유니크 제약
+     * (uk_comment_like_comment_user)에 걸린다. 에러가 난 트랜잭션은 다시 쓸 수 없으므로(PostgreSQL)
+     * 롤백하고 새 트랜잭션에서 "이미 좋아요한 상태"로 응답한다. 알림은 커밋된 요청만 나간다. (#199)
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CommentLikeResponse createCommentLike(CommentLikeRequest request) {
+        try {
+            return transactionTemplate.execute(status -> toggleCommentLike(request));
+        } catch (DataIntegrityViolationException e) {
+            return transactionTemplate.execute(status -> alreadyLikedComment(request, e));
+        }
+    }
+
+    private CommentLikeResponse toggleCommentLike(CommentLikeRequest request) {
         // 로그인 유저 정보 조회
         User user = authenticationFacade.getCurrentUser();
 
@@ -237,11 +253,9 @@ public class CommunityCommentsService {
 
         // 기존 좋아요 조회
         CommentLike newLike = null;
-        Optional<CommentLike> existLike = commentLikeRepository.findByCommentIdAndCreatedBy(comment.getId(), user);
-
-        if (existLike.isPresent()) {
-            // 좋아요 취소
-            commentLikeRepository.delete(existLike.get());
+        if (commentLikeRepository.existsByCommentIdAndCreatedById(comment.getId(), user.getId())) {
+            // 좋아요 취소 (제약 전 중복 저장된 행이 있으면 함께 지운다)
+            commentLikeRepository.deleteByCommentIdAndUserId(comment.getId(), user.getId());
         } else {
             // 좋아요 등록
             newLike = commentLikeFactory.createCommentLike(comment);
@@ -264,13 +278,28 @@ public class CommunityCommentsService {
             }
         }
 
-        long likeCount = commentLikeRepository.countGroupByCommentIds(List.of(comment.getId()))
+        return commentLikeMapper.toCommentLikeResponse(comment, newLike, countCommentLike(comment.getId()));
+    }
+
+    // 동시 요청이 먼저 좋아요를 저장해 유니크 제약에 걸린 경우 → 지금 상태로 응답 (#199)
+    private CommentLikeResponse alreadyLikedComment(CommentLikeRequest request, DataIntegrityViolationException cause) {
+        User user = authenticationFacade.getCurrentUser();
+        CommunityComments comment = communityCommentsRepository.findById(request.commentId())
+                .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
+
+        // 좋아요가 없으면 동시 요청이 아닌 다른 무결성 오류 → 숨기지 않는다
+        if (!commentLikeRepository.existsByCommentIdAndCreatedById(comment.getId(), user.getId())) {
+            throw cause;
+        }
+        return commentLikeMapper.toCommentLikeResponse(comment, true, countCommentLike(comment.getId()));
+    }
+
+    private long countCommentLike(Long commentId) {
+        return commentLikeRepository.countGroupByCommentIds(List.of(commentId))
                 .stream()
                 .findFirst()
                 .map(row -> ((Number) row[1]).longValue())
                 .orElse(0L);
-
-        return commentLikeMapper.toCommentLikeResponse(comment, newLike, likeCount);
     }
 
     /**

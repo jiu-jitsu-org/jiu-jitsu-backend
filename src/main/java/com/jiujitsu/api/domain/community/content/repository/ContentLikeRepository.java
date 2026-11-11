@@ -1,19 +1,23 @@
 package com.jiujitsu.api.domain.community.content.repository;
 
 import com.jiujitsu.api.domain.community.content.entity.ContentLike;
-import com.jiujitsu.api.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 @Repository
 public interface ContentLikeRepository extends JpaRepository<ContentLike, Long> {
-    Optional<ContentLike> findByContentIdAndCreatedBy(Long contentId, User user);
+    // 단건 조회 대신 존재 여부·벌크 삭제를 쓴다: 동시에 취소해 지울 행이 없어도 예외가 나지 않는다 (#199)
+    boolean existsByContentIdAndCreatedById(Long contentId, Long userId);
+
+    @Modifying
+    @Query("delete from ContentLike cl where cl.content.id = :contentId and cl.createdBy.id = :userId")
+    int deleteByContentIdAndUserId(@Param("contentId") Long contentId, @Param("userId") Long userId);
 
     @Query("""
         select c.content.id, count(c)
