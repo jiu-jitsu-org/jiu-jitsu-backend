@@ -105,10 +105,13 @@ public class UserNoticeSetting {
 
     /**
      * 처음 관심 등록 때 묻는 "이 대회 마감 알림을 받을까요?"의 답 (알림 받기 = true, 나중에 = false).
-     * 관심 대회 알림 값을 답대로 두고, 물어봤음을 남겨 다시 묻지 않게 한다 (기기를 바꿔도)
+     * 알림 받기면 관심 대회 알림을 켜고, 나중에면 지금 값을 그대로 둔다 (설정에서 미리 켠 사람을 끄지 않게).
+     * 어느 쪽이든 물어봤음을 남겨 다시 묻지 않게 한다 (기기를 바꿔도)
      */
     public void answerCompetitionNoticePrompt(boolean enabled, LocalDateTime now) {
-        this.competitionEnabled = enabled;
+        if (enabled) {
+            this.competitionEnabled = true;
+        }
         if (this.competitionNoticeAskedAt == null) {
             this.competitionNoticeAskedAt = now;
         }

@@ -60,6 +60,6 @@ public record CompetitionDetailResponse(
             long interestCount,
         @Schema(description = "내 관심 여부 (비로그인은 false)")
             boolean interested,
-        @Schema(description = "이 대회 마감 알림 받는지 (관심 등록 + 이 대회 알림 켜짐. 비로그인·관심 없음은 false). 설정의 관심 대회 알림이 꺼져 있으면 실제로는 오지 않음")
+        @Schema(description = "이 대회 알림 켜짐 (관심 등록 + 이 대회 알림 켜짐. 비로그인·관심 없음은 false). 실제로 알림이 오려면 설정의 관심 대회 알림(GET /notice/setting 의 competitionEnabled)도 켜져 있어야 함 — 앱은 두 값을 함께 본다")
             boolean noticeEnabled
 ) { }

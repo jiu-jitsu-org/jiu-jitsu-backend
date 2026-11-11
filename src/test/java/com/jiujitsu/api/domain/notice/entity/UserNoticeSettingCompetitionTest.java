@@ -53,6 +53,18 @@ class UserNoticeSettingCompetitionTest {
     }
 
     @Test
+    @DisplayName("질문 답 나중에: 설정에서 미리 켜 둔 관심 대회 알림을 끄지 않는다")
+    void prompt_later_keepsEnabled() {
+        UserNoticeSetting setting = newSetting();
+        setting.update(new NoticeSettingRequest(true, true, true, false, true));
+
+        setting.answerCompetitionNoticePrompt(false, T1);
+
+        assertThat(setting.isCompetitionEnabled()).isTrue();
+        assertThat(setting.isCompetitionNoticeAsked()).isTrue();
+    }
+
+    @Test
     @DisplayName("질문 답: 알림 받기·나중에 모두 물어봤음을 남기고, 처음 물어본 시각은 바뀌지 않는다")
     void prompt() {
         UserNoticeSetting setting = newSetting();
