@@ -12,6 +12,7 @@ import com.jiujitsu.api.domain.notice.factory.NoticeFactory;
 import com.jiujitsu.api.domain.notice.repository.NoticeRepository;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
+import com.jiujitsu.api.global.properties.LikePushProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -60,7 +61,7 @@ class LikeNoticeServiceTest {
     private final LikeNoticeService service = new LikeNoticeService(
             noticeRepository, new NoticeFactory(), noticeService, boardHideRepository, reportRepository,
             contentLikeRepository, commentLikeRepository, fcmPushEventPublisher,
-            new LikePushPolicy(List.of(1, 5, 10), 10), CLOCK);
+            new LikePushProperties(List.of(1, 5, 10), 10), CLOCK);
 
     private Notice card;
 

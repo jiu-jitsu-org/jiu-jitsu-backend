@@ -1,19 +1,18 @@
-package com.jiujitsu.api.domain.notice.service;
+package com.jiujitsu.api.global.properties;
 
-import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
 
 /**
- * 좋아요 푸시 기준 (#196). application.yml notice.like-push 에서 바꾼다
+ * 좋아요 푸시 기준 (#196). application.yml notice.like-push 에서 바꾼다 (LikeNoticeService 가 사용)
  * - thresholds: 처음 기준들 (오름차순, 예: 1, 5, 10)
  * - step: 마지막 기준 뒤로 이 간격마다 (예: 10 → 20, 30, …)
  */
 @ConfigurationProperties("notice.like-push")
-public record LikePushPolicy(List<Integer> thresholds, int step) {
+public record LikePushProperties(List<Integer> thresholds, int step) {
 
-    public LikePushPolicy {
+    public LikePushProperties {
         if (thresholds == null || thresholds.isEmpty() || step <= 0) {
             throw new IllegalArgumentException("notice.like-push 설정이 비었거나 step 이 0 이하");
         }
@@ -40,16 +39,5 @@ public record LikePushPolicy(List<Integer> thresholds, int step) {
             reached = t;
         }
         return reached;
-    }
-
-    /**
-     * 좋아요 카드 제목·푸시 제목. 개수는 지금 실제 좋아요 수
-     */
-    public static String title(FcmPushType pushType, long count) {
-        return switch (pushType) {
-            case CONTENTS_LIKE -> "내 게시글에 좋아요가 " + count + "개 달렸어요";
-            case COMMENTS_LIKE -> "내 댓글에 좋아요가 " + count + "개 달렸어요";
-            default -> throw new IllegalArgumentException("좋아요 알림이 아님: " + pushType);
-        };
     }
 }

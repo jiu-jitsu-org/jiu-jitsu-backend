@@ -88,6 +88,22 @@ public class Notice extends BaseEntity {
         return groupKey != null;
     }
 
+    // 아직 푸시가 한 번도 안 간 좋아요 카드 (첫 기준 전) — 알림함에 보이지 않는다
+    public boolean isLikeCardBeforeFirstPush() {
+        return isLikeCard() && (likePushedCount == null || likePushedCount == 0);
+    }
+
+    /**
+     * 좋아요 카드 제목·푸시 제목. 개수는 지금 실제 좋아요 수
+     */
+    public static String likeTitle(FcmPushType pushType, long count) {
+        return switch (pushType) {
+            case CONTENTS_LIKE -> "내 게시글에 좋아요가 " + count + "개 달렸어요";
+            case COMMENTS_LIKE -> "내 댓글에 좋아요가 " + count + "개 달렸어요";
+            default -> throw new IllegalArgumentException("좋아요 알림이 아님: " + pushType);
+        };
+    }
+
     /**
      * 좋아요 카드가 새 기준에 닿아 푸시를 보낼 때: 안 읽음으로 알림함 맨 위에 올린다
      */

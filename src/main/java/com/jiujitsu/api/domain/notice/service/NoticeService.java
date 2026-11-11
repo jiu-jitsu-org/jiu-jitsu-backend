@@ -81,8 +81,9 @@ public class NoticeService {
                 .filter(n -> isVisible(n, blockedUserIds, excludedContentIds))
                 .toList();
         LikeCounts likeCounts = loadLikeCounts(unread);
+        LocalDateTime likeCardCutoff = likeCardCutoff();
         return unread.stream()
-                .filter(n -> !likeCounts.isEmptyCard(n))
+                .filter(n -> !likeCounts.isHidden(n, likeCardCutoff))
                 .count();
     }
 
@@ -102,10 +103,11 @@ public class NoticeService {
                 .filter(n -> isVisible(n, blockedUserIds, excludedContentIds))
                 .toList();
 
-        // 좋아요 카드: 지금 실제 좋아요 수로 제목을 만들고, 0개(전부 취소)면 뺀다 (#196)
+        // 좋아요 카드: 지금 실제 좋아요 수로 제목을 만들고, 숨길 카드는 뺀다 (#196, LikeCounts#isHidden)
         LikeCounts likeCounts = loadLikeCounts(visible);
+        LocalDateTime likeCardCutoff = likeCardCutoff();
         List<Notice> notices = visible.stream()
-                .filter(n -> !likeCounts.isEmptyCard(n))
+                .filter(n -> !likeCounts.isHidden(n, likeCardCutoff))
                 .toList();
 
         // 존재하는 contentId 일괄 조회
@@ -165,7 +167,7 @@ public class NoticeService {
 
         return notices.stream()
                 .map(n -> NoticeMapper.toNoticeListResponse(n,
-                        n.isLikeCard() ? LikePushPolicy.title(n.getPushType(), likeCounts.of(n)) : n.getTitle(),
+                        n.isLikeCard() ? Notice.likeTitle(n.getPushType(), likeCounts.of(n)) : n.getTitle(),
                         isCompetitionNotice(n)
                                 ? computeCompetitionDeletedStatus(n, publishedCompetitionIds)
                                 : computeDeletedStatus(n, existingContentIds, commentByRefId),
@@ -364,10 +366,20 @@ public class NoticeService {
             return n.getData() == null ? 0L : byContentId.getOrDefault(Long.parseLong(n.getData()), 0L);
         }
 
-        // 좋아요가 전부 취소된 카드는 알림함·안 읽은 수에서 뺀다
-        boolean isEmptyCard(Notice n) {
-            return n.isLikeCard() && of(n) == 0;
+        /**
+         * 알림함·안 읽은 수에서 뺄 좋아요 카드
+         * - 좋아요가 전부 취소됨 (0개)
+         * - 아직 푸시가 한 번도 안 감 (첫 기준 전 — 기준을 1보다 크게 바꾼 경우)
+         * - 마지막 푸시가 보관 기간(30일) 전 — 카드는 이미 보낸 기준을 들고 있어 정리에서 지우지 않으므로 여기서 숨긴다
+         */
+        boolean isHidden(Notice n, LocalDateTime cutoff) {
+            if (!n.isLikeCard()) return false;
+            return of(n) == 0 || n.isLikeCardBeforeFirstPush() || n.getNotifiedAt().isBefore(cutoff);
         }
+    }
+
+    private LocalDateTime likeCardCutoff() {
+        return LocalDateTime.now(clock).minusDays(NoticeCleanupService.RETENTION_DAYS);
     }
 
     // 대회 알림은 data 가 대회 id 다 (게시글·밸런스 게임은 contentId)
@@ -393,6 +405,9 @@ public class NoticeService {
      * 알림 body 동적 계산
      * - NEW_COMMENTS        : 현재 게시글 제목 (밸런스 게임이면 null)
      * - NEW_CHILD_COMMENTS  : 부모 댓글 본문 (삭제/숨김이면 null)
+     * - CONTENTS_LIKE       : 좋아요 받은 게시글 제목 (밸런스 게임이면 null)
+     * - COMMENTS_LIKE       : 좋아요 받은 댓글 본문 (삭제/숨김이면 null)
+     * - 대회 마감 알림       : 발송 때 저장한 본문
      * - 그 외                : null
      */
     private String computeBody(Notice notice,

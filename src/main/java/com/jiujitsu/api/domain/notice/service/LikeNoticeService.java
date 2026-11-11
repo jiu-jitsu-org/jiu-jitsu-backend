@@ -10,6 +10,7 @@ import com.jiujitsu.api.domain.notice.event.LikeNoticeEvent;
 import com.jiujitsu.api.domain.notice.factory.NoticeFactory;
 import com.jiujitsu.api.domain.notice.repository.NoticeRepository;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
+import com.jiujitsu.api.global.properties.LikePushProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -20,7 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 좋아요 알림 (#196): 글·댓글마다 카드 한 장, 기준 개수(LikePushPolicy)에 처음 닿을 때만 푸시
+ * 좋아요 알림 (#196): 글·댓글마다 카드 한 장, 기준 개수(LikePushProperties)에 처음 닿을 때만 푸시
  * - 카드 숫자는 알림함 조회 때 실제 좋아요 수로 계산하므로 기준 사이 좋아요는 카드를 건드리지 않는다
  * - 취소 후 다시 눌러 같은 수가 돼도 이미 보낸 기준이라 다시 보내지 않는다
  * - 누가 눌렀는지 드러나지 않으므로 차단한 사람의 좋아요도 개수·푸시에 들어간다
@@ -37,7 +38,7 @@ public class LikeNoticeService {
     private final ContentLikeRepository contentLikeRepository;
     private final CommentLikeRepository commentLikeRepository;
     private final FcmPushEventPublisher fcmPushEventPublisher;
-    private final LikePushPolicy likePushPolicy;
+    private final LikePushProperties likePushProperties;
     private final Clock clock;
 
     /**
@@ -64,12 +65,12 @@ public class LikeNoticeService {
                 .orElseGet(() -> noticeRepository.saveAndFlush(noticeFactory.createLikeCard(event)));
 
         long count = countLikes(event);
-        int threshold = likePushPolicy.reachedThreshold(count);
+        int threshold = likePushProperties.reachedThreshold(count);
         if (threshold <= card.getLikePushedCount()) {
             return false;
         }
 
-        String title = LikePushPolicy.title(event.pushType(), count);
+        String title = Notice.likeTitle(event.pushType(), count);
         card.pushLike(threshold, title, LocalDateTime.now(clock));
         fcmPushEventPublisher.publish(recipientId, event.pushType(), event.pushData(), title, null);
         return true;

@@ -90,17 +90,30 @@ class NoticeLikeCardRepositoryTest {
     }
 
     @Test
-    @DisplayName("30일 정리는 알림 시각 기준 — 오래전에 만들었어도 최근 푸시한 카드는 남는다")
+    @DisplayName("30일 정리는 알림 시각 기준 — 오래된 일반 알림만 지운다")
     void cleanup_byNotifiedAt() {
-        Notice card = noticeRepository.saveAndFlush(noticeFactory.createLikeCard(like(1L, 10L)));
-        card.pushLike(10, "내 게시글에 좋아요가 10개 달렸어요", T);
         Notice old = comment(1L, T.minusDays(31));
+        Notice recent = comment(1L, T.minusDays(29));
         em.flush();
 
-        noticeRepository.deleteByNotifiedAtBefore(T.minusDays(30));
+        noticeRepository.deleteExpiredExceptLikeCards(T.minusDays(30));
         em.clear();
 
-        assertThat(noticeRepository.findById(card.getId())).isPresent();
         assertThat(noticeRepository.findById(old.getId())).isEmpty();
+        assertThat(noticeRepository.findById(recent.getId())).isPresent();
+    }
+
+    @Test
+    @DisplayName("30일 정리는 좋아요 카드를 지우지 않는다 — 이미 보낸 기준(likePushedCount)을 잃으면 같은 기준으로 다시 푸시하게 됨")
+    void cleanup_keepsLikeCards() {
+        Notice card = noticeRepository.saveAndFlush(noticeFactory.createLikeCard(like(1L, 10L)));
+        card.pushLike(10, "내 게시글에 좋아요가 10개 달렸어요", T.minusDays(31));
+        em.flush();
+
+        noticeRepository.deleteExpiredExceptLikeCards(T.minusDays(30));
+        em.clear();
+
+        assertThat(noticeRepository.findForUpdateByUserIdAndGroupKey(1L, "CONTENTS_LIKE:10"))
+                .get().extracting(Notice::getLikePushedCount).isEqualTo(10);
     }
 }

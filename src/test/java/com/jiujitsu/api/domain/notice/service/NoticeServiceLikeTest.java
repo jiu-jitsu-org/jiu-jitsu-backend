@@ -30,9 +30,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -67,7 +70,8 @@ class NoticeServiceLikeTest {
     @Mock private CompetitionRepository competitionRepository;
     @Mock private ContentLikeRepository contentLikeRepository;
     @Mock private CommentLikeRepository commentLikeRepository;
-    @Mock private Clock clock;
+    // 마지막 푸시(PUSHED_AT) 하루 뒤
+    @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-12T09:00:00Z"), ZoneId.of("Asia/Seoul"));
 
     private final User me = User.builder().id(1L).role(UserRole.USER).build();
 
@@ -158,6 +162,30 @@ class NoticeServiceLikeTest {
         stubContentExists(11L, "글");
 
         assertThat(noticeService.getNoticeList()).extracting(NoticeListResponse::id).containsExactly(2L);
+        assertThat(noticeService.getUnreadCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("푸시가 한 번도 안 간 카드(첫 기준 전)와 마지막 푸시가 30일 지난 카드는 목록·안 읽은 수에서 빠진다")
+    void beforeFirstPushOrExpired_hidden() {
+        Notice beforeFirstPush = Notice.builder().id(1L).userId(1L)
+                .pushType(FcmPushType.CONTENTS_LIKE).pushActionType(PushActionType.BOARD_DETAIL)
+                .title("내 게시글에 좋아요가 달렸어요.").data("10")
+                .groupKey("CONTENTS_LIKE:10").likePushedCount(0)
+                .notifiedAt(PUSHED_AT).isRead(true).build();
+        Notice expired = Notice.builder().id(2L).userId(1L)
+                .pushType(FcmPushType.CONTENTS_LIKE).pushActionType(PushActionType.BOARD_DETAIL)
+                .title("내 게시글에 좋아요가 10개 달렸어요").data("11")
+                .groupKey("CONTENTS_LIKE:11").likePushedCount(10)
+                .notifiedAt(PUSHED_AT.minusDays(30)).isRead(false).build();
+        Notice live = contentLikeCard(3, 12, false);
+        given(noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(1L)).willReturn(List.of(beforeFirstPush, live, expired));
+        given(noticeRepository.findByUserIdAndIsReadFalse(1L)).willReturn(List.of(live, expired));
+        given(contentLikeRepository.countContentLikeByContentIds(anyList())).willReturn(List.of(
+                new Object[]{10L, 3L}, new Object[]{11L, 14L}, new Object[]{12L, 5L}));
+        stubContentExists(12L, "글");
+
+        assertThat(noticeService.getNoticeList()).extracting(NoticeListResponse::id).containsExactly(3L);
         assertThat(noticeService.getUnreadCount()).isEqualTo(1);
     }
 
