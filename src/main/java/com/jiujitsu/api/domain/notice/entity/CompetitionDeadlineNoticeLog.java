@@ -18,13 +18,15 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "competition_deadline_notice_logs",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_competition_deadline_notice_log",
+                @UniqueConstraint(name = CompetitionDeadlineNoticeLog.UNIQUE_CONSTRAINT,
                         columnNames = {"competition_id", "deadline_type", "deadline", "user_id"})
         })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 public class CompetitionDeadlineNoticeLog {
+
+    public static final String UNIQUE_CONSTRAINT = "uk_competition_deadline_notice_log";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

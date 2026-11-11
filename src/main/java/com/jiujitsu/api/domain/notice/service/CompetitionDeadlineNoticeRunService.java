@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.notice.service;
 
 import com.jiujitsu.api.domain.notice.dto.CompetitionDeadlineNoticeRunResponse;
+import com.jiujitsu.api.domain.notice.entity.CompetitionDeadlineNoticeLog;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.Locale;
 
 /**
  * 관심 대회 마감 전날 알림 실행 — 매일 저녁(기본 18시, competition.deadline-notice.cron) 내일 끝나는 마감을 보낸다
@@ -43,19 +45,36 @@ public class CompetitionDeadlineNoticeRunService {
             deadlines++;
             try {
                 sent += competitionDeadlineNoticeService.send(due);
-            } catch (DataIntegrityViolationException e) {
-                // 발송 기록 유니크 충돌 = 동시에 돈 다른 실행이 먼저 보냄. 그 사이 새로 대상이 된 유저는 다시 실행하면 받는다
-                overlapped++;
-                log.info("대회 마감 알림 다른 실행과 겹침 competitionId={} type={} deadline={}",
-                        due.competitionId(), due.deadline().type(), due.deadline().date());
             } catch (RuntimeException e) {
-                // 실패한 마감은 롤백된다 (발송 기록도 없음) — 같은 날 자정 전 관리자 재실행으로 다시 보낼 수 있다
-                failed++;
-                log.warn("대회 마감 알림 실패 competitionId={} type={} deadline={}",
-                        due.competitionId(), due.deadline().type(), due.deadline().date(), e);
+                if (isSendLogDuplicate(e)) {
+                    // 발송 기록 유니크 충돌 = 동시에 돈 다른 실행이 먼저 보냄. 그 사이 새로 대상이 된 유저는 다시 실행하면 받는다
+                    overlapped++;
+                    log.info("대회 마감 알림 다른 실행과 겹침 competitionId={} type={} deadline={}",
+                            due.competitionId(), due.deadline().type(), due.deadline().date());
+                } else {
+                    // 그 밖의 실패(다른 제약 위반 포함)는 롤백된다 (발송 기록도 없음) — 원인을 고친 뒤 같은 날 자정 전 관리자 재실행
+                    failed++;
+                    log.warn("대회 마감 알림 실패 competitionId={} type={} deadline={}",
+                            due.competitionId(), due.deadline().type(), due.deadline().date(), e);
+                }
             }
         }
         log.info("대회 마감 알림 마감일 {} — 마감 {}개(겹침 {}, 실패 {}), 보낸 알림 {}건", tomorrow, deadlines, overlapped, failed, sent);
         return new CompetitionDeadlineNoticeRunResponse(tomorrow, deadlines, overlapped, failed, sent);
+    }
+
+    // 발송 기록 유니크 제약 위반만 겹침으로 본다 (알림 저장의 CHECK·NOT NULL 위반 등은 실패로 드러나야 한다)
+    // 제약 이름은 DB 메시지에 담긴다 (H2 는 대문자로 바꿔 적어 대소문자를 무시)
+    private static boolean isSendLogDuplicate(RuntimeException e) {
+        if (!(e instanceof DataIntegrityViolationException)) {
+            return false;
+        }
+        for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+            String message = cause.getMessage();
+            if (message != null && message.toLowerCase(Locale.ROOT).contains(CompetitionDeadlineNoticeLog.UNIQUE_CONSTRAINT)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

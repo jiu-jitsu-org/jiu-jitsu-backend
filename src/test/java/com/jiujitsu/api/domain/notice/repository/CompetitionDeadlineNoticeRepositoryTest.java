@@ -129,7 +129,10 @@ class CompetitionDeadlineNoticeRepositoryTest {
 
         assertThat(logRepository.findNotifiedUserIds(1L, CompetitionDeadlineType.EARLY_BIRD, D, List.of(10L, 11L, 12L, 13L)))
                 .containsExactly(10L);
+        // 실행 서비스는 DB 메시지의 제약 이름으로 "다른 실행과 겹침"을 가린다 — 실제 예외에 이름이 담기는지 확인
         assertThatThrownBy(() -> logRepository.saveAndFlush(new CompetitionDeadlineNoticeLog(1L, CompetitionDeadlineType.EARLY_BIRD, D, 10L)))
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .satisfies(e -> assertThat(((DataIntegrityViolationException) e).getMostSpecificCause().getMessage().toLowerCase())
+                        .contains(CompetitionDeadlineNoticeLog.UNIQUE_CONSTRAINT));
     }
 }

@@ -53,9 +53,21 @@ class CompetitionDeadlineNoticeRunServiceTest {
     void overlapCountedSeparately() {
         DueNotice overlapping = due(1);
         given(service.findDue(LocalDate.of(2026, 11, 20))).willReturn(List.of(overlapping));
-        given(service.send(overlapping)).willThrow(new DataIntegrityViolationException("uk_competition_deadline_notice_log"));
+        given(service.send(overlapping)).willThrow(new DataIntegrityViolationException("could not execute statement",
+                new RuntimeException("Unique index or primary key violation: \"PUBLIC.UK_COMPETITION_DEADLINE_NOTICE_LOG_INDEX_1\"")));
 
         assertThat(runService.runTomorrow()).isEqualTo(new CompetitionDeadlineNoticeRunResponse(LocalDate.of(2026, 11, 20), 1, 1, 0, 0));
+    }
+
+    @Test
+    @DisplayName("발송 기록이 아닌 제약 위반(알림 저장의 CHECK 등)은 겹침이 아니라 실패로 센다")
+    void otherConstraintViolation_isFailure() {
+        DueNotice due = due(1);
+        given(service.findDue(LocalDate.of(2026, 11, 20))).willReturn(List.of(due));
+        given(service.send(due)).willThrow(new DataIntegrityViolationException(
+                "new row for relation \"notice\" violates check constraint \"notice_push_type_check\""));
+
+        assertThat(runService.runTomorrow()).isEqualTo(new CompetitionDeadlineNoticeRunResponse(LocalDate.of(2026, 11, 20), 1, 0, 1, 0));
     }
 
     @Test
