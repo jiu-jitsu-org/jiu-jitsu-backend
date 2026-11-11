@@ -19,6 +19,7 @@ import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
+import com.jiujitsu.api.global.util.ConstraintViolationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,15 +47,19 @@ public class ContentService {
 
     /**
      * 게시물 좋아요 등록/삭제
-     * 같은 사람의 요청이 동시에 들어와 늦은 쪽이 유니크 제약에 걸리면, 롤백하고 새 트랜잭션에서
-     * "이미 좋아요한 상태"로 응답한다 (댓글 좋아요와 같음, #199)
+     * 같은 사람의 요청이 동시에 들어와 늦은 쪽이 유니크 제약({@link ContentLike#UNIQUE_CONSTRAINT})에 걸리면,
+     * 롤백하고 새 트랜잭션에서 지금 상태로 응답한다 (댓글 좋아요와 같음, #199)
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ContentLikeResponse like(Long id) {
         try {
             return transactionTemplate.execute(status -> toggleLike(id));
         } catch (DataIntegrityViolationException e) {
-            return transactionTemplate.execute(status -> alreadyLiked(id, e));
+            // 그 밖의 제약 위반(FK·NOT NULL 등)은 동시 요청이 아니므로 그대로 드러낸다
+            if (!ConstraintViolationUtil.isViolationOf(e, ContentLike.UNIQUE_CONSTRAINT)) {
+                throw e;
+            }
+            return transactionTemplate.execute(status -> currentLike(id));
         }
     }
 
@@ -70,7 +75,7 @@ public class ContentService {
         ContentLike newLike = null;
         if (contentLikeRepository.existsByContentIdAndCreatedById(id, user.getId())) {
             // 좋아요 취소
-            contentLikeRepository.deleteByContentIdAndUserId(id, user.getId());
+            contentLikeRepository.deleteAllByContentIdAndCreatedById(id, user.getId());
         } else {
             // 좋아요 등록
             newLike = ContentLike.builder().content(content).build();
@@ -87,7 +92,7 @@ public class ContentService {
                 Long contentOwnerId = content.getCreatedBy().getId();
                 // 게시물 주인이 좋아요 누른 사람을 차단한 경우 → 알림/푸시 안 함
                 if (userBlockRepository.existsByBlockerIdAndBlockedId(contentOwnerId, user.getId())) {
-                    return contentLikeMapper.toContentLikeResponse(content, newLike,
+                    return contentLikeMapper.toContentLikeResponse(content, true,
                             getContentLikeCount(List.of(content.getId())).getOrDefault(content.getId(), 0L));
                 }
                 if (noticeService.isContentNoticeEnabled(contentOwnerId, content.getId())) {
@@ -100,20 +105,18 @@ public class ContentService {
         long likeCount = getContentLikeCount(List.of(content.getId()))
                 .getOrDefault(content.getId(), 0L);
 
-        return contentLikeMapper.toContentLikeResponse(content, newLike, likeCount);
+        return contentLikeMapper.toContentLikeResponse(content, newLike != null, likeCount);
     }
 
     // 동시 요청이 먼저 좋아요를 저장해 유니크 제약에 걸린 경우 → 지금 상태로 응답 (#199)
-    private ContentLikeResponse alreadyLiked(Long id, DataIntegrityViolationException cause) {
+    // 보통은 좋아요 상태지만, 그 사이 같은 사람의 다음 요청이 취소했으면 취소 상태다
+    private ContentLikeResponse currentLike(Long id) {
         User user = authenticationFacade.getCurrentUser();
         Content content = contentRepository.findById(id)
                 .orElseThrow(() -> new ErrorException(ErrorCode.CONTENT_NOT_FOUND));
 
-        // 좋아요가 없으면 동시 요청이 아닌 다른 무결성 오류 → 숨기지 않는다
-        if (!contentLikeRepository.existsByContentIdAndCreatedById(id, user.getId())) {
-            throw cause;
-        }
-        return contentLikeMapper.toContentLikeResponse(content, true,
+        boolean liked = contentLikeRepository.existsByContentIdAndCreatedById(id, user.getId());
+        return contentLikeMapper.toContentLikeResponse(content, liked,
                 getContentLikeCount(List.of(id)).getOrDefault(id, 0L));
     }
 

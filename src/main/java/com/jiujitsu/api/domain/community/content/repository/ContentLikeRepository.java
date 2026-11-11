@@ -15,9 +15,10 @@ public interface ContentLikeRepository extends JpaRepository<ContentLike, Long> 
     // 단건 조회 대신 존재 여부·벌크 삭제를 쓴다: 동시에 취소해 지울 행이 없어도 예외가 나지 않는다 (#199)
     boolean existsByContentIdAndCreatedById(Long contentId, Long userId);
 
+    // 벌크 삭제로 둔다: 파생 deleteBy 는 엔티티를 읽어 한 건씩 지워, 동시 취소로 먼저 지워진 행이면 예외가 난다
     @Modifying
     @Query("delete from ContentLike cl where cl.content.id = :contentId and cl.createdBy.id = :userId")
-    int deleteByContentIdAndUserId(@Param("contentId") Long contentId, @Param("userId") Long userId);
+    void deleteAllByContentIdAndCreatedById(@Param("contentId") Long contentId, @Param("userId") Long userId);
 
     @Query("""
         select c.content.id, count(c)

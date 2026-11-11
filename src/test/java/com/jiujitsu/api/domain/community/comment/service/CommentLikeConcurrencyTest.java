@@ -257,12 +257,12 @@ class CommentLikeConcurrencyTest {
 
     private void dropUniqueConstraint() {
         tx.executeWithoutResult(status -> em.createNativeQuery(
-                "alter table comment_like drop constraint uk_comment_like_comment_user").executeUpdate());
+                "alter table comment_like drop constraint " + CommentLike.UNIQUE_CONSTRAINT).executeUpdate());
     }
 
     private void addUniqueConstraint() {
         tx.executeWithoutResult(status -> em.createNativeQuery(
-                "alter table comment_like add constraint uk_comment_like_comment_user unique (comment_id, created_by)")
+                "alter table comment_like add constraint " + CommentLike.UNIQUE_CONSTRAINT + " unique (comment_id, created_by)")
                 .executeUpdate());
     }
 

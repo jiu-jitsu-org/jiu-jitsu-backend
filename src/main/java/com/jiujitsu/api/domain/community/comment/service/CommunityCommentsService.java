@@ -35,6 +35,7 @@ import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.entity.PushActionType;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
+import com.jiujitsu.api.global.util.ConstraintViolationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -231,15 +232,20 @@ public class CommunityCommentsService {
     /**
      * 댓글 좋아요 등록/취소 (토글)
      * 같은 사람의 요청이 동시에 들어와 둘 다 "좋아요 없음"으로 보고 저장하면, 늦은 쪽은 유니크 제약
-     * (uk_comment_like_comment_user)에 걸린다. 에러가 난 트랜잭션은 다시 쓸 수 없으므로(PostgreSQL)
-     * 롤백하고 새 트랜잭션에서 "이미 좋아요한 상태"로 응답한다. 알림은 커밋된 요청만 나간다. (#199)
+     * ({@link CommentLike#UNIQUE_CONSTRAINT})에 걸린다. 에러가 난 트랜잭션은 다시 쓸 수 없으므로(PostgreSQL)
+     * 롤백하고 새 트랜잭션에서 지금 상태로 응답한다. 알림은 커밋된 요청만 나간다. (#199)
+     * 같은 클래스 안에서 트랜잭션을 나눠야 해서 TransactionTemplate 으로 실행한다
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CommentLikeResponse createCommentLike(CommentLikeRequest request) {
         try {
             return transactionTemplate.execute(status -> toggleCommentLike(request));
         } catch (DataIntegrityViolationException e) {
-            return transactionTemplate.execute(status -> alreadyLikedComment(request, e));
+            // 그 밖의 제약 위반(FK·NOT NULL 등)은 동시 요청이 아니므로 그대로 드러낸다
+            if (!ConstraintViolationUtil.isViolationOf(e, CommentLike.UNIQUE_CONSTRAINT)) {
+                throw e;
+            }
+            return transactionTemplate.execute(status -> currentCommentLike(request));
         }
     }
 
@@ -255,7 +261,7 @@ public class CommunityCommentsService {
         CommentLike newLike = null;
         if (commentLikeRepository.existsByCommentIdAndCreatedById(comment.getId(), user.getId())) {
             // 좋아요 취소 (제약 전 중복 저장된 행이 있으면 함께 지운다)
-            commentLikeRepository.deleteByCommentIdAndUserId(comment.getId(), user.getId());
+            commentLikeRepository.deleteAllByCommentIdAndCreatedById(comment.getId(), user.getId());
         } else {
             // 좋아요 등록
             newLike = commentLikeFactory.createCommentLike(comment);
@@ -278,20 +284,18 @@ public class CommunityCommentsService {
             }
         }
 
-        return commentLikeMapper.toCommentLikeResponse(comment, newLike, countCommentLike(comment.getId()));
+        return commentLikeMapper.toCommentLikeResponse(comment, newLike != null, countCommentLike(comment.getId()));
     }
 
     // 동시 요청이 먼저 좋아요를 저장해 유니크 제약에 걸린 경우 → 지금 상태로 응답 (#199)
-    private CommentLikeResponse alreadyLikedComment(CommentLikeRequest request, DataIntegrityViolationException cause) {
+    // 보통은 좋아요 상태지만, 그 사이 같은 사람의 다음 요청이 취소했으면 취소 상태다
+    private CommentLikeResponse currentCommentLike(CommentLikeRequest request) {
         User user = authenticationFacade.getCurrentUser();
         CommunityComments comment = communityCommentsRepository.findById(request.commentId())
                 .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
 
-        // 좋아요가 없으면 동시 요청이 아닌 다른 무결성 오류 → 숨기지 않는다
-        if (!commentLikeRepository.existsByCommentIdAndCreatedById(comment.getId(), user.getId())) {
-            throw cause;
-        }
-        return commentLikeMapper.toCommentLikeResponse(comment, true, countCommentLike(comment.getId()));
+        boolean liked = commentLikeRepository.existsByCommentIdAndCreatedById(comment.getId(), user.getId());
+        return commentLikeMapper.toCommentLikeResponse(comment, liked, countCommentLike(comment.getId()));
     }
 
     private long countCommentLike(Long commentId) {
