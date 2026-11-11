@@ -26,10 +26,9 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 // 게시글 좋아요 (#196): 알림은 바로 보내지 않고 개수 기준 처리 이벤트만 발행한다
 @ExtendWith(MockitoExtension.class)
@@ -55,10 +54,10 @@ class ContentServiceLikeNoticeTest {
     }
 
     @Test
-    @DisplayName("남의 글에 좋아요: 글쓴이에게 CONTENTS_LIKE 이벤트 (딥링크는 컨텐츠 타입 기준)")
+    @DisplayName("남의 게시글에 좋아요: 글쓴이에게 CONTENTS_LIKE 이벤트 (딥링크 BOARD_DETAIL)")
     void like_publishesLikeNoticeEvent() {
         given(authenticationFacade.getCurrentUser()).willReturn(me);
-        given(contentRepository.findById(10L)).willReturn(Optional.of(content(writer, ContentType.BALANCE)));
+        given(contentRepository.findById(10L)).willReturn(Optional.of(content(writer, ContentType.BOARD)));
         given(contentLikeRepository.findByContentIdAndCreatedBy(10L, me)).willReturn(Optional.empty());
         given(contentLikeRepository.countContentLikeByContentIds(List.of(10L))).willReturn(List.of());
 
@@ -71,8 +70,21 @@ class ContentServiceLikeNoticeTest {
         assertThat(event.contentId()).isEqualTo(10L);
         assertThat(event.commentId()).isNull();
         assertThat(event.pushType()).isEqualTo(FcmPushType.CONTENTS_LIKE);
-        assertThat(event.pushData()).isEqualTo(Map.of("type", "BALANCE_DETAIL", "data", "10"));
+        assertThat(event.pushData()).isEqualTo(Map.of("type", "BOARD_DETAIL", "data", "10"));
         assertThat(event.groupKey()).isEqualTo("CONTENTS_LIKE:10");
+    }
+
+    @Test
+    @DisplayName("밸런스 게임 좋아요는 알림 없음 — 운영자가 올린 게임이라 등록한 관리자 계정에 \"내 게시글\" 알림이 가면 안 됨")
+    void likeBalanceGame_noEvent() {
+        given(authenticationFacade.getCurrentUser()).willReturn(me);
+        given(contentRepository.findById(10L)).willReturn(Optional.of(content(writer, ContentType.BALANCE)));
+        given(contentLikeRepository.findByContentIdAndCreatedBy(10L, me)).willReturn(Optional.empty());
+        given(contentLikeRepository.countContentLikeByContentIds(List.of(10L))).willReturn(List.of());
+
+        contentService.like(10L);
+
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test
@@ -85,6 +97,6 @@ class ContentServiceLikeNoticeTest {
 
         contentService.like(10L);
 
-        verify(eventPublisher, never()).publishEvent(any());
+        verifyNoInteractions(eventPublisher);
     }
 }

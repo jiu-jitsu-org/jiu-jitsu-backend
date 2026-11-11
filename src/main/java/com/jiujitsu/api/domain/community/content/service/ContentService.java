@@ -60,9 +60,10 @@ public class ContentService {
             newLike = ContentLike.builder().content(content).build();
             contentLikeRepository.save(newLike);
 
-            if (!Objects.equals(user.getId(), content.getCreatedBy().getId())) {
+            // 좋아요 알림은 게시글만. 밸런스 게임은 운영자가 올린 게임이라 등록한 관리자 계정에 "내 게시글" 알림을 보내지 않는다 (#196)
+            if (content.getContentType() == ContentType.BOARD
+                    && !Objects.equals(user.getId(), content.getCreatedBy().getId())) {
                 // 알림은 커밋 뒤 개수 기준으로 처리한다 (#196, LikeNoticeService)
-                // 딥링크 목적지는 푸시 종류가 아니라 대상 컨텐츠 타입이 결정한다 (게시글 / 밸런스 게임)
                 eventPublisher.publishEvent(new LikeNoticeEvent(
                         content.getCreatedBy().getId(),
                         content.getId(),
