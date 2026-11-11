@@ -21,6 +21,7 @@ import com.jiujitsu.api.domain.community.comment.mapper.CommentMapper;
 import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepository;
 import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.entity.Content;
+import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
@@ -189,10 +190,12 @@ public class CommunityCommentsService {
         PushActionType actionType = content.getContentType().getPushActionType();
 
         // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
+        // 밸런스 게임은 운영자가 올린 게임이라 등록한 관리자 계정에 "내 게시글" 알림을 보내지 않는다 (#196)
         // 단, 게시글 작성자 == 부모댓글 작성자인 경우 알림2(NEW_CHILD_COMMENTS)로 대체되므로 중복 방지
-        boolean boardWriterIsParentAuthor = parentComments.isPresent() &&
+        boolean notifyBoardWriter = content.getContentType() == ContentType.BOARD;
+        boolean boardWriterIsParentAuthor = notifyBoardWriter && parentComments.isPresent() &&
                 Objects.equals(boardWriter.getId(), parentComments.get().getCreatedBy().getId());
-        if (!Objects.equals(user.getId(), boardWriter.getId()) && !boardWriterIsParentAuthor) {
+        if (notifyBoardWriter && !Objects.equals(user.getId(), boardWriter.getId()) && !boardWriterIsParentAuthor) {
             eventPublisher.publishEvent(new CommentNoticeEvent(
                     boardWriter.getId(),
                     content.getId(),

@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
  * 밸런스 게임 댓글 알림의 딥링크가 대상 컨텐츠 타입을 따르는지 검증한다. (#120)
@@ -66,25 +67,39 @@ class CommunityCommentsNoticeDeepLinkTest {
     private static final Long THIRD_ID = 3L;
 
     @Test
-    @DisplayName("밸런스 게임 대댓글 알림은 BALANCE_DETAIL 로 나간다")
+    @DisplayName("밸런스 게임 대댓글은 댓글 작성자에게만 BALANCE_DETAIL 로 나간다 — 게임을 등록한 관리자에게 \"내 게시글에 댓글\" 알림 없음 (#196)")
     void createComment_onBalance_publishesBalanceDetail() {
         // given
         Content content = stubContent(ContentType.BALANCE);
-        stubContentWriter(content);
+        // 게임을 등록한 관리자는 알림 대상이 아니라 스텁하지 않는다
         CommunityComments parent = stubComment(100L, THIRD_ID); // 글쓴이와 다른 사람의 댓글 (#177)
         stubCreateComment(content, parent);
 
         // when
         communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 100L, "대댓글"));
 
-        // then - 게시글 작성자 알림 + 부모 댓글 작성자 알림 두 건 모두 밸런스 상세로 향한다
-        List<CommentNoticeEvent> events = capturePublishedEvents(2);
-        assertThat(events)
-                .extracting(e -> e.pushData().get("type"))
-                .containsOnly("BALANCE_DETAIL");
-        assertThat(events)
-                .extracting(CommentNoticeEvent::pushType)
-                .containsExactlyInAnyOrder(FcmPushType.NEW_COMMENTS, FcmPushType.NEW_CHILD_COMMENTS);
+        // then - 부모 댓글 작성자 알림 한 건만, 밸런스 상세로 향한다
+        CommentNoticeEvent event = capturePublishedEvents(1).get(0);
+        assertThat(event.pushType()).isEqualTo(FcmPushType.NEW_CHILD_COMMENTS);
+        assertThat(event.recipientUserId()).isEqualTo(THIRD_ID);
+        assertThat(event.pushData().get("type")).isEqualTo("BALANCE_DETAIL");
+    }
+
+    @Test
+    @DisplayName("밸런스 게임에 댓글: 알림 없음 — 운영자가 올린 게임이라 등록한 관리자 계정에 보내지 않음 (#196)")
+    void createComment_topLevelOnBalance_noNotice() {
+        // given - 대댓글이 아닌 댓글 (부모 없음)
+        Content content = mock(Content.class);
+        given(content.getContentType()).willReturn(ContentType.BALANCE);
+        given(authenticationFacade.getCurrentUser()).willReturn(mock(User.class));
+        given(contentRepository.findById(CONTENT_ID)).willReturn(Optional.of(content));
+        given(commentFactory.createComments(any(), any(), any())).willReturn(mock(CommunityComments.class));
+
+        // when
+        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 0L, "가드 패스가 낫죠"));
+
+        // then
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test
