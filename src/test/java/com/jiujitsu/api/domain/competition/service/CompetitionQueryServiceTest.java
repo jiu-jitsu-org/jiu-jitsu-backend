@@ -366,6 +366,27 @@ class CompetitionQueryServiceTest {
     }
 
     @Test
+    @DisplayName("상세: 이 대회 알림은 로그인 + 관심 + 알림 켜짐일 때만 true (비로그인·관심 없음·끔은 false)")
+    void detail_noticeEnabled() {
+        Competition competition = saveDetailed();
+        em.flush();
+        assertThat(competitionQueryService.getDetail(competition.getId()).noticeEnabled()).isFalse();
+
+        login();
+        assertThat(competitionQueryService.getDetail(competition.getId()).noticeEnabled()).isFalse();
+
+        CompetitionInterest interest = em.persist(new CompetitionInterest(em.find(Competition.class, competition.getId()), me));
+        em.flush();
+        assertThat(competitionQueryService.getDetail(competition.getId()).noticeEnabled()).isTrue();
+
+        interest.disableNotice();
+        em.flush();
+        CompetitionDetailResponse muted = competitionQueryService.getDetail(competition.getId());
+        assertThat(muted.noticeEnabled()).isFalse();
+        assertThat(muted.interested()).isTrue();
+    }
+
+    @Test
     @DisplayName("상세: 없거나 미공개면 COMPETITION_NOT_FOUND, 상세를 조회해도 조회수는 오르지 않는다")
     void detail_notFound_andNoViewSideEffect() {
         Long id = saveDetailed().getId();

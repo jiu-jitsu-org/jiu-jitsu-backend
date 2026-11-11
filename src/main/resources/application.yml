@@ -68,6 +68,11 @@ fcm:
   google_api: https://www.googleapis.com/auth/cloud-platform
   project_id: jiu-jitsu-lab
 
+# 관심 대회 마감 전날 알림 발송 시각 (Asia/Seoul). 마감은 대부분 그날 밤 11시 59분이라 전날 저녁에 보낸다. 오픈 뒤 조정
+competition:
+  deadline-notice:
+    cron: "0 0 18 * * *"
+
 # imageKit
 imagekit:
   private-key: ${IMAGEKIT_PRIVATE_KEY}

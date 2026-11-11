@@ -59,5 +59,7 @@ public record CompetitionDetailResponse(
         @Schema(description = "관심 수 (익명 집계)", example = "32")
             long interestCount,
         @Schema(description = "내 관심 여부 (비로그인은 false)")
-            boolean interested
+            boolean interested,
+        @Schema(description = "이 대회 마감 알림 받는지 (관심 등록 + 이 대회 알림 켜짐. 비로그인·관심 없음은 false). 설정의 관심 대회 알림이 꺼져 있으면 실제로는 오지 않음")
+            boolean noticeEnabled
 ) { }

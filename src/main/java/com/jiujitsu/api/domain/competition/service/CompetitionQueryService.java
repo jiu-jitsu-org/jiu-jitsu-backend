@@ -6,6 +6,7 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
 import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -25,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -108,8 +110,9 @@ public class CompetitionQueryService {
 
         List<Long> ids = List.of(competitionId);
         long interestCount = competitionInterestService.getInterestCounts(ids).getOrDefault(competitionId, 0L);
-        boolean interested = userId != null && competitionInterestService.getInterestedIds(userId, ids).contains(competitionId);
-        return competitionMapper.toDetail(competition, today, interestCount, interested);
+        Optional<CompetitionInterest> mine = userId == null ? Optional.empty() : competitionInterestService.findInterest(userId, competitionId);
+        return competitionMapper.toDetail(competition, today, interestCount,
+                mine.isPresent(), mine.map(CompetitionInterest::isNoticeEnabled).orElse(false));
     }
 
     /**

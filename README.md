@@ -150,6 +150,8 @@ src/main/java/com/jiujitsu/api/
 | GET | `/competitions/autocomplete?keyword=` | 등록 대회 검색 (프로필 대회 기록용 대회명 자동완성, 지난 대회까지) |
 | PUT | `/competitions/{competitionId}/interest` | 대회 관심 등록 (멱등, 처리 후 관심 상태·관심 수) |
 | DELETE | `/competitions/{competitionId}/interest` | 대회 관심 해제 (멱등, 미공개로 바뀐 대회도 해제 가능) |
+| PUT | `/competitions/{competitionId}/notice` | 이 대회 마감 알림 켜기 (관심 없으면 관심도 등록) |
+| DELETE | `/competitions/{competitionId}/notice` | 이 대회 마감 알림 끄기 (관심 유지) |
 | POST | `/competitions/{competitionId}/info-reports` | 대회 정보 제보 (정보가 달라요, 공개 대회. 같은 항목은 하루 3번까지) |
 
 ### 관리자 등록 대회 (`/api/admin/competitions`)
@@ -171,9 +173,12 @@ src/main/java/com/jiujitsu/api/
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/notice` | 알림 목록 조회 |
+| GET | `/notice` | 알림 목록 조회 (커뮤니티 알림 + 관심 대회 마감 알림) |
 | PUT | `/notice` | 모든 알림 읽음 처리 |
 | PUT | `/notice/{id}` | 개별 알림 읽음 처리 |
+| PUT | `/notice/setting/competition` | 처음 관심 등록 때 관심 대회 알림 질문 답 저장 |
+
+관심 대회 마감 알림은 매일 18시(`competition.deadline-notice.cron`) 내일 끝나는 얼리버드(할인 단계)·접수 마감을 관심 등록한 유저에게 보낸다 (`CompetitionDeadlineNoticeScheduler`)
 
 ### 앱 버전 (`/api/bootstrap`)
 

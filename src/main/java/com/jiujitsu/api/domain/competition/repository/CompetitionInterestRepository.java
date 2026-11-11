@@ -9,12 +9,15 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
 public interface CompetitionInterestRepository extends JpaRepository<CompetitionInterest, Long> {
 
     boolean existsByCompetitionIdAndUserId(Long competitionId, Long userId);
+
+    Optional<CompetitionInterest> findByCompetitionIdAndUserId(Long competitionId, Long userId);
 
     @Modifying
     @Query("DELETE FROM CompetitionInterest i WHERE i.competition.id = :competitionId AND i.user.id = :userId")

@@ -36,4 +36,23 @@ class NoticeFactoryTest {
         assertThat(notice.getRefId()).isEqualTo(100L);
         assertThat(notice.getIsRead()).isFalse();
     }
+
+    @Test
+    @DisplayName("제목·본문을 넘기면 그 값으로 저장한다 (대회 마감 알림)")
+    void createNotice_withTitleAndBody() {
+        Notice notice = noticeFactory.createNotice(
+                1L,
+                FcmPushType.COMPETITION_EARLY_BIRD_DEADLINE,
+                Map.of("type", PushActionType.COMPETITION_DETAIL.name(), "data", "7"),
+                null,
+                null,
+                "1차 얼리버드 마감 내일",
+                "서울 오픈 1차 얼리버드 마감이 내일이에요. 신청과 결제는 대회 공지에서"
+        );
+
+        assertThat(notice.getPushActionType()).isEqualTo(PushActionType.COMPETITION_DETAIL);
+        assertThat(notice.getData()).isEqualTo("7");
+        assertThat(notice.getTitle()).isEqualTo("1차 얼리버드 마감 내일");
+        assertThat(notice.getBody()).isEqualTo("서울 오픈 1차 얼리버드 마감이 내일이에요. 신청과 결제는 대회 공지에서");
+    }
 }

@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.competition.service;
 
 import com.jiujitsu.api.domain.competition.dto.CompetitionInterestResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionNoticeResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
 import com.jiujitsu.api.domain.competition.repository.CompetitionInterestRepository;
@@ -182,5 +183,80 @@ class CompetitionInterestServiceTest {
         assertThat(competitionInterestService.getInterestedIds(1L, List.of(1L, 2L))).containsExactly(2L);
         assertThat(competitionInterestService.getInterestedIds(1L, List.of())).isEmpty();
         verify(competitionInterestRepository).findInterestedCompetitionIds(anyLong(), any());
+    }
+
+    // ---------- 이 대회 알림 켜기·끄기 ----------
+
+    @Test
+    @DisplayName("알림 켜기: 관심이 없으면 관심을 켠 상태로 등록한다")
+    void enableNotice_registersInterest() {
+        givenLoginAndPublished();
+        given(competitionInterestRepository.findByCompetitionIdAndUserId(COMPETITION_ID, 1L)).willReturn(Optional.empty());
+        given(competitionInterestRepository.countByCompetitionId(COMPETITION_ID)).willReturn(1L);
+
+        CompetitionNoticeResponse response = competitionInterestService.enableNotice(COMPETITION_ID);
+
+        ArgumentCaptor<CompetitionInterest> saved = ArgumentCaptor.forClass(CompetitionInterest.class);
+        verify(competitionInterestRepository).save(saved.capture());
+        assertThat(saved.getValue().isNoticeEnabled()).isTrue();
+        assertThat(response).isEqualTo(new CompetitionNoticeResponse(COMPETITION_ID, true, 1L, true));
+    }
+
+    @Test
+    @DisplayName("알림 켜기: 관심이 있으면 새로 저장하지 않고 꺼진 알림만 켠다 (멱등)")
+    void enableNotice_existingInterest() {
+        givenLoginAndPublished();
+        CompetitionInterest interest = new CompetitionInterest(competition, user);
+        interest.disableNotice();
+        given(competitionInterestRepository.findByCompetitionIdAndUserId(COMPETITION_ID, 1L)).willReturn(Optional.of(interest));
+
+        competitionInterestService.enableNotice(COMPETITION_ID);
+        competitionInterestService.enableNotice(COMPETITION_ID);
+
+        assertThat(interest.isNoticeEnabled()).isTrue();
+        verify(competitionInterestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("알림 켜기: 없거나 미공개 대회면 COMPETITION_NOT_FOUND")
+    void enableNotice_unpublished_notFound() {
+        given(authenticationFacade.getCurrentUserForUpdate()).willReturn(user);
+        given(competitionRepository.findByIdAndPublishedTrue(COMPETITION_ID)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> competitionInterestService.enableNotice(COMPETITION_ID))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+        verify(competitionInterestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("알림 끄기: 관심은 그대로 두고 알림만 끈다. 미공개로 바뀐 대회도 끌 수 있다")
+    void disableNotice_keepsInterest() {
+        givenLoginAndExists();
+        CompetitionInterest interest = new CompetitionInterest(competition, user);
+        given(competitionInterestRepository.findByCompetitionIdAndUserId(COMPETITION_ID, 1L)).willReturn(Optional.of(interest));
+        given(competitionInterestRepository.countByCompetitionId(COMPETITION_ID)).willReturn(3L);
+
+        CompetitionNoticeResponse response = competitionInterestService.disableNotice(COMPETITION_ID);
+
+        assertThat(interest.isNoticeEnabled()).isFalse();
+        assertThat(response).isEqualTo(new CompetitionNoticeResponse(COMPETITION_ID, true, 3L, false));
+        verify(competitionInterestRepository, never()).deleteByCompetitionIdAndUserId(anyLong(), anyLong());
+        verify(competitionRepository, never()).findByIdAndPublishedTrue(any());
+    }
+
+    @Test
+    @DisplayName("알림 끄기: 관심이 없으면 아무것도 바꾸지 않는다, 없는 대회는 COMPETITION_NOT_FOUND")
+    void disableNotice_noInterest_andNotFound() {
+        givenLoginAndExists();
+        given(competitionInterestRepository.findByCompetitionIdAndUserId(COMPETITION_ID, 1L)).willReturn(Optional.empty());
+
+        assertThat(competitionInterestService.disableNotice(COMPETITION_ID).interested()).isFalse();
+        verify(competitionInterestRepository, never()).save(any());
+
+        given(competitionRepository.existsById(99L)).willReturn(false);
+        assertThatThrownBy(() -> competitionInterestService.disableNotice(99L))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
     }
 }

@@ -51,6 +51,15 @@ public interface CompetitionRepository extends JpaRepository<Competition, Long>,
 
     List<Competition> findAllByIdInAndPublishedTrue(Collection<Long> ids);
 
+    // date 에 끝나는 마감(접수 마감·얼리버드 마감·할인 단계 기한)이 있는 공개 대회 (마감 전날 알림 대상)
+    @Query("""
+    SELECT DISTINCT c FROM Competition c
+    LEFT JOIN c.fees f
+    WHERE c.published = true
+      AND (c.registrationDeadline = :date OR c.earlyBirdDeadline = :date OR f.until = :date)
+    """)
+    List<Competition> findPublishedWithDeadlineOn(@Param("date") LocalDate date);
+
     // 조회수 +1 을 DB 에서 한 번에 (읽고 +1 해 저장하면 동시 요청 시 증가가 빠진다). 공개 대회만, 바뀐 행 수 반환
     // 벌크 UPDATE 라 updated_at·@PreUpdate 를 건드리지 않는다 — 조회는 대회 정보 수정이 아니다
     @Modifying(clearAutomatically = true)

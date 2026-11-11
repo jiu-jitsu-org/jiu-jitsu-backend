@@ -16,11 +16,17 @@ public class NoticeFactory {
      */
     public Notice createNotice(Long userId, FcmPushType pushType, Map<String, String> data,
                                Long senderUserId, Long refId) {
+        return createNotice(userId, pushType, data, senderUserId, refId, pushType.getTitle(), pushType.getBody());
+    }
+
+    // 제목·본문을 발송 지점이 정하는 알림 (대회 마감 알림)
+    public Notice createNotice(Long userId, FcmPushType pushType, Map<String, String> data,
+                               Long senderUserId, Long refId, String title, String body) {
          return Notice.builder()
                 .userId(userId)
                 .pushType(pushType)
-                .title(pushType.getTitle())
-                .body(pushType.getBody())
+                .title(title)
+                .body(body)
                 .pushActionType(PushActionType.from(data.get("type")))
                 .data(data.get("data"))
                 .senderUserId(senderUserId)

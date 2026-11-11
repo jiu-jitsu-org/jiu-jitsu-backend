@@ -28,7 +28,9 @@ public class NoticeMapper {
                 userNoticeSetting.getServiceEnabled(),
                 userNoticeSetting.getCommunityEnabled(),
                 userNoticeSetting.getMarketingEnabled(),
-                userNoticeSetting.getMarketingAgreedAt()
+                userNoticeSetting.getMarketingAgreedAt(),
+                userNoticeSetting.isCompetitionEnabled(),
+                userNoticeSetting.isCompetitionNoticeAsked()
         );
     }
 

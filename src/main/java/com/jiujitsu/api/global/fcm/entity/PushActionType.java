@@ -9,7 +9,8 @@ import lombok.Getter;
 @Getter
 public enum PushActionType {
     BOARD_DETAIL,    // 게시물 상세
-    BALANCE_DETAIL;  // 밸런스 게임 상세
+    BALANCE_DETAIL,  // 밸런스 게임 상세
+    COMPETITION_DETAIL; // 대회 상세 (data = 대회 id)
 
     public static PushActionType from(String value) {
         for (PushActionType type : PushActionType.values()) {

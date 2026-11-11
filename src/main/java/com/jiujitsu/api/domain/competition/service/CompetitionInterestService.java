@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.competition.service;
 
 import com.jiujitsu.api.domain.competition.dto.CompetitionInterestResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionNoticeResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
 import com.jiujitsu.api.domain.competition.repository.CompetitionInterestRepository;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -53,6 +55,43 @@ public class CompetitionInterestService {
 
         competitionInterestRepository.deleteByCompetitionIdAndUserId(competitionId, user.getId());
         return new CompetitionInterestResponse(competitionId, false, competitionInterestRepository.countByCompetitionId(competitionId));
+    }
+
+    /**
+     * 이 대회 마감 알림 켜기. 관심이 없으면 관심도 함께 등록한다 (켠 상태로). 이미 켜져 있으면 그대로 (멱등)
+     * 관심 등록과 같이 공개 대회만, 유저 행을 잠가 같은 유저의 동시 요청을 차례로 처리한다
+     */
+    public CompetitionNoticeResponse enableNotice(Long competitionId) {
+        User user = authenticationFacade.getCurrentUserForUpdate();
+        Competition competition = getPublishedCompetition(competitionId);
+
+        competitionInterestRepository.findByCompetitionIdAndUserId(competitionId, user.getId())
+                .ifPresentOrElse(CompetitionInterest::enableNotice,
+                        () -> competitionInterestRepository.save(new CompetitionInterest(competition, user)));
+        return new CompetitionNoticeResponse(competitionId, true, competitionInterestRepository.countByCompetitionId(competitionId), true);
+    }
+
+    /**
+     * 이 대회 마감 알림 끄기. 관심은 그대로 둔다. 관심이 없으면 아무것도 하지 않는다 (멱등)
+     * 관심 해제와 같이 공개 여부는 보지 않는다 — 미공개로 바뀐 대회도 끌 수 있게
+     */
+    public CompetitionNoticeResponse disableNotice(Long competitionId) {
+        User user = authenticationFacade.getCurrentUserForUpdate();
+        if (!competitionRepository.existsById(competitionId)) {
+            throw new ErrorException(ErrorCode.COMPETITION_NOT_FOUND);
+        }
+
+        Optional<CompetitionInterest> interest = competitionInterestRepository.findByCompetitionIdAndUserId(competitionId, user.getId());
+        interest.ifPresent(CompetitionInterest::disableNotice);
+        return new CompetitionNoticeResponse(competitionId, interest.isPresent(), competitionInterestRepository.countByCompetitionId(competitionId), false);
+    }
+
+    /**
+     * 이 유저의 이 대회 관심 (상세의 내 관심 여부·이 대회 알림 상태용). 없으면 empty
+     */
+    @Transactional(readOnly = true)
+    public Optional<CompetitionInterest> findInterest(Long userId, Long competitionId) {
+        return competitionInterestRepository.findByCompetitionIdAndUserId(competitionId, userId);
     }
 
     /**

@@ -38,7 +38,7 @@ public class CompetitionMapper {
     }
 
     // 공개 대회만 (toListItem 과 같음)
-    public CompetitionDetailResponse toDetail(Competition competition, LocalDate today, long interestCount, boolean interested) {
+    public CompetitionDetailResponse toDetail(Competition competition, LocalDate today, long interestCount, boolean interested, boolean noticeEnabled) {
         return new CompetitionDetailResponse(
                 today,
                 competition.getId(),
@@ -64,7 +64,8 @@ public class CompetitionMapper {
                 competition.getLastVerifiedDate(),
                 competition.getViewCount(),
                 interestCount,
-                interested
+                interested,
+                noticeEnabled
         );
     }
 }

@@ -19,4 +19,14 @@ public class FcmPushEventPublisher {
         }
         eventPublisher.publishEvent(new FcmPushRequestedEvent(recipientUserId, pushType, data));
     }
+
+    /**
+     * 제목·본문을 발송 지점이 정하는 알림 (대회 마감 알림처럼 대상마다 문구가 다른 경우)
+     */
+    public void publish(Long recipientUserId, FcmPushType pushType, Map<String, String> data, String title, String body) {
+        if (recipientUserId == null || pushType == null) {
+            return;
+        }
+        eventPublisher.publishEvent(new FcmPushRequestedEvent(recipientUserId, pushType, data, title, body));
+    }
 }

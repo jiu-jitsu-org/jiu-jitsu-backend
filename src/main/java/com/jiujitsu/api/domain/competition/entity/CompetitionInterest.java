@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.data.annotation.CreatedDate;
@@ -47,8 +48,22 @@ public class CompetitionInterest {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    // 이 대회 마감 알림 (관심은 두고 알림만 끌 수 있다). 관심을 새로 등록하면 켜진 상태로 시작
+    // DB 기본값은 이 칸이 생기기 전 관심 행을 켜진 상태로 채우기 위함
+    @ColumnDefault("true")
+    @Column(name = "notice_enabled", nullable = false)
+    private boolean noticeEnabled = true;
+
     public CompetitionInterest(Competition competition, User user) {
         this.competition = competition;
         this.user = user;
+    }
+
+    public void enableNotice() {
+        this.noticeEnabled = true;
+    }
+
+    public void disableNotice() {
+        this.noticeEnabled = false;
     }
 }
