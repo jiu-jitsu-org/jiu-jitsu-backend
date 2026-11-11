@@ -105,7 +105,7 @@ class NoticeServiceCompetitionTest {
         given(boardHideService.getHiddenContentIds()).willReturn(List.of(7L));
         given(reportService.getReportedTargetIds(ReportType.BOARD)).willReturn(List.of());
         given(userBlockService.getBlockedUserIds()).willReturn(List.of());
-        given(noticeRepository.findByUserIdOrderByCreatedAtDesc(1L)).willReturn(List.of(
+        given(noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(1L)).willReturn(List.of(
                 competitionNotice(1, "7"), competitionNotice(2, "8"), boardNotice(3, "7")));
         given(competitionRepository.findAllByIdInAndPublishedTrue(Set.of(7L, 8L)))
                 .willReturn(List.of(Competition.builder().id(7L).name("대회7").published(true).build()));

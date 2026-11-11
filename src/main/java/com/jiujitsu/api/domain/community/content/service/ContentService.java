@@ -11,15 +11,14 @@ import com.jiujitsu.api.domain.community.content.mapper.ContentSaveMapper;
 import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.community.content.repository.ContentSaveRepository;
-import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.domain.notice.event.LikeNoticeEvent;
 import com.jiujitsu.api.domain.user.entity.User;
-import com.jiujitsu.api.domain.user.repository.UserBlockRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
-import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,9 +35,7 @@ public class ContentService {
     private final ContentLikeMapper contentLikeMapper;
     private final ContentSaveRepository contentSaveRepository;
     private final ContentSaveMapper contentSaveMapper;
-    private final FcmPushEventPublisher fcmPushEventPublisher;
-    private final NoticeService noticeService;
-    private final UserBlockRepository userBlockRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 게시물 좋아요 등록/삭제
@@ -64,23 +61,16 @@ public class ContentService {
             contentLikeRepository.save(newLike);
 
             if (!Objects.equals(user.getId(), content.getCreatedBy().getId())) {
-                FcmPushType pushType = FcmPushType.CONTENTS_LIKE;
-
+                // 알림은 커밋 뒤 개수 기준으로 처리한다 (#196, LikeNoticeService)
                 // 딥링크 목적지는 푸시 종류가 아니라 대상 컨텐츠 타입이 결정한다 (게시글 / 밸런스 게임)
-                Map<String, String> pushData = new HashMap<>();
-                pushData.put("type", content.getContentType().getPushActionType().name());
-                pushData.put("data", content.getId().toString());
-
-                Long contentOwnerId = content.getCreatedBy().getId();
-                // 게시물 주인이 좋아요 누른 사람을 차단한 경우 → 알림/푸시 안 함
-                if (userBlockRepository.existsByBlockerIdAndBlockedId(contentOwnerId, user.getId())) {
-                    return contentLikeMapper.toContentLikeResponse(content, newLike,
-                            getContentLikeCount(List.of(content.getId())).getOrDefault(content.getId(), 0L));
-                }
-                if (noticeService.isContentNoticeEnabled(contentOwnerId, content.getId())) {
-                    fcmPushEventPublisher.publish(contentOwnerId, pushType, pushData);
-                    noticeService.saveNotice(contentOwnerId, pushType, pushData, user.getId(), null);
-                }
+                eventPublisher.publishEvent(new LikeNoticeEvent(
+                        content.getCreatedBy().getId(),
+                        content.getId(),
+                        null,
+                        FcmPushType.CONTENTS_LIKE,
+                        Map.of("type", content.getContentType().getPushActionType().name(),
+                               "data", content.getId().toString())
+                ));
             }
         }
 

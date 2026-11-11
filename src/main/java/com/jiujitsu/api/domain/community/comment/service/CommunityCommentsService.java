@@ -26,6 +26,7 @@ import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
+import com.jiujitsu.api.domain.notice.event.LikeNoticeEvent;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -252,14 +253,14 @@ public class CommunityCommentsService {
                 // data 는 상세 화면을 여는 데 쓰이므로 commentId 가 아닌 contentId 를 보낸다.
                 // 나머지 3개 푸시와 동일한 규약이며, 밸런스 상세(GET /community/balance-game/{contentId})
                 // 진입에도 contentId 가 필요하다. (#136)
-                eventPublisher.publishEvent(new CommentNoticeEvent(
+                // 알림은 커밋 뒤 댓글별 개수 기준으로 처리한다 (#196, LikeNoticeService)
+                eventPublisher.publishEvent(new LikeNoticeEvent(
                         comment.getCreatedBy().getId(),
                         content.getId(),
+                        comment.getId(),
                         FcmPushType.COMMENTS_LIKE,
                         Map.of("type", content.getContentType().getPushActionType().name(),
-                               "data", content.getId().toString()),
-                        user.getId(),
-                        comment.getId()
+                               "data", content.getId().toString())
                 ));
             }
         }

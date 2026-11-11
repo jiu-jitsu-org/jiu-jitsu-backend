@@ -23,6 +23,6 @@ public class NoticeCleanupService {
     @Transactional
     public void deleteExpiredNotices() {
         LocalDateTime threshold = LocalDateTime.now().minusDays(RETENTION_DAYS);
-        noticeRepository.deleteByCreatedAtBefore(threshold);
+        noticeRepository.deleteByNotifiedAtBefore(threshold);
     }
 }

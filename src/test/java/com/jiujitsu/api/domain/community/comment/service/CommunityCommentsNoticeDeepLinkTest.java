@@ -15,6 +15,7 @@ import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.community.content.repository.ContentRepository;
 import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
+import com.jiujitsu.api.domain.notice.event.LikeNoticeEvent;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
@@ -139,9 +140,15 @@ class CommunityCommentsNoticeDeepLinkTest {
         // when
         communityCommentsService.createCommentLike(new CommentLikeRequest(100L));
 
-        // then
-        CommentNoticeEvent event = capturePublishedEvents(1).get(0);
+        // then - 좋아요는 개수 기준 알림 이벤트로 나간다 (#196)
+        ArgumentCaptor<LikeNoticeEvent> captor = ArgumentCaptor.forClass(LikeNoticeEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        LikeNoticeEvent event = captor.getValue();
         assertThat(event.pushType()).isEqualTo(FcmPushType.COMMENTS_LIKE);
+        assertThat(event.recipientUserId()).isEqualTo(OTHER_ID);
+        // 카드는 좋아요 받은 댓글 기준 한 장
+        assertThat(event.commentId()).isEqualTo(100L);
+        assertThat(event.groupKey()).isEqualTo("COMMENTS_LIKE:100");
         assertThat(event.pushData().get("type")).isEqualTo("BALANCE_DETAIL");
         // 상세 진입에 쓰이는 data 는 commentId 가 아니라 contentId 여야 한다 (#136)
         assertThat(event.pushData().get("data")).isEqualTo(CONTENT_ID.toString());
