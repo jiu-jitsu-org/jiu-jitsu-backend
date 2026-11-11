@@ -104,4 +104,19 @@ class BalanceGameRepositoryTest {
 
         assertThat(shownInBuffer).isEqualTo(shownWhileOpen);
     }
+
+    @Test
+    @DisplayName("마감이 같고 시작이 다른 게임: 먼저 시작한 게임이 하루 내내 메인에 남고 버퍼 결과도 그 게임 (나중에 등록·시작한 게임으로 바뀌지 않음)")
+    void sameEndAtKeepsEarlierStartedGame() {
+        LocalDateTime endAt = LocalDateTime.of(2026, 11, 12, 23, 59, 59);
+        saveGame("X-09시", LocalDateTime.of(2026, 11, 12, 9, 0), endAt);         // 먼저 등록(id 작음), 늦게 시작
+        BalanceGame y = saveGame("Y-00시30분", LocalDateTime.of(2026, 11, 12, 0, 30), endAt);
+
+        assertThat(balanceGameRepository.findOpen(LocalDateTime.of(2026, 11, 12, 8, 0), PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(y.getId());
+        assertThat(balanceGameRepository.findOpen(LocalDateTime.of(2026, 11, 12, 12, 0), PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(y.getId());
+        assertThat(balanceGameRepository.findClosed(LocalDateTime.of(2026, 11, 13, 0, 10), PageRequest.of(0, 1)))
+                .extracting(BalanceGame::getId).containsExactly(y.getId());
+    }
 }
