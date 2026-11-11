@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@DynamicUpdate  // 바뀐 컬럼만 UPDATE — 읽음 처리와 좋아요 푸시(기준·제목·시각)가 겹쳐도 서로 덮어쓰지 않게
+@DynamicUpdate  // 바뀐 컬럼만 UPDATE — 읽음 처리가 겹쳐도 좋아요 푸시가 올린 기준·제목·시각을 덮지 않게 (읽음 여부는 마지막 쓰기가 이긴다)
 public class Notice extends BaseEntity {
 
     public static final String GROUP_KEY_UNIQUE_CONSTRAINT = "uk_notice_user_group_key";

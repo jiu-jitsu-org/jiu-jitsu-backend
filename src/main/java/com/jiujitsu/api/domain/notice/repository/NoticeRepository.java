@@ -29,5 +29,5 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     // 푸시가 한 번도 안 간 좋아요 카드(like_pushed_count 0)는 잃을 기준이 없어 같이 지운다
     @Modifying
     @Query("DELETE FROM Notice n WHERE n.notifiedAt < :threshold AND (n.groupKey IS NULL OR n.likePushedCount = 0)")
-    void deleteExpiredExceptLikeCards(@Param("threshold") LocalDateTime threshold);
+    void deleteExpiredKeepingPushedLikeCards(@Param("threshold") LocalDateTime threshold);
 }

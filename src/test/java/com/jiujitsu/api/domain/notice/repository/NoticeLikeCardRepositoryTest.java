@@ -96,7 +96,7 @@ class NoticeLikeCardRepositoryTest {
         Notice recent = comment(1L, T.minusDays(29));
         em.flush();
 
-        noticeRepository.deleteExpiredExceptLikeCards(T.minusDays(30));
+        noticeRepository.deleteExpiredKeepingPushedLikeCards(T.minusDays(30));
         em.clear();
 
         assertThat(noticeRepository.findById(old.getId())).isEmpty();
@@ -104,7 +104,7 @@ class NoticeLikeCardRepositoryTest {
     }
 
     @Test
-    @DisplayName("읽음 처리는 is_read 만 쓴다 — 그 사이 다른 트랜잭션이 올린 기준(like_pushed_count)·제목·시각을 옛 값으로 덮지 않는다")
+    @DisplayName("읽음 처리는 is_read 만 쓴다 — 그 사이 다른 트랜잭션이 올린 기준(like_pushed_count)·제목·시각을 옛 값으로 덮지 않는다 (읽음 여부는 마지막 쓰기)")
     void setRead_doesNotOverwriteConcurrentPush() {
         Notice card = noticeRepository.saveAndFlush(noticeFactory.createLikeCard(like(1L, 10L)));
         card.pushLike(5, "내 게시글에 좋아요가 5개 달렸어요", T.minusHours(1));
@@ -135,7 +135,7 @@ class NoticeLikeCardRepositoryTest {
                 .executeUpdate();
         em.clear();
 
-        noticeRepository.deleteExpiredExceptLikeCards(T.minusDays(30));
+        noticeRepository.deleteExpiredKeepingPushedLikeCards(T.minusDays(30));
         em.clear();
 
         assertThat(noticeRepository.findById(neverPushed.getId())).isEmpty();
@@ -148,7 +148,7 @@ class NoticeLikeCardRepositoryTest {
         card.pushLike(10, "내 게시글에 좋아요가 10개 달렸어요", T.minusDays(31));
         em.flush();
 
-        noticeRepository.deleteExpiredExceptLikeCards(T.minusDays(30));
+        noticeRepository.deleteExpiredKeepingPushedLikeCards(T.minusDays(30));
         em.clear();
 
         assertThat(noticeRepository.findForUpdateByUserIdAndGroupKey(1L, "CONTENTS_LIKE:10"))
