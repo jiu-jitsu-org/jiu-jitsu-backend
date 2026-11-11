@@ -30,7 +30,7 @@ import java.time.LocalDateTime;
 @Transactional
 public class CompetitionInfoReportService {
 
-    static final int DAILY_LIMIT = 3;   // 같은 유저·대회·항목, 하루(서버 기준 자정부터) 최대 제보 수
+    static final int DAILY_LIMIT = 3;   // 같은 유저·대회·항목, 하루(서울 자정부터, ClockConfig) 최대 제보 수
 
     private final CompetitionInfoReportRepository competitionInfoReportRepository;
     private final CompetitionRepository competitionRepository;

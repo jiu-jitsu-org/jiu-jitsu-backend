@@ -34,6 +34,7 @@ public class CompetitionInfoReportController {
     )
     @LoginErrorExamples
     @ApiErrorCodeExamples({
+            ErrorCode.REQUIRED_PARAMETER,
             ErrorCode.WRONG_PARAMETER,
             ErrorCode.COMPETITION_NOT_FOUND,
             ErrorCode.COMPETITION_INFO_REPORT_LIMIT_EXCEEDED
