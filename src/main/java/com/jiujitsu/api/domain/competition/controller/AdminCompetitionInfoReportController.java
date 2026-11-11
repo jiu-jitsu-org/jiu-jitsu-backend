@@ -6,6 +6,7 @@ import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -24,7 +25,7 @@ public class AdminCompetitionInfoReportController {
 
     @Operation(summary = "대회 정보 제보 목록", description = "대회 정보 제보를 최신순으로 페이징 조회합니다. 정렬은 고정이라 sort 는 무시합니다. (ROLE_ADMIN 필요)")
     @GetMapping
-    public Page<AdminCompetitionInfoReportResponse> getReports(@PageableDefault(size = 20) Pageable pageable) {
+    public Page<AdminCompetitionInfoReportResponse> getReports(@ParameterObject @PageableDefault(size = 20) Pageable pageable) {
         return competitionInfoReportService.getAdminReports(pageable);
     }
 }
