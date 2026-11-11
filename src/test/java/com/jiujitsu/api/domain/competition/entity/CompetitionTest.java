@@ -8,7 +8,9 @@ import org.junit.jupiter.api.Test;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,6 +77,15 @@ class CompetitionTest {
     private static final LocalDate EARLY_BIRD = LocalDate.of(2026, 11, 8);
     private static final LocalDate DEADLINE = LocalDate.of(2026, 11, 15);
     private static final LocalDate OPEN_DATE = LocalDate.of(2026, 11, 22);
+
+    private static CompetitionFee fee(String label, int amount, LocalDate until) {
+        return new CompetitionFee(label, amount, until);
+    }
+
+    // 얼리버드(~EARLY_BIRD) → 기본 참가비 두 단계
+    private static List<CompetitionFee> twoTiers() {
+        return new ArrayList<>(List.of(fee("얼리버드", 60000, EARLY_BIRD), fee("기본 참가비", 70000, null)));
+    }
 
     private static Competition.CompetitionBuilder event() {
         return Competition.builder()
@@ -144,7 +155,7 @@ class CompetitionTest {
     @Test
     @DisplayName("일정·참가비가 올바르면 검증을 통과하고, 기존 카탈로그 엔트리도 통과한다")
     void validateEventInfo_valid() {
-        assertThatCode(() -> event().earlyBirdFee(60000).baseFee(70000).build().validateEventInfo()).doesNotThrowAnyException();
+        assertThatCode(() -> event().fees(twoTiers()).build().validateEventInfo()).doesNotThrowAnyException();
         assertThatCode(() -> event().earlyBirdDeadline(null).registrationStartDate(null).build().validateEventInfo()).doesNotThrowAnyException();
         assertThatCode(() -> Competition.of("서울 오픈", null).validateEventInfo()).doesNotThrowAnyException();
     }
@@ -166,11 +177,46 @@ class CompetitionTest {
     }
 
     @Test
-    @DisplayName("참가비가 음수이거나, 얼리버드 금액만 있고 얼리버드 마감일이 없으면 COMPETITION_INVALID_EVENT_INFO")
-    void validateEventInfo_fees() {
-        assertInvalid(event().baseFee(-1).build());
-        assertInvalid(event().earlyBirdFee(-1).build());
-        assertInvalid(event().earlyBirdDeadline(null).earlyBirdFee(60000).build());
+    @DisplayName("참가비 단계: 1·2차 얼리버드처럼 여러 단계, 기본 참가비만, 참가비 모름(빈 목록)은 통과")
+    void validateEventInfo_fees_valid() {
+        LocalDate first = EARLY_BIRD.minusDays(14);
+        assertThatCode(() -> event().fees(new ArrayList<>(List.of(
+                fee("1차 얼리버드", 50000, first), fee("2차 얼리버드", 60000, EARLY_BIRD), fee("기본 참가비", 70000, null))))
+                .build().validateEventInfo()).doesNotThrowAnyException();
+        assertThatCode(() -> event().earlyBirdDeadline(null).fees(new ArrayList<>(List.of(fee("참가비", 70000, null))))
+                .build().validateEventInfo()).doesNotThrowAnyException();
+        assertThatCode(() -> event().build().validateEventInfo()).doesNotThrowAnyException();   // 얼리버드 마감일은 알고 참가비는 모름
+        assertThatCode(() -> event().fees(new ArrayList<>(List.of(fee("얼리버드", 60000, EARLY_BIRD)))).build().validateEventInfo())
+                .doesNotThrowAnyException();   // 기본 참가비 미확인
+    }
+
+    @Test
+    @DisplayName("참가비 단계: 금액 0 이하·빈 이름, 기한 순서 어긋남·같은 기한, 기한 없는 단계가 중간, 접수 마감 뒤 기한이면 COMPETITION_INVALID_EVENT_INFO")
+    void validateEventInfo_fees_invalidTiers() {
+        assertInvalid(event().fees(new ArrayList<>(List.of(fee("얼리버드", 0, EARLY_BIRD), fee("기본", 70000, null)))).build());
+        assertInvalid(event().fees(new ArrayList<>(List.of(fee(" ", 60000, EARLY_BIRD), fee("기본", 70000, null)))).build());
+        assertInvalid(event().fees(new ArrayList<>(List.of(fee("2차", 60000, EARLY_BIRD), fee("1차", 50000, EARLY_BIRD.minusDays(7))))).build());
+        assertInvalid(event().fees(new ArrayList<>(List.of(fee("1차", 50000, EARLY_BIRD), fee("2차", 60000, EARLY_BIRD)))).build());
+        assertInvalid(event().fees(new ArrayList<>(List.of(fee("기본", 70000, null), fee("얼리버드", 60000, EARLY_BIRD)))).build());
+        assertInvalid(event().earlyBirdDeadline(DEADLINE)
+                .fees(new ArrayList<>(List.of(fee("얼리버드", 60000, DEADLINE.plusDays(1))))).build());
+    }
+
+    @Test
+    @DisplayName("얼리버드 기준은 일정 하나: 기한 있는 단계가 있는데 얼리버드 마감일이 없거나, 마감일이 어느 단계 기한과도 다르면 COMPETITION_INVALID_EVENT_INFO")
+    void validateEventInfo_fees_earlyBirdDeadlineIsSingleSource() {
+        assertInvalid(event().earlyBirdDeadline(null).fees(twoTiers()).build());
+        assertInvalid(event().earlyBirdDeadline(EARLY_BIRD.minusDays(1)).fees(twoTiers()).build());
+        assertInvalid(event().fees(new ArrayList<>(List.of(fee("참가비", 70000, null)))).build());   // 마감일은 있는데 얼리버드 단계가 없음
+    }
+
+    @Test
+    @DisplayName("참가비 단계는 밖에서 바꿀 수 없다")
+    void fees_unmodifiable() {
+        Competition competition = event().fees(twoTiers()).build();
+
+        assertThat(competition.getFees()).extracting(CompetitionFee::getLabel).containsExactly("얼리버드", "기본 참가비");
+        assertThatThrownBy(() -> competition.getFees().clear()).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test

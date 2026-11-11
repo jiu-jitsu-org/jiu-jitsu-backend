@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.competition.repository;
 
 import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
 import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
 import com.jiujitsu.api.domain.competition.service.CompetitionService;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -14,6 +15,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -166,6 +169,34 @@ class CompetitionRepositoryTest {
 
         assertThat(competitionRepository.findById(id).orElseThrow().getUniforms())
                 .containsExactlyInAnyOrder(CompetitionUniform.GI, CompetitionUniform.NO_GI);
+    }
+
+    @Test
+    @DisplayName("참가비 단계·시작 시각·경기장이 입력 순서대로 저장되고, 대회를 지우면 단계도 함께 지워진다")
+    void savesFeesInOrder_andCascades() {
+        LocalDate earlyBird = LocalDate.of(2026, 11, 8);
+        Competition event = Competition.builder()
+                .name("서울 오픈").searchName(Competition.normalize("서울 오픈")).competitionYear(2026)
+                .published(true).openDate(LocalDate.of(2026, 11, 22)).startTime(LocalTime.of(9, 0))
+                .place("서울 송파").venue("올림픽홀")
+                .earlyBirdDeadline(earlyBird).registrationDeadline(LocalDate.of(2026, 11, 15))
+                .fees(new ArrayList<>(List.of(
+                        new CompetitionFee("1차 얼리버드", 50000, LocalDate.of(2026, 11, 1)),
+                        new CompetitionFee("2차 얼리버드", 60000, earlyBird),
+                        new CompetitionFee("기본 참가비", 70000, null))))
+                .build();
+        Long id = competitionRepository.saveAndFlush(event).getId();
+        em.clear();
+
+        Competition saved = competitionRepository.findById(id).orElseThrow();
+        assertThat(saved.getFees()).extracting(CompetitionFee::getLabel).containsExactly("1차 얼리버드", "2차 얼리버드", "기본 참가비");
+        assertThat(saved.getFees().get(2).getUntil()).isNull();
+        assertThat(saved.getStartTime()).isEqualTo(LocalTime.of(9, 0));
+        assertThat(saved.getVenue()).isEqualTo("올림픽홀");
+
+        em.createNativeQuery("DELETE FROM competitions WHERE id = " + id).executeUpdate();
+        Number left = (Number) em.createNativeQuery("SELECT COUNT(*) FROM competition_fees WHERE competition_id = " + id).getSingleResult();
+        assertThat(left.longValue()).isZero();
     }
 
     @Test

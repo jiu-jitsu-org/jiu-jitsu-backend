@@ -13,6 +13,8 @@ import org.hibernate.annotations.ColumnDefault;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -70,12 +72,20 @@ public class Competition extends BaseEntity {
     @Column(name = "open_date")
     private LocalDate openDate;              // 대회일
 
+    @Column(name = "start_time")
+    private LocalTime startTime;             // 시작 시각 (모르면 null)
+
     @Enumerated(EnumType.STRING)
     @Column(name = "region", length = 20)
     private CompetitionRegion region;        // 지역(시·도)
 
+    // 장소는 표시용 글자 두 칸. 필터는 region(시·도)으로만 한다
+    // place 는 목록에도 쓰는 짧은 표기라 대회마다 다르게 적는다("서울 송파", "수원", "부산") — region 에서 조합하지 않는다
     @Column(name = "place", length = 200)
-    private String place;                    // 장소 (시·군 + 체육관명)
+    private String place;                    // 짧은 장소 표기 (예: "서울 송파")
+
+    @Column(name = "venue", length = 100)
+    private String venue;                    // 경기장 이름 (상세에서 place 뒤에 붙임)
 
     @Column(name = "host", length = 100)
     private String host;                     // 주최 단체
@@ -114,12 +124,17 @@ public class Competition extends BaseEntity {
     @Column(name = "registration_deadline")
     private LocalDate registrationDeadline;  // 접수 마감
 
-    // 참가비 (성인 1종목 기준 등은 feeNote 로 보조 표기)
-    @Column(name = "early_bird_fee")
-    private Integer earlyBirdFee;            // 얼리버드 금액 (없으면 null)
-
-    @Column(name = "base_fee")
-    private Integer baseFee;                 // 기본 참가비
+    // 참가비 단계 — 대회마다 단계 수가 달라(얼리버드·기본, 1차·2차 얼리버드 등) 목록으로 둔다. 모르면 비어 있음
+    // uniforms 와 같은 값 객체 컬렉션. 입력 순서 = 표시 순서(fee_order), 대회 행이 지워지면 함께 지운다
+    @ElementCollection
+    @CollectionTable(name = "competition_fees",
+            joinColumns = @JoinColumn(name = "competition_id"),
+            foreignKey = @ForeignKey(name = "fk_competition_fees_competition",
+                    foreignKeyDefinition = "foreign key (competition_id) references competitions (id) on delete cascade"))
+    @OrderColumn(name = "fee_order")
+    @BatchSize(size = 100)
+    @Builder.Default
+    private List<CompetitionFee> fees = new ArrayList<>();
 
     @Column(name = "fee_note", length = 100)
     private String feeNote;                  // 예: "성인 1종목 기준"
@@ -130,7 +145,7 @@ public class Competition extends BaseEntity {
 
     @ColumnDefault("0")
     @Column(name = "view_count", nullable = false)
-    private long viewCount;                  // 조회수 (증가 로직은 대회 상세 조회 이슈 #186)
+    private long viewCount;                  // 조회수 (CompetitionRepository#incrementViewCount 로만 올린다)
 
     // 웹 페이지(공개 일정)에서 복사한 대회명에 섞여 들어오는 문자를 정리한다
     // - \s 는 ASCII 공백만 잡으므로 NBSP(U+00A0)·전각 공백(U+3000) 등 유니코드 공백(\p{Z})도 함께 본다
@@ -150,6 +165,13 @@ public class Competition extends BaseEntity {
      */
     public Set<CompetitionUniform> getUniforms() {
         return Collections.unmodifiableSet(uniforms);
+    }
+
+    /**
+     * 참가비 단계(읽기 전용, 입력 순서)
+     */
+    public List<CompetitionFee> getFees() {
+        return Collections.unmodifiableList(fees);
     }
 
     /**
@@ -192,7 +214,7 @@ public class Competition extends BaseEntity {
      * 이벤트 정보 불변식 검증. 위반이면 COMPETITION_INVALID_EVENT_INFO
      * - 공개 대회는 대회일이 있어야 한다
      * - 일정 순서: 접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 (비어 있는 값은 건너뛰고 채워진 것끼리 비교)
-     * - 참가비는 0 이상, 얼리버드 금액이 있으면 얼리버드 마감일도 있어야 한다
+     * - 참가비 단계: validateFees 참고
      * 저장 직전(@PrePersist/@PreUpdate)에 항상 확인해 어떤 쓰기 경로로도 잘못된 데이터가 저장되지 않게 한다.
      * 쓰기 쪽(관리자 입력·정보 수집)은 저장 전에 직접 호출해 400 으로 응답할 것 —
      * 커밋 시점 flush 에서 터지면 트랜잭션 예외로 감싸져 에러 코드가 사라진다
@@ -211,16 +233,48 @@ public class Competition extends BaseEntity {
                 throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
             }
         }
-        if (isNegative(earlyBirdFee) || isNegative(baseFee)) {
-            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
-        }
-        if (earlyBirdFee != null && earlyBirdDeadline == null) {
-            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
-        }
+        validateFees();
     }
 
-    private static boolean isNegative(Integer fee) {
-        return fee != null && fee < 0;
+    /**
+     * 참가비 단계 불변식 (단계가 없으면 = 참가비 모름, 검사할 것 없음)
+     * - 금액은 0보다 크고 이름이 비어 있지 않다
+     * - 기한은 목록 순서대로 엄격히 오름차순이고, 기한 없는 단계(기본 참가비)는 맨 마지막 하나만
+     * - 기한은 접수 마감을 넘지 않는다
+     * - 얼리버드 마감일은 일정의 earlyBirdDeadline 하나가 기준이다(상태·강조·알림이 쓰는 날짜).
+     *   기한 있는 단계가 있으면 earlyBirdDeadline 이 있어야 하고, 그 날짜는 어느 단계의 기한과 같아야 한다 —
+     *   일정과 참가비가 서로 다른 얼리버드 날짜를 보여 주지 않게
+     */
+    private void validateFees() {
+        LocalDate previousUntil = null;
+        for (int i = 0; i < fees.size(); i++) {
+            CompetitionFee fee = fees.get(i);
+            boolean last = i == fees.size() - 1;
+            if (fee == null || fee.getAmount() <= 0 || fee.getLabel() == null || fee.getLabel().isBlank()) {
+                throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+            }
+            LocalDate until = fee.getUntil();
+            if (until == null) {
+                if (!last) {
+                    throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+                }
+                continue;
+            }
+            if ((previousUntil != null && !until.isAfter(previousUntil))
+                    || (registrationDeadline != null && until.isAfter(registrationDeadline))) {
+                throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+            }
+            previousUntil = until;
+        }
+
+        boolean hasDeadlineTier = previousUntil != null;
+        if (hasDeadlineTier && earlyBirdDeadline == null) {
+            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        }
+        if (earlyBirdDeadline != null && !fees.isEmpty()
+                && fees.stream().noneMatch(fee -> earlyBirdDeadline.equals(fee.getUntil()))) {
+            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        }
     }
 
     /**
