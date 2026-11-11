@@ -60,8 +60,8 @@ public class ContentService {
             newLike = ContentLike.builder().content(content).build();
             contentLikeRepository.save(newLike);
 
-            // 좋아요 알림은 게시글만. 밸런스 게임은 운영자가 올린 게임이라 등록한 관리자 계정에 "내 게시글" 알림을 보내지 않는다 (#196)
-            if (content.getContentType() == ContentType.BOARD
+            // 글쓴이 알림을 받는 컨텐츠만 (밸런스 게임 제외, ContentType#notifiesWriter)
+            if (content.getContentType().isNotifiesWriter()
                     && !Objects.equals(user.getId(), content.getCreatedBy().getId())) {
                 // 알림은 커밋 뒤 개수 기준으로 처리한다 (#196, LikeNoticeService)
                 eventPublisher.publishEvent(new LikeNoticeEvent(

@@ -40,7 +40,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
- * 밸런스 게임 댓글 알림의 딥링크가 대상 컨텐츠 타입을 따르는지 검증한다. (#120)
+ * 댓글 알림이 대상 컨텐츠 타입을 따르는지 검증한다.
+ * - 딥링크: 게시글 BOARD_DETAIL / 밸런스 게임 BALANCE_DETAIL (#120)
+ * - 받는 사람: 내 게시글의 내 댓글엔 대댓글 알림 1건 (#177), 밸런스 게임은 등록한 관리자에게 글쓴이 알림 없음 (#196)
  */
 @ExtendWith(MockitoExtension.class)
 class CommunityCommentsNoticeDeepLinkTest {
@@ -68,7 +70,7 @@ class CommunityCommentsNoticeDeepLinkTest {
 
     @Test
     @DisplayName("밸런스 게임 대댓글은 댓글 작성자에게만 BALANCE_DETAIL 로 나간다 — 게임을 등록한 관리자에게 \"내 게시글에 댓글\" 알림 없음 (#196)")
-    void createComment_onBalance_publishesBalanceDetail() {
+    void createComment_onBalance_notifiesOnlyParentAuthorWithBalanceDetail() {
         // given
         Content content = stubContent(ContentType.BALANCE);
         // 게임을 등록한 관리자는 알림 대상이 아니라 스텁하지 않는다
