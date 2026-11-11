@@ -73,6 +73,12 @@ competition:
   deadline-notice:
     cron: "0 0 18 * * *"
 
+# 좋아요 알림 푸시 기준 (#196): 1·5·10개, 그 뒤 10개마다. 사용자가 늘면 간격을 넓힌다
+notice:
+  like-push:
+    thresholds: [1, 5, 10]
+    step: 10
+
 # imageKit
 imagekit:
   private-key: ${IMAGEKIT_PRIVATE_KEY}
