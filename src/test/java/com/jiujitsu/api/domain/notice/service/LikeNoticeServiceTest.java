@@ -1,6 +1,10 @@
 package com.jiujitsu.api.domain.notice.service;
 
+import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardHide;
+import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
+import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
+import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.board.repository.BoardHideRepository;
 import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepository;
 import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
@@ -57,10 +61,13 @@ class LikeNoticeServiceTest {
     private final ContentLikeRepository contentLikeRepository = mock(ContentLikeRepository.class);
     private final CommentLikeRepository commentLikeRepository = mock(CommentLikeRepository.class);
     private final FcmPushEventPublisher fcmPushEventPublisher = mock(FcmPushEventPublisher.class);
+    private final BoardRepository boardRepository = mock(BoardRepository.class);
+    private final CommunityCommentsRepository communityCommentsRepository = mock(CommunityCommentsRepository.class);
+    private final CommunityComments comment = mock(CommunityComments.class);
 
     private final LikeNoticeService service = new LikeNoticeService(
             noticeRepository, new NoticeFactory(), noticeService, boardHideRepository, reportRepository,
-            contentLikeRepository, commentLikeRepository, fcmPushEventPublisher,
+            contentLikeRepository, commentLikeRepository, boardRepository, communityCommentsRepository, fcmPushEventPublisher,
             new LikePushProperties(List.of(1, 5, 10), 10), CLOCK);
 
     private Notice card;
@@ -68,6 +75,12 @@ class LikeNoticeServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(noticeService.isContentNoticeEnabled(OWNER, CONTENT)).thenReturn(true);
+        // 푸시 본문: 게시글 제목 / 좋아요 받은 댓글
+        Board board = mock(Board.class);
+        lenient().when(board.getTitle()).thenReturn("오늘 오픈매트 후기");
+        lenient().when(boardRepository.findByContent_Id(CONTENT)).thenReturn(Optional.of(board));
+        lenient().when(comment.getBody()).thenReturn("저도 그 기술 배워보고 싶어요");
+        lenient().when(communityCommentsRepository.findById(COMMENT)).thenReturn(Optional.of(comment));
         lenient().when(boardHideRepository.findByCreatedByIdAndContentId(OWNER, CONTENT)).thenReturn(Optional.empty());
         lenient().when(reportRepository.existsByCreatedByIdAndReportTypeAndTargetId(OWNER, ReportType.BOARD, CONTENT))
                 .thenReturn(false);
@@ -108,7 +121,7 @@ class LikeNoticeServiceTest {
         assertThat(service.handle(contentLike())).isTrue();
 
         verify(fcmPushEventPublisher).publish(eq(OWNER), eq(FcmPushType.CONTENTS_LIKE),
-                eq(Map.of("type", "BOARD_DETAIL", "data", "10")), eq("내 게시글에 좋아요가 1개 달렸어요"), isNull());
+                eq(Map.of("type", "BOARD_DETAIL", "data", "10")), eq("내 게시글에 좋아요가 1개 달렸어요"), eq("오늘 오픈매트 후기"));
         assertThat(card.getGroupKey()).isEqualTo("CONTENTS_LIKE:10");
         assertThat(card.getLikePushedCount()).isEqualTo(1);
         assertThat(card.getIsRead()).isFalse();
@@ -145,7 +158,7 @@ class LikeNoticeServiceTest {
         contentLikes(5);
         assertThat(service.handle(contentLike())).isTrue();
 
-        verify(fcmPushEventPublisher).publish(eq(OWNER), any(), anyMap(), eq("내 게시글에 좋아요가 5개 달렸어요"), isNull());
+        verify(fcmPushEventPublisher).publish(eq(OWNER), any(), anyMap(), eq("내 게시글에 좋아요가 5개 달렸어요"), eq("오늘 오픈매트 후기"));
         assertThat(card.getIsRead()).isFalse();
         assertThat(card.getLikePushedCount()).isEqualTo(5);
         assertThat(card.getTitle()).isEqualTo("내 게시글에 좋아요가 5개 달렸어요");
@@ -191,7 +204,19 @@ class LikeNoticeServiceTest {
         assertThat(service.handle(commentLike())).isTrue();
 
         verify(fcmPushEventPublisher).publish(eq(OWNER), eq(FcmPushType.COMMENTS_LIKE), anyMap(),
-                eq("내 댓글에 좋아요가 5개 달렸어요"), isNull());
+                eq("내 댓글에 좋아요가 5개 달렸어요"), eq("저도 그 기술 배워보고 싶어요"));
+    }
+
+    @Test
+    @DisplayName("좋아요 받은 댓글이 그사이 삭제·숨김됐으면 푸시 본문은 비운다 (알림함 미리보기와 같음)")
+    void commentLike_deletedComment_noBody() {
+        given(comment.isDeleted()).willReturn(true);
+        commentLikes(1);
+
+        assertThat(service.handle(commentLike())).isTrue();
+
+        verify(fcmPushEventPublisher).publish(eq(OWNER), eq(FcmPushType.COMMENTS_LIKE), anyMap(),
+                eq("내 댓글에 좋아요가 1개 달렸어요"), isNull());
     }
 
     @Test

@@ -202,7 +202,8 @@ public class CommunityCommentsService {
                     Map.of("type", actionType.name(),
                            "data", content.getId().toString()),
                     user.getId(),
-                    communityComments.getId()
+                    communityComments.getId(),
+                    boardRepository.findByContent_Id(content.getId()).map(Board::getTitle).orElse(null)
             ));
         }
 
@@ -216,7 +217,8 @@ public class CommunityCommentsService {
                         Map.of("type", actionType.name(),
                                "data", content.getId().toString()),
                         user.getId(),
-                        communityComments.getId()
+                        communityComments.getId(),
+                        parentComments.get().getBody()
                 ));
             }
         }

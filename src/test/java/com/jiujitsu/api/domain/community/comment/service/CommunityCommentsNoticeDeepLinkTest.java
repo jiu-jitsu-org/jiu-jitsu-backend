@@ -1,5 +1,7 @@
 package com.jiujitsu.api.domain.community.comment.service;
 
+import com.jiujitsu.api.domain.community.board.entity.Board;
+import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest;
 import com.jiujitsu.api.domain.community.comment.dto.like.CommentLikeRequest;
 import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
@@ -62,6 +64,7 @@ class CommunityCommentsNoticeDeepLinkTest {
     @Mock private CommentLikeFactory commentLikeFactory;
     @Mock private CommentLikeMapper commentLikeMapper;
     @Mock private CommunityProfileService communityProfileService;
+    @Mock private BoardRepository boardRepository;
 
     private static final Long CONTENT_ID = 10L;
     private static final Long ME_ID = 1L;
@@ -120,6 +123,30 @@ class CommunityCommentsNoticeDeepLinkTest {
         assertThat(capturePublishedEvents(2))
                 .extracting(e -> e.pushData().get("type"))
                 .containsOnly("BOARD_DETAIL");
+    }
+
+    @Test
+    @DisplayName("푸시 본문: 새 댓글 알림 = 게시글 제목, 대댓글 알림 = 대댓글이 달린 내 댓글 (알림함 미리보기와 같음, #196)")
+    void createComment_pushBody_boardTitleAndParentComment() {
+        // given
+        Content content = stubContent(ContentType.BOARD);
+        stubContentWriter(content);
+        CommunityComments parent = stubComment(100L, THIRD_ID);
+        given(parent.getBody()).willReturn("저도 그 기술 배워보고 싶어요");
+        stubCreateComment(content, parent);
+        Board board = mock(Board.class);
+        given(board.getTitle()).willReturn("오늘 오픈매트 후기");
+        given(boardRepository.findByContent_Id(CONTENT_ID)).willReturn(Optional.of(board));
+
+        // when
+        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 100L, "대댓글"));
+
+        // then
+        assertThat(capturePublishedEvents(2))
+                .extracting(CommentNoticeEvent::pushType, CommentNoticeEvent::pushBody)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(FcmPushType.NEW_COMMENTS, "오늘 오픈매트 후기"),
+                        org.assertj.core.groups.Tuple.tuple(FcmPushType.NEW_CHILD_COMMENTS, "저도 그 기술 배워보고 싶어요"));
     }
 
     @Test

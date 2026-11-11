@@ -43,7 +43,9 @@ public class CommentNoticeEventListener {
                 event.recipientUserId(), ReportType.BOARD, event.contentId())) {
             return;
         }
-        fcmPushEventPublisher.publish(event.recipientUserId(), event.pushType(), event.pushData());
+        // 본문은 알림함 미리보기와 같은 값 (새 댓글 = 게시글 제목, 대댓글 = 내 댓글, #196)
+        fcmPushEventPublisher.publish(event.recipientUserId(), event.pushType(), event.pushData(),
+                event.pushType().getTitle(), event.pushBody());
         noticeService.saveNotice(event.recipientUserId(), event.pushType(), event.pushData(),
                 event.senderUserId(), event.refId());
     }

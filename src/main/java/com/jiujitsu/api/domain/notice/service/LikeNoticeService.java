@@ -1,7 +1,11 @@
 package com.jiujitsu.api.domain.notice.service;
 
+import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.repository.BoardHideRepository;
+import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
+import com.jiujitsu.api.domain.community.comment.entity.CommunityComments;
 import com.jiujitsu.api.domain.community.comment.repository.CommentLikeRepository;
+import com.jiujitsu.api.domain.community.comment.repository.CommunityCommentsRepository;
 import com.jiujitsu.api.domain.community.content.repository.ContentLikeRepository;
 import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.repository.ReportRepository;
@@ -37,6 +41,8 @@ public class LikeNoticeService {
     private final ReportRepository reportRepository;
     private final ContentLikeRepository contentLikeRepository;
     private final CommentLikeRepository commentLikeRepository;
+    private final BoardRepository boardRepository;
+    private final CommunityCommentsRepository communityCommentsRepository;
     private final FcmPushEventPublisher fcmPushEventPublisher;
     private final LikePushProperties likePushProperties;
     private final Clock clock;
@@ -72,8 +78,21 @@ public class LikeNoticeService {
 
         String title = Notice.likeTitle(event.pushType(), count);
         card.pushLike(threshold, title, LocalDateTime.now(clock));
-        fcmPushEventPublisher.publish(recipientId, event.pushType(), event.pushData(), title, null);
+        fcmPushEventPublisher.publish(recipientId, event.pushType(), event.pushData(), title, pushBody(event));
         return true;
+    }
+
+    /**
+     * 푸시 본문 — 알림함 미리보기와 같은 값: 게시글 좋아요 = 게시글 제목, 댓글 좋아요 = 좋아요 받은 댓글 (삭제·숨김이면 없음)
+     */
+    private String pushBody(LikeNoticeEvent event) {
+        if (event.commentId() != null) {
+            return communityCommentsRepository.findById(event.commentId())
+                    .filter(c -> !c.isDeleted() && !c.isHidden())
+                    .map(CommunityComments::getBody)
+                    .orElse(null);
+        }
+        return boardRepository.findByContent_Id(event.contentId()).map(Board::getTitle).orElse(null);
     }
 
     private long countLikes(LikeNoticeEvent event) {
