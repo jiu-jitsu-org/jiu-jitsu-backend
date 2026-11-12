@@ -40,7 +40,7 @@ public record CompetitionDetailResponse(
             String noticeUrl,
         @Schema(description = "오늘 기준 접수/진행 상태")
             CompetitionStatus status,
-        @Schema(description = "오늘 기준 얼리버드 접수 중인지. 가장 가까운 마감 = true 면 얼리버드 마감, 아니면 접수 마감")
+        @Schema(description = "오늘 기준 얼리버드 접수 중인지. 어느 마감을 보여 주고 강조할지(예: D-7부터)는 앱 화면 규칙 — 날짜 원본과 today 로 계산")
             boolean earlyBirdOpen,
         @Schema(description = "접수 시작일", nullable = true)
             LocalDate registrationStartDate,

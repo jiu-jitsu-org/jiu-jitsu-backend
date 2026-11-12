@@ -61,7 +61,7 @@ public class CompetitionController {
             summary = "대회 상세 (대회 탭)",
             description = "공개 대회의 상세 정보를 반환합니다. 비로그인도 조회할 수 있습니다.\n\n"
                     + "- 이 조회로는 조회수가 오르지 않습니다. 앱은 상세 화면을 열 때 POST /competitions/{competitionId}/views 를 한 번 부릅니다\n"
-                    + "- status·earlyBirdOpen 은 응답 today(서버 기준일) 기준. 가장 가까운 마감 = earlyBirdOpen 이면 얼리버드 마감, 아니면 접수 마감\n"
+                    + "- status·earlyBirdOpen 은 응답 today(서버 기준일) 기준. 어느 마감을 보여 주고 강조할지는 앱 화면 규칙(날짜 원본과 today 로 계산)\n"
                     + "- fees 는 입력 순서대로, until 이 null 인 단계가 기본 참가비. 참가비가 확인되지 않았으면 빈 배열"
     )
     @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND})

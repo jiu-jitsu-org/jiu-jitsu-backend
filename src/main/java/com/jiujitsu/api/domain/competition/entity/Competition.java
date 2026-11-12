@@ -201,7 +201,7 @@ public class Competition extends BaseEntity {
 
     /**
      * 오늘 기준 얼리버드 접수 중인지 — 얼리버드 마감일이 있고 아직 지나지 않았으며 접수가 열려 있는 상태.
-     * 목록·상세의 "얼리버드 마감 D-n" 강조용 보조 판단.
+     * 응답 보조 값일 뿐, 어느 마감을 보여 주고 강조할지는 앱 화면 규칙이 날짜 원본으로 정한다.
      */
     public boolean isEarlyBirdOpen(LocalDate today) {
         // status 를 먼저 불러 미공개 엔트리는 얼리버드 정보가 없어도 똑같이 막는다
