@@ -99,6 +99,17 @@ class CompetitionQueryServiceTest {
                 .build());
     }
 
+    private Competition saveIn(String name, CompetitionRegion region, LocalDate openDate) {
+        return em.persist(Competition.builder()
+                .name(name)
+                .searchName(Competition.normalize(name))
+                .competitionYear(openDate.getYear())
+                .published(true)
+                .region(region)
+                .openDate(openDate)
+                .build());
+    }
+
     private CompetitionListRequest request(LocalDate date, String cursor, Integer size) {
         return new CompetitionListRequest(date, cursor, size, null, null, null, null);
     }
@@ -500,15 +511,9 @@ class CompetitionQueryServiceTest {
     @Test
     @DisplayName("지역: 지역 enum 선언 순서로, 지난 대회 지역도 포함")
     void regionsInEnumOrder() {
-        for (Object[] row : new Object[][]{
-                {"제주 오픈", CompetitionRegion.JEJU, TODAY.plusDays(3)},
-                {"경기 오픈", CompetitionRegion.GYEONGGI, TODAY.minusDays(10)},
-                {"서울 오픈", CompetitionRegion.SEOUL, TODAY.plusDays(5)}}) {
-            em.persist(Competition.builder()
-                    .name((String) row[0]).searchName(Competition.normalize((String) row[0])).competitionYear(TODAY.getYear())
-                    .published(true).region((CompetitionRegion) row[1]).openDate((LocalDate) row[2])
-                    .build());
-        }
+        saveIn("제주 오픈", CompetitionRegion.JEJU, TODAY.plusDays(3));
+        saveIn("경기 오픈", CompetitionRegion.GYEONGGI, TODAY.minusDays(10));
+        saveIn("서울 오픈", CompetitionRegion.SEOUL, TODAY.plusDays(5));
         em.flush();
 
         CompetitionRegionsResponse response = competitionQueryService.getRegions();

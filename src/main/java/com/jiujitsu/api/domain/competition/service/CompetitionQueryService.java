@@ -148,6 +148,7 @@ public class CompetitionQueryService {
      * 지난 대회도 목록에 나오므로 지난 대회만 있는 지역도 포함한다. 다른 필터(관심·상태)는 반영하지 않는다
      */
     public CompetitionRegionsResponse getRegions() {
+        // enum 기본 정렬 = 선언 순서 (CompetitionRegion 참고)
         List<CompetitionRegion> regions = competitionRepository.findPublishedRegions().stream()
                 .sorted()
                 .toList();
