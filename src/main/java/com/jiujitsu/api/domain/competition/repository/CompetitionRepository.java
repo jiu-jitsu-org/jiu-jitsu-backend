@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.competition.repository;
 
 import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -50,6 +51,11 @@ public interface CompetitionRepository extends JpaRepository<Competition, Long>,
     Optional<Competition> findByIdAndPublishedTrue(Long id);
 
     List<Competition> findAllByIdInAndPublishedTrue(Collection<Long> ids);
+
+    // 대회 탭 지역 필터에서 고를 수 있는 시·도 — 지난 대회 포함 공개 대회 전체 기준, 지역 없는 대회는 뺀다
+    // 정렬은 서비스에서 enum 선언 순서로 (STRING 저장이라 DB 정렬은 알파벳 순)
+    @Query("SELECT DISTINCT c.region FROM Competition c WHERE c.published = true AND c.region IS NOT NULL")
+    List<CompetitionRegion> findPublishedRegions();
 
     // date 에 끝나는 마감(접수 마감·얼리버드 마감·할인 단계 기한)이 있는 공개 대회 (마감 전날 알림 대상)
     @Query("""

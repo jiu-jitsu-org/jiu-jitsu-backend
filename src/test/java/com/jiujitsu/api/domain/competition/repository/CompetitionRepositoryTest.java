@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.competition.repository;
 
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
+import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
 import com.jiujitsu.api.domain.competition.service.CompetitionService;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -247,5 +248,56 @@ class CompetitionRepositoryTest {
 
         assertThat(competitionRepository.findByIdAndPublishedTrue(published.getId())).contains(published);
         assertThat(competitionRepository.findByIdAndPublishedTrue(catalog.getId())).isEmpty();
+    }
+
+    // 지역이 있는 공개 대회
+    private void savePublishedIn(String name, CompetitionRegion region, LocalDate openDate) {
+        competitionRepository.save(Competition.builder()
+                .name(name)
+                .searchName(Competition.normalize(name))
+                .competitionYear(openDate.getYear())
+                .published(true)
+                .region(region)
+                .openDate(openDate)
+                .build());
+    }
+
+    @Test
+    @DisplayName("findPublishedRegions: 공개 대회가 있는 지역을 중복 없이")
+    void findPublishedRegionsDistinct() {
+        savePublishedIn("서울 오픈", CompetitionRegion.SEOUL, TODAY.plusDays(7));
+        savePublishedIn("서울 챔피언십", CompetitionRegion.SEOUL, TODAY.plusDays(14));
+        savePublishedIn("부산 오픈", CompetitionRegion.BUSAN, TODAY.plusDays(21));
+
+        assertThat(competitionRepository.findPublishedRegions())
+                .containsExactlyInAnyOrder(CompetitionRegion.SEOUL, CompetitionRegion.BUSAN);
+    }
+
+    @Test
+    @DisplayName("findPublishedRegions: 지난 대회만 있는 지역도 포함한다")
+    void findPublishedRegionsIncludesPast() {
+        savePublishedIn("울산 오픈", CompetitionRegion.ULSAN, TODAY.minusDays(30));
+
+        assertThat(competitionRepository.findPublishedRegions()).containsExactly(CompetitionRegion.ULSAN);
+    }
+
+    @Test
+    @DisplayName("findPublishedRegions: 미공개 카탈로그 엔트리의 지역은 뺀다")
+    void findPublishedRegionsExcludesUnpublished() {
+        competitionRepository.save(Competition.builder()
+                .name("제주 오픈").searchName(Competition.normalize("제주 오픈")).competitionYear(2026)
+                .region(CompetitionRegion.JEJU)
+                .build());
+
+        assertThat(competitionRepository.findPublishedRegions()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findPublishedRegions: 지역이 없는 공개 대회는 어느 지역에도 넣지 않는다")
+    void findPublishedRegionsExcludesNullRegion() {
+        competitionRepository.save(publishedEvent("지역 미정 오픈", TODAY.plusDays(7)));
+        savePublishedIn("대전 오픈", CompetitionRegion.DAEJEON, TODAY.plusDays(7));
+
+        assertThat(competitionRepository.findPublishedRegions()).containsExactly(CompetitionRegion.DAEJEON);
     }
 }

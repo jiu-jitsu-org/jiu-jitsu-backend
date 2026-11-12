@@ -5,8 +5,10 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionRegionsResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
+import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
 import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -139,6 +141,17 @@ public class CompetitionQueryService {
                     q -> q.sortBy(DESCENDING).limit(PICKER_LIMIT - picked.size()).all()));
         }
         return new CompetitionPickerResponse(today, toItems(picked, today, userId));
+    }
+
+    /**
+     * 대회가 있는 지역 (비로그인 가능). 지역 시트에서 대회가 없는 지역을 비활성으로 두는 데 쓴다
+     * 지난 대회도 목록에 나오므로 지난 대회만 있는 지역도 포함한다. 다른 필터(관심·상태)는 반영하지 않는다
+     */
+    public CompetitionRegionsResponse getRegions() {
+        List<CompetitionRegion> regions = competitionRepository.findPublishedRegions().stream()
+                .sorted()
+                .toList();
+        return new CompetitionRegionsResponse(regions);
     }
 
     /**

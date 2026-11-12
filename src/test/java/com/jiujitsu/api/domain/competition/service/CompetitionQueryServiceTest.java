@@ -6,6 +6,7 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionRegionsResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionAudience;
 import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
@@ -494,5 +495,33 @@ class CompetitionQueryServiceTest {
         assertThatThrownBy(() -> competitionQueryService.getPublished(catalog))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("지역: 지역 enum 선언 순서로, 지난 대회 지역도 포함")
+    void regionsInEnumOrder() {
+        for (Object[] row : new Object[][]{
+                {"제주 오픈", CompetitionRegion.JEJU, TODAY.plusDays(3)},
+                {"경기 오픈", CompetitionRegion.GYEONGGI, TODAY.minusDays(10)},
+                {"서울 오픈", CompetitionRegion.SEOUL, TODAY.plusDays(5)}}) {
+            em.persist(Competition.builder()
+                    .name((String) row[0]).searchName(Competition.normalize((String) row[0])).competitionYear(TODAY.getYear())
+                    .published(true).region((CompetitionRegion) row[1]).openDate((LocalDate) row[2])
+                    .build());
+        }
+        em.flush();
+
+        CompetitionRegionsResponse response = competitionQueryService.getRegions();
+
+        assertThat(response.regions()).containsExactly(CompetitionRegion.SEOUL, CompetitionRegion.GYEONGGI, CompetitionRegion.JEJU);
+    }
+
+    @Test
+    @DisplayName("지역: 공개 대회가 없으면 빈 배열")
+    void regionsEmpty() {
+        em.persist(Competition.of("카탈로그", 2026));
+        em.flush();
+
+        assertThat(competitionQueryService.getRegions().regions()).isEmpty();
     }
 }
