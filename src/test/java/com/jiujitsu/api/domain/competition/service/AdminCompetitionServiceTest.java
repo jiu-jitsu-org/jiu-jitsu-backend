@@ -13,6 +13,7 @@ import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRequiredField;
 import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
+import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
 import com.jiujitsu.api.domain.community.profile.entity.CompetitionRecord;
 import com.jiujitsu.api.domain.community.profile.event.CompetitionRenamedEventListener;
@@ -29,18 +30,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -54,8 +60,19 @@ class AdminCompetitionServiceTest {
     private static final PageRequest FIRST_PAGE = PageRequest.of(0, 20);
     private static final AdminCompetitionListRequest ALL = new AdminCompetitionListRequest(null, null, null, null);
 
+    @TestConfiguration
+    static class FixedClock {
+        @Bean
+        Clock clock() {
+            return Clock.fixed(BASE.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant(), ZoneId.of("Asia/Seoul"));
+        }
+    }
+
     @Autowired
     private AdminCompetitionService adminCompetitionService;
+
+    @Autowired
+    private CompetitionRepository competitionRepository;
 
     @Autowired
     private TestEntityManager em;
@@ -549,6 +566,125 @@ class AdminCompetitionServiceTest {
         assertThatThrownBy(() -> adminCompetitionService.update(target.getId(), minimal("서울 오픈", 2025, LocalDate.of(2026, 12, 6))))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+    }
+
+    // ---- 확인·공개·비공개 (#209) ----
+
+    // 공개에 필요한 칸이 다 있는 미공개 대회 (마지막 확인일은 비어 있음)
+    private Competition saveReady(String name) {
+        return em.persist(Competition.builder()
+                .name(name).searchName(Competition.normalize(name)).competitionYear(2026)
+                .published(false).openDate(LocalDate.of(2026, 12, 6)).startTime(LocalTime.of(9, 0))
+                .region(CompetitionRegion.SEOUL).uniforms(new LinkedHashSet<>(Set.of(CompetitionUniform.GI)))
+                .registrationStartDate(LocalDate.of(2026, 11, 1)).registrationDeadline(LocalDate.of(2026, 11, 30))
+                .noticeUrl("https://example.com/notice")
+                .build());
+    }
+
+    @Test
+    @DisplayName("공개: 필수 칸이 다 있으면 공개하고 마지막 확인일을 오늘로, 사용자 조회에도 나온다")
+    void publish() {
+        Competition ready = saveReady("서울 오픈");
+
+        AdminCompetitionDetailResponse detail = adminCompetitionService.publish(ready.getId());
+        em.flush();
+        em.clear();
+
+        assertThat(detail.published()).isTrue();
+        assertThat(detail.lastVerifiedDate()).isEqualTo(BASE);
+        assertThat(detail.missingFields()).isEmpty();
+        assertThat(competitionRepository.findByIdAndPublishedTrue(ready.getId())).isPresent();
+    }
+
+    @Test
+    @DisplayName("공개: 필수 칸이 비면 COMPETITION_REQUIRED_FIELDS_MISSING, 그대로 미공개")
+    void publish_missingFields() {
+        Competition draft = save("준비 중", day(30), false);
+
+        assertThatThrownBy(() -> adminCompetitionService.publish(draft.getId()))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_REQUIRED_FIELDS_MISSING);
+        em.flush();
+        em.clear();
+        assertThat(competitionRepository.findByIdAndPublishedTrue(draft.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("공개: 이미 공개된 대회는 빈 칸이 있어도 그대로 200, 확인일도 그대로")
+    void publish_alreadyPublished() {
+        Competition published = em.persist(Competition.builder()
+                .name("시드 대회").searchName("시드대회").competitionYear(2026)
+                .published(true).openDate(LocalDate.of(2026, 12, 6)).lastVerifiedDate(LocalDate.of(2026, 11, 2))
+                .build());
+
+        AdminCompetitionDetailResponse detail = adminCompetitionService.publish(published.getId());
+
+        assertThat(detail.published()).isTrue();
+        assertThat(detail.lastVerifiedDate()).isEqualTo(LocalDate.of(2026, 11, 2));
+    }
+
+    @Test
+    @DisplayName("비공개: 사용자 조회에서 빠지고 관심은 남는다. 다시 공개하면 돌아온다")
+    void unpublishAndRepublish() {
+        Competition ready = saveReady("서울 오픈");
+        adminCompetitionService.publish(ready.getId());
+        em.persist(new CompetitionInterest(ready, saveUser()));
+
+        AdminCompetitionDetailResponse hidden = adminCompetitionService.unpublish(ready.getId());
+        em.flush();
+        em.clear();
+
+        assertThat(hidden.published()).isFalse();
+        assertThat(hidden.interestCount()).isEqualTo(1);
+        assertThat(competitionRepository.findByIdAndPublishedTrue(ready.getId())).isEmpty();
+
+        adminCompetitionService.publish(ready.getId());
+        em.flush();
+        em.clear();
+        assertThat(competitionRepository.findByIdAndPublishedTrue(ready.getId())).isPresent();
+        assertThat(adminCompetitionService.getDetail(ready.getId()).interestCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("비공개: 이미 비공개면 그대로 200")
+    void unpublish_alreadyUnpublished() {
+        Competition draft = save("준비 중", day(30), false);
+
+        assertThat(adminCompetitionService.unpublish(draft.getId()).published()).isFalse();
+    }
+
+    @Test
+    @DisplayName("확인 완료: 공개·미공개 모두 마지막 확인일을 오늘로, 공개 여부는 그대로")
+    void verify() {
+        Competition published = em.persist(Competition.builder()
+                .name("시드 대회").searchName("시드대회").competitionYear(2026)
+                .published(true).openDate(LocalDate.of(2026, 12, 6)).lastVerifiedDate(LocalDate.of(2026, 11, 2))
+                .build());
+        Competition draft = save("준비 중", day(30), false);
+
+        AdminCompetitionDetailResponse verifiedPublished = adminCompetitionService.verify(published.getId());
+        AdminCompetitionDetailResponse verifiedDraft = adminCompetitionService.verify(draft.getId());
+
+        assertThat(verifiedPublished.lastVerifiedDate()).isEqualTo(BASE);
+        assertThat(verifiedPublished.published()).isTrue();
+        assertThat(verifiedDraft.lastVerifiedDate()).isEqualTo(BASE);
+        assertThat(verifiedDraft.published()).isFalse();
+    }
+
+    @Test
+    @DisplayName("확인·공개·비공개: 자동완성용 대회는 COMPETITION_CATALOG_NOT_EDITABLE, 없는 ID 는 COMPETITION_NOT_FOUND")
+    void stateChange_catalogAndNotFound() {
+        Long catalogId = saveCatalog("작년 대회", 2025).getId();
+
+        for (Consumer<Long> action : List.<Consumer<Long>>of(
+                adminCompetitionService::verify, adminCompetitionService::publish, adminCompetitionService::unpublish)) {
+            assertThatThrownBy(() -> action.accept(catalogId))
+                    .isInstanceOf(ErrorException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE);
+            assertThatThrownBy(() -> action.accept(999_999L))
+                    .isInstanceOf(ErrorException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+        }
     }
 }
 

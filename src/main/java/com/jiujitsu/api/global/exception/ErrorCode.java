@@ -35,6 +35,7 @@ public enum ErrorCode {
     COMPETITION_INVALID_EVENT_INFO(400, "R0009", "대회 일정·참가비 정보가 올바르지 않습니다."),
     COMPETITION_INFO_REPORT_LIMIT_EXCEEDED(400, "R0010", "같은 대회의 같은 항목은 하루 3번까지 제보할 수 있습니다."),
     COMPETITION_CATALOG_NOT_EDITABLE(400, "R0011", "자동완성용 대회는 수정할 수 없습니다. 대회 만들기로 정보를 채워 주세요."),
+    COMPETITION_REQUIRED_FIELDS_MISSING(400, "R0012", "공개에 필요한 칸이 비어 있습니다. 대회 상세의 missingFields를 확인해 주세요."),
 
 
     /**

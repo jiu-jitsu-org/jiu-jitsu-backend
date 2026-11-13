@@ -214,7 +214,7 @@ public class Competition extends BaseEntity {
     /**
      * 공개에 필요한데 비어 있는 칸 (CompetitionRequiredField 선언 순서). 다 채워졌으면 빈 목록
      * 관리자 목록·상세에서 채울 칸을 보여 준다. 저장 시 강제하지 않으므로(validateEventInfo 의 필수 칸 검사는 공개 대회의 대회일뿐 — 그 밖엔 연도·일정 순서·참가비 규칙)
-     * 공개 대회도 빈 칸이 있을 수 있다 — 공개 전환 검사(#209)가 이 기준을 쓸 예정
+     * 공개 대회도 빈 칸이 있을 수 있다 (공개 전환 때만 검사 — publish 참고)
      */
     public List<CompetitionRequiredField> missingRequiredFields() {
         List<CompetitionRequiredField> missing = new ArrayList<>();
@@ -243,6 +243,38 @@ public class Competition extends BaseEntity {
             missing.add(CompetitionRequiredField.LAST_VERIFIED_DATE);
         }
         return missing;
+    }
+
+    /**
+     * 확인 완료 — 운영자가 대회 공지와 맞춰 본 날로 마지막 확인일을 바꾼다 (공개 여부와 무관)
+     */
+    public void verify(LocalDate today) {
+        this.lastVerifiedDate = today;
+    }
+
+    /**
+     * 대회 탭에 공개. 공개 = 운영자가 공지와 맞춰 본 대회라 마지막 확인일도 오늘로 바꾼다
+     * 그래서 마지막 확인일을 뺀 필수 칸이 하나라도 비면 COMPETITION_REQUIRED_FIELDS_MISSING (어떤 칸인지는 missingRequiredFields)
+     * 이미 공개면 그대로 둔다 (확인일 갱신은 verify). 검사는 공개로 바꿀 때만 — 이미 공개된 대회는 빈 칸이 있어도 공개를 유지한다
+     */
+    public void publish(LocalDate today) {
+        if (published) {
+            return;
+        }
+        boolean missing = missingRequiredFields().stream()
+                .anyMatch(field -> field != CompetitionRequiredField.LAST_VERIFIED_DATE);
+        if (missing) {
+            throw new ErrorException(ErrorCode.COMPETITION_REQUIRED_FIELDS_MISSING);
+        }
+        this.published = true;
+        this.lastVerifiedDate = today;
+    }
+
+    /**
+     * 대회 탭에서 내림. 관심·알림 설정·게시글 연결은 지우지 않는다 — 공개 대회만 보는 곳에서 숨겨졌다가 다시 공개하면 돌아온다
+     */
+    public void unpublish() {
+        this.published = false;
     }
 
     /**

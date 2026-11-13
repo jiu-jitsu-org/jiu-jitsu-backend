@@ -22,6 +22,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -29,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "admin-competition-controller", description = "관리자 대회 API (대회 목록·상세·만들기·고치기, 자동완성용 대회 일괄 등록)")
+@Tag(name = "admin-competition-controller", description = "관리자 대회 API (대회 목록·상세·만들기·고치기·확인·공개·비공개, 자동완성용 대회 일괄 등록)")
 @CommonApiResponses
 @RestController
 @RequestMapping("/admin/competitions")
@@ -103,5 +104,38 @@ public class AdminCompetitionController {
     public AdminCompetitionDetailResponse getDetail(
             @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId) {
         return adminCompetitionService.getDetail(competitionId);
+    }
+
+    @Operation(
+            summary = "관리자 대회 확인 완료",
+            description = "운영자가 대회 공지와 맞춰 본 날로 마지막 확인일을 오늘로 바꿉니다. 공개·미공개 모두 됩니다. 자동완성용 대회는 R0011. (ROLE_ADMIN 필요)"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE})
+    @PatchMapping("/{competitionId}/verify")
+    public AdminCompetitionDetailResponse verify(@Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId) {
+        return adminCompetitionService.verify(competitionId);
+    }
+
+    @Operation(
+            summary = "관리자 대회 공개",
+            description = "대회 탭에 공개하고 마지막 확인일을 오늘로 바꿉니다 (공개 = 공지와 맞춰 본 대회). "
+                    + "대회일·시작 시각·지역·종목·접수 시작·접수 마감·대회 공지 링크 중 하나라도 비면 R0012 — 어떤 칸인지는 상세의 missingFields. "
+                    + "이미 공개면 그대로 둡니다 (확인일 갱신은 verify). 이미 공개된 대회는 빈 칸이 있어도 공개를 유지합니다. 자동완성용 대회는 R0011. (ROLE_ADMIN 필요)"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE, ErrorCode.COMPETITION_REQUIRED_FIELDS_MISSING})
+    @PatchMapping("/{competitionId}/publish")
+    public AdminCompetitionDetailResponse publish(@Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId) {
+        return adminCompetitionService.publish(competitionId);
+    }
+
+    @Operation(
+            summary = "관리자 대회 비공개",
+            description = "대회 탭에서 내립니다. 대회 목록·상세·관심 등록·마감 알림·게시글 대회 카드·대회 이야기에서 숨겨지고, 알림함의 이 대회 알림은 삭제된 대회로 보입니다. "
+                    + "관심·알림 설정·게시글 연결은 지우지 않아 다시 공개하면 돌아옵니다. 이미 비공개면 그대로 둡니다. 자동완성용 대회는 R0011. (ROLE_ADMIN 필요)"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE})
+    @PatchMapping("/{competitionId}/unpublish")
+    public AdminCompetitionDetailResponse unpublish(@Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId) {
+        return adminCompetitionService.unpublish(competitionId);
     }
 }
