@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionLinkRequest;
 import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLink;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLinkStatus;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLinkType;
 import com.jiujitsu.api.domain.competition.entity.RegistrationSite;
@@ -213,6 +214,23 @@ class AdminCompetitionLinkServiceTest {
 
         assertThat(link(adminCompetitionLinkService.put(id, CompetitionLinkType.BRACKET, url("https://a.example")), CompetitionLinkType.BRACKET).status())
                 .isEqualTo(CompetitionLinkStatus.HIDDEN);
+    }
+
+    @Test
+    @DisplayName("이미 대한체육회인 대회에 (동시 요청으로) 신청 링크가 남아 있어도 다른 칸 고치기는 됨, 그 링크는 안 보임")
+    void ksocWithLeftoverRegistrationLink() {
+        Competition competition = save(RegistrationSite.KSOC);
+        Long id = competition.getId();
+        CompetitionLink leftover =
+                new CompetitionLink(competition, CompetitionLinkType.REGISTRATION, "https://ksoc.example");
+        leftover.approve(NOW);
+        em.persist(leftover);
+        em.flush();
+
+        AdminCompetitionDetailResponse updated = adminCompetitionService.update(id, request(RegistrationSite.KSOC));
+
+        assertThat(updated.registrationSite()).isEqualTo(RegistrationSite.KSOC);
+        assertThat(link(updated, CompetitionLinkType.REGISTRATION).visibleNow()).isFalse();
     }
 
     private static AdminCompetitionRequest request(RegistrationSite site) {

@@ -297,7 +297,9 @@ public class Competition extends BaseEntity {
      * 신청 링크가 있으면 COMPETITION_REGISTRATION_LINK_EXISTS — 링크부터 지운다
      */
     public void changeRegistrationSite(RegistrationSite registrationSite, boolean hasRegistrationLink) {
-        if (registrationSite != null && registrationSite.isClubRegistrationOnly() && hasRegistrationLink) {
+        // 바꿀 때만 본다 — 이미 대한체육회인 대회(동시 요청으로 신청 링크가 남은 경우 포함)의 다른 칸 고치기는 막지 않는다 (그 링크는 앱에 안 나감)
+        if (registrationSite != this.registrationSite
+                && registrationSite != null && registrationSite.isClubRegistrationOnly() && hasRegistrationLink) {
             throw new ErrorException(ErrorCode.COMPETITION_REGISTRATION_LINK_EXISTS);
         }
         this.registrationSite = registrationSite;
