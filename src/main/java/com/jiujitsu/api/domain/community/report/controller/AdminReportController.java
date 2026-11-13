@@ -24,7 +24,7 @@ public class AdminReportController {
 
     private final ReportService reportService;
 
-    @Operation(summary = "신고 목록 조회", description = "전체 신고 목록을 페이징으로 조회합니다.")
+    @Operation(summary = "신고 목록 조회", description = "전체 신고 목록을 페이징 조회합니다.")
     @GetMapping
     public Page<AdminReportListResponse> getReports(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
