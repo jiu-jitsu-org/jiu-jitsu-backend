@@ -574,5 +574,30 @@ class CompetitionQueryServiceTest {
                         tuple("서울 3등", false));   // 같은 달 3등 (부산 2등이 위)
         assertThat(competitionQueryService.getCards(List.of(busanSecond.getId())).get(busanSecond.getId()).popular()).isTrue();
     }
+
+    @Test
+    @DisplayName("관심 많은 대회: 한 응답이 두 달에 걸치면 달마다 따로 상위 N개, 글쓰기 대회 고르기도 같은 값")
+    void popular_perMonth_listAndPicker() {
+        Competition novTop = save("11월 1등", TODAY.plusDays(5));       // 11/14
+        Competition novLow = save("11월 3등", TODAY.plusDays(6));
+        Competition novSecond = save("11월 2등", TODAY.plusDays(7));
+        Competition decTop = save("12월 1등", LocalDate.of(2026, 12, 6));
+        interests(novTop, 5);
+        interests(novSecond, 4);
+        interests(novLow, 3);
+        interests(decTop, 2);
+
+        CompetitionListResponse list = competitionQueryService.getList(request(TODAY, null, 10));
+        assertThat(list.competitions())
+                .extracting(CompetitionListItem::name, CompetitionListItem::popular)
+                .containsExactly(
+                        tuple("11월 1등", true),
+                        tuple("11월 3등", false),   // 11월은 관심 5·4 두 대회가 상위 2개
+                        tuple("11월 2등", true),
+                        tuple("12월 1등", true));   // 12월은 따로 순위 (관심 2개 = M)
+        assertThat(competitionQueryService.getPicker(null).competitions())
+                .extracting(CompetitionListItem::name, CompetitionListItem::popular)
+                .contains(tuple("11월 2등", true), tuple("11월 3등", false), tuple("12월 1등", true));
+    }
 }
 

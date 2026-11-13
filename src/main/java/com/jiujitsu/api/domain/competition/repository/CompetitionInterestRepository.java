@@ -1,7 +1,6 @@
 package com.jiujitsu.api.domain.competition.repository;
 
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -45,10 +44,11 @@ public interface CompetitionInterestRepository extends JpaRepository<Competition
     """)
     Set<Long> findInterestedCompetitionIds(@Param("userId") Long userId, @Param("competitionIds") Collection<Long> competitionIds);
 
-    // 관심 많은 대회 (#210): from~to(한 달) 공개 대회 중 대회일이 오늘 이후(당일 포함)이고 관심이 minInterests 개 이상인 대회를
-    // 관심 수 내림차순 → 대회일 빠른 순 → id 순으로. 몇 개까지는 Pageable 로 자른다
+    // 관심 많은 대회 후보 (#210): from~to 공개 대회 중 대회일이 오늘 이후(당일 포함)이고 관심이 minInterests 개 이상인 대회의
+    // [id, 대회일]을 관심 수 내림차순 → 대회일 빠른 순 → id 순으로. 달마다 몇 개까지 자를지는 호출하는 쪽이 정한다
+    // (관심 minInterests 개 이상인 대회만이라 행 수가 작다 — 여러 달을 한 번에 조회)
     @Query("""
-    SELECT c.id
+    SELECT c.id, c.openDate
     FROM CompetitionInterest i
     JOIN i.competition c
     WHERE c.published = true
@@ -58,9 +58,8 @@ public interface CompetitionInterestRepository extends JpaRepository<Competition
     HAVING COUNT(i) >= :minInterests
     ORDER BY COUNT(i) DESC, c.openDate ASC, c.id ASC
     """)
-    List<Long> findPopularIds(@Param("from") LocalDate from,
-                              @Param("to") LocalDate to,
-                              @Param("today") LocalDate today,
-                              @Param("minInterests") long minInterests,
-                              Pageable pageable);
+    List<Object[]> findPopularCandidates(@Param("from") LocalDate from,
+                                         @Param("to") LocalDate to,
+                                         @Param("today") LocalDate today,
+                                         @Param("minInterests") long minInterests);
 }

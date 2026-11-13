@@ -18,7 +18,6 @@ import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.properties.PopularCompetitionProperties;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -30,6 +29,7 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -237,18 +237,27 @@ public class CompetitionQueryService {
     /**
      * 관심 많은 대회 (#210): 이 대회들이 속한 달마다, 그 달 끝나지 않은 공개 대회 중 관심 수 상위 N개 (관심 M개 이상)
      * 필터와 무관하게 달 전체에서 순위를 매긴다 — 지역·관심 필터를 바꿔도 같은 대회에 같은 표시
-     * 끝난 대회만 있는 달은 조회하지 않는다 (끝난 대회는 표시 대상이 아님)
+     * 끝난 대회만 있는 달은 보지 않는다 (끝난 대회는 표시 대상이 아님). 여러 달이어도 한 번에 조회하고 달마다 자른다
      */
     private Set<Long> popularIds(List<Competition> page, LocalDate today) {
-        Set<YearMonth> months = page.stream()
+        TreeSet<YearMonth> months = page.stream()
                 .map(Competition::getOpenDate)
                 .filter(openDate -> !openDate.isBefore(today))
                 .map(YearMonth::from)
                 .collect(Collectors.toCollection(TreeSet::new));
+        if (months.isEmpty()) {
+            return Set.of();
+        }
+        LocalDate from = months.first().atDay(1);
+        LocalDate to = months.last().atEndOfMonth();
+        Map<YearMonth, Integer> taken = new HashMap<>();
         Set<Long> popular = new HashSet<>();
-        for (YearMonth month : months) {
-            popular.addAll(competitionInterestRepository.findPopularIds(month.atDay(1), month.atEndOfMonth(), today,
-                    popularProperties.minInterests(), PageRequest.of(0, popularProperties.top())));
+        // 관심 수 → 대회일 → id 순으로 오므로 달마다 앞에서 N개
+        for (Object[] row : competitionInterestRepository.findPopularCandidates(from, to, today, popularProperties.minInterests())) {
+            YearMonth month = YearMonth.from((LocalDate) row[1]);
+            if (months.contains(month) && taken.merge(month, 1, Integer::sum) <= popularProperties.top()) {
+                popular.add((Long) row[0]);
+            }
         }
         return popular;
     }

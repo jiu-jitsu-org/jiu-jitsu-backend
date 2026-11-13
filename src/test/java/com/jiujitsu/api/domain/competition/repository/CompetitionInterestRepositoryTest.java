@@ -13,8 +13,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import org.springframework.data.domain.PageRequest;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -174,9 +172,13 @@ class CompetitionInterestRepositoryTest {
         return competition;
     }
 
+    // 12월 후보 중 앞에서 top 개 (서비스가 달마다 자르는 것과 같음)
     private List<Long> popular(int top, long min) {
-        return competitionInterestRepository.findPopularIds(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31), TODAY,
-                min, PageRequest.of(0, top));
+        return competitionInterestRepository.findPopularCandidates(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31), TODAY, min)
+                .stream()
+                .map(row -> (Long) row[0])
+                .limit(top)
+                .toList();
     }
 
     @Test
@@ -201,6 +203,16 @@ class CompetitionInterestRepositoryTest {
         Competition today = withInterests(saveOn("오늘", LocalDate.of(2026, 12, 10), true), 5);
 
         assertThat(popular(3, 5)).containsExactly(today.getId());
+    }
+
+    @Test
+    @DisplayName("관심 많은 대회: 관심 수·대회일이 같으면 id 순, 달 마지막 날 대회도 그 달에 들어간다")
+    void findPopularIds_idTieAndMonthEnd() {
+        Competition first = withInterests(saveOn("먼저 등록", LocalDate.of(2026, 12, 31), true), 5);
+        Competition second = withInterests(saveOn("나중 등록", LocalDate.of(2026, 12, 31), true), 5);
+
+        assertThat(popular(1, 5)).containsExactly(first.getId());
+        assertThat(popular(2, 5)).containsExactly(first.getId(), second.getId());
     }
 }
 

@@ -286,6 +286,9 @@ IMAGEKIT_PRIVATE_KEY=<ImageKit Private Key>
 WEBHOOK_SECRET=<Webhook Secret>
 GHCR_USERNAME=<GitHub Container Registry Username>
 GHCR_PAT=<GitHub Personal Access Token>
+# 선택: 관심 많은 대회 기준 (기본은 application.yml competition.popular — 상위 3개, 관심 5개 이상). 바꾸면 재시작
+COMPETITION_POPULAR_TOP=3
+COMPETITION_POPULAR_MININTERESTS=5
 ```
 
 ### application.yml 주요 설정
