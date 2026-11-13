@@ -163,6 +163,9 @@ src/main/java/com/jiujitsu/api/
 | GET | `/admin/competitions/{competitionId}` | 관리자 대회 상세 (공개 여부 무관, 입력 화면 전체 칸 + 조회수·관심 수·비어 있는 공개 필수 칸) |
 | POST | `/admin/competitions` | 관리자 대회 만들기 (미공개, 대회명·연도·대회일 필수. 같은 이름·연도의 자동완성용 대회가 있으면 그 행에 채움) |
 | PUT | `/admin/competitions/{competitionId}` | 관리자 대회 고치기 (전체 교체, 공개 여부·확인일 제외. 대회명·연도를 바꾸면 연결된 프로필 대회 기록도 맞춤) |
+| PATCH | `/admin/competitions/{competitionId}/verify` | 관리자 대회 확인 완료 (마지막 확인일 = 오늘) |
+| PATCH | `/admin/competitions/{competitionId}/publish` | 관리자 대회 공개 (필수 칸 검사, 마지막 확인일 = 오늘. 이미 공개면 그대로) |
+| PATCH | `/admin/competitions/{competitionId}/unpublish` | 관리자 대회 비공개 (관심·알림 설정·게시글 연결은 유지) |
 | GET | `/admin/competitions/info-reports` | 대회 정보 제보 목록 (최신순 페이지) |
 
 ### 관리자 관장/사범 인증 (`/api/admin/owner-requests`)

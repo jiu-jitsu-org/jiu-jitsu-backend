@@ -392,5 +392,52 @@ class CompetitionTest {
         assertThatCode(() -> filledForPublish().competitionYear(null).build().validateEventInfo()).doesNotThrowAnyException();
         assertThatCode(() -> Competition.of("작년 대회", 2025).validateEventInfo()).doesNotThrowAnyException();
     }
+
+    @Test
+    @DisplayName("publish: 필수 칸이 다 있으면 공개하고 확인일을 오늘로 (확인일이 비어 있어도)")
+    void publish_setsVerifiedDate() {
+        Competition competition = filledForPublish().lastVerifiedDate(null).build();
+
+        competition.publish(LocalDate.of(2026, 11, 20));
+
+        assertThat(competition.isPublished()).isTrue();
+        assertThat(competition.getLastVerifiedDate()).isEqualTo(LocalDate.of(2026, 11, 20));
+    }
+
+    @Test
+    @DisplayName("publish: 필수 칸이 비면 COMPETITION_REQUIRED_FIELDS_MISSING 이고 그대로 미공개")
+    void publish_missingFields() {
+        Competition competition = filledForPublish().startTime(null).build();
+
+        assertThatThrownBy(() -> competition.publish(LocalDate.of(2026, 11, 20)))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_REQUIRED_FIELDS_MISSING);
+        assertThat(competition.isPublished()).isFalse();
+        assertThat(competition.getLastVerifiedDate()).isEqualTo(LocalDate.of(2026, 11, 13));
+    }
+
+    @Test
+    @DisplayName("publish: 이미 공개면 빈 칸이 있어도 그대로, 확인일도 그대로")
+    void publish_alreadyPublished() {
+        Competition competition = filledForPublish().published(true).startTime(null).build();
+
+        competition.publish(LocalDate.of(2026, 11, 20));
+
+        assertThat(competition.isPublished()).isTrue();
+        assertThat(competition.getLastVerifiedDate()).isEqualTo(LocalDate.of(2026, 11, 13));
+    }
+
+    @Test
+    @DisplayName("unpublish·verify: 공개만 내리고, 확인일만 바꾼다")
+    void unpublishAndVerify() {
+        Competition competition = filledForPublish().published(true).build();
+
+        competition.unpublish();
+        competition.verify(LocalDate.of(2026, 11, 20));
+
+        assertThat(competition.isPublished()).isFalse();
+        assertThat(competition.getLastVerifiedDate()).isEqualTo(LocalDate.of(2026, 11, 20));
+        assertThat(competition.getOpenDate()).isEqualTo(LocalDate.of(2026, 12, 6));
+    }
 }
 
