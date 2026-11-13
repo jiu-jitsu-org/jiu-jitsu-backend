@@ -3,6 +3,8 @@ package com.jiujitsu.api.domain.competition.service;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListRequest;
+import com.jiujitsu.api.domain.competition.dto.AdminCompetitionRequest;
+import com.jiujitsu.api.domain.competition.dto.AdminCompetitionSaveResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionFeeResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
@@ -11,6 +13,9 @@ import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRequiredField;
 import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
+import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
+import com.jiujitsu.api.domain.community.profile.entity.CompetitionRecord;
+import com.jiujitsu.api.domain.community.profile.event.CompetitionRenamedEventListener;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
@@ -42,7 +47,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 // 필터 조합·정렬·페이지는 실제 쿼리 결과에 달려 있어 DB 와 함께 검증한다 (CompetitionQueryServiceTest 와 같은 방식)
 @DataJpaTest
-@Import({AdminCompetitionService.class, CompetitionInterestService.class, CompetitionMapper.class})
+@Import({AdminCompetitionService.class, CompetitionInterestService.class, CompetitionMapper.class, CompetitionRenamedEventListener.class})
 class AdminCompetitionServiceTest {
 
     private static final LocalDate BASE = LocalDate.of(2026, 11, 13);
@@ -278,4 +283,272 @@ class AdminCompetitionServiceTest {
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
     }
+
+    // ---- 만들기·고치기 (#208) ----
+
+    private static AdminCompetitionRequest request(String name, LocalDate openDate) {
+        return new AdminCompetitionRequest(name, openDate.getYear(), openDate, LocalTime.of(9, 0), CompetitionRegion.SEOUL,
+                " 서울 송파 ", "올림픽홀", "서울시주짓수회", "https://example.com/notice", List.of(CompetitionUniform.GI, CompetitionUniform.GI),
+                null, openDate.minusDays(30), openDate.minusDays(20), openDate.minusDays(10),
+                List.of(new AdminCompetitionRequest.Fee("얼리버드", 60000, openDate.minusDays(20)), new AdminCompetitionRequest.Fee("기본 참가비", 70000, null)),
+                "성인 1종목 기준");
+    }
+
+    // 이름·연도·대회일만, 나머지 칸 비움
+    private static AdminCompetitionRequest minimal(String name, int year, LocalDate openDate) {
+        return new AdminCompetitionRequest(name, year, openDate, null, null, "  ", null, null, null, null, null,
+                null, null, null, null, null);
+    }
+
+    private CompetitionRecord saveRecord(Competition competition, String name, int year) {
+        CommunityProfile profile = em.persist(CommunityProfile.builder().user(saveUser()).build());
+        return em.persist(CompetitionRecord.builder()
+                .communityProfile(profile)
+                .competition(competition)
+                .competitionName(name)
+                .competitionYear(year)
+                .build());
+    }
+
+    private CompetitionRecord reload(CompetitionRecord record) {
+        em.flush();
+        em.clear();
+        return em.find(CompetitionRecord.class, record.getId());
+    }
+
+    @Test
+    @DisplayName("만들기: 새 대회는 미공개로 모든 칸을 저장하고, 글자 칸 공백 정리·종목 중복 제거")
+    void create_new() {
+        AdminCompetitionSaveResponse response = adminCompetitionService.create(request("서울 오픈", day(30)));
+
+        assertThat(response.catalogFilled()).isFalse();
+        AdminCompetitionDetailResponse detail = response.competition();
+        assertThat(detail.published()).isFalse();
+        assertThat(detail.name()).isEqualTo("서울 오픈");
+        assertThat(detail.place()).isEqualTo("서울 송파");
+        assertThat(detail.uniforms()).containsExactly(CompetitionUniform.GI);
+        assertThat(detail.fees()).hasSize(2);
+        assertThat(detail.earlyBirdDeadline()).isEqualTo(day(10));
+        assertThat(detail.lastVerifiedDate()).isNull();
+        em.clear();
+        assertThat(em.find(Competition.class, detail.competitionId()).getSearchName()).isEqualTo("서울오픈");
+    }
+
+    @Test
+    @DisplayName("만들기: 공백만 있는 글자 칸은 null 로 저장해 missingFields 에 빈 칸으로 잡힌다")
+    void create_blankTextIsNull() {
+        AdminCompetitionDetailResponse detail = adminCompetitionService.create(minimal("서울 오픈", 2026, day(30))).competition();
+
+        assertThat(detail.place()).isNull();
+        assertThat(detail.missingFields()).contains(CompetitionRequiredField.NOTICE_URL, CompetitionRequiredField.REGION);
+    }
+
+    @Test
+    @DisplayName("만들기: 같은 이름·연도의 자동완성용 대회가 있으면 그 행에 채우고, 연결된 프로필 기록 이름도 맞춘다")
+    void create_fillsCatalogEntry() {
+        Competition catalog = saveCatalog("서울오픈", 2026);
+        CompetitionRecord record = saveRecord(catalog, "서울오픈", 2026);
+
+        AdminCompetitionSaveResponse response = adminCompetitionService.create(request("서울 오픈", LocalDate.of(2026, 12, 6)));
+
+        assertThat(response.catalogFilled()).isTrue();
+        assertThat(response.competition().competitionId()).isEqualTo(catalog.getId());
+        assertThat(response.competition().name()).isEqualTo("서울 오픈");
+        assertThat(response.competition().published()).isFalse();
+        assertThat(response.competition().openDate()).isEqualTo(LocalDate.of(2026, 12, 6));
+        assertThat(reload(record).getCompetitionName()).isEqualTo("서울 오픈");
+    }
+
+    @Test
+    @DisplayName("만들기: 대회일 있는 대회와 이름(공백·대소문자 무시)·연도가 같으면 COMPETITION_DUPLICATED")
+    void create_duplicateOfEventCompetition() {
+        save("Seoul Open", LocalDate.of(2026, 12, 6), true);
+
+        assertThatThrownBy(() -> adminCompetitionService.create(request("seoul  OPEN", LocalDate.of(2026, 10, 1))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_DUPLICATED);
+    }
+
+    @Test
+    @DisplayName("만들기: 연도가 다르면 같은 이름이라도 따로 만든다")
+    void create_sameNameOtherYear() {
+        save("서울 오픈", LocalDate.of(2025, 12, 6), true);
+
+        assertThat(adminCompetitionService.create(request("서울 오픈", LocalDate.of(2026, 12, 6))).catalogFilled()).isFalse();
+    }
+
+    @Test
+    @DisplayName("만들기·고치기: 연도가 대회일 연도와 다르면 COMPETITION_INVALID_EVENT_INFO")
+    void yearMustMatchOpenDate() {
+        Competition existing = save("부산 오픈", day(30), false);
+
+        assertThatThrownBy(() -> adminCompetitionService.create(minimal("서울 오픈", 2025, LocalDate.of(2026, 12, 6))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        assertThatThrownBy(() -> adminCompetitionService.update(existing.getId(), minimal("부산 오픈", 2027, LocalDate.of(2026, 12, 6))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+    }
+
+    @Test
+    @DisplayName("만들기: 정리하면 비는 이름은 WRONG_PARAMETER")
+    void create_invalidName() {
+        assertThatThrownBy(() -> adminCompetitionService.create(minimal("\u200B\u3000", 2026, day(30))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.WRONG_PARAMETER);
+    }
+
+    @Test
+    @DisplayName("만들기: 일정 순서가 틀리면 COMPETITION_INVALID_EVENT_INFO 이고 저장되지 않는다")
+    void create_invalidSchedule() {
+        AdminCompetitionRequest reversed = new AdminCompetitionRequest("서울 오픈", 2026, day(30), null, null, null, null, null, null, null, null,
+                null, null, day(40), null, null);
+
+        assertThatThrownBy(() -> adminCompetitionService.create(reversed))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        assertThat(adminCompetitionService.getList(ALL, FIRST_PAGE).getTotalElements()).isZero();
+    }
+
+    @Test
+    @DisplayName("고치기: 전체 교체 — 안 보낸 칸은 비우고, 공개 여부·마지막 확인일·조회수는 그대로")
+    void update_replacesAllKeepsPublishState() {
+        Competition saved = em.persist(Competition.builder()
+                .name("서울 오픈").searchName("서울오픈").competitionYear(2026)
+                .published(true).openDate(LocalDate.of(2026, 12, 6)).startTime(LocalTime.of(9, 0))
+                .region(CompetitionRegion.SEOUL).venue("올림픽홀")
+                .uniforms(new LinkedHashSet<>(Set.of(CompetitionUniform.GI)))
+                .fees(new ArrayList<>(List.of(new CompetitionFee("기본", 50000, null))))
+                .lastVerifiedDate(LocalDate.of(2026, 11, 2)).viewCount(9)
+                .build());
+
+        AdminCompetitionDetailResponse detail = adminCompetitionService.update(saved.getId(), minimal("서울 오픈", 2026, LocalDate.of(2026, 12, 13)));
+
+        assertThat(detail.openDate()).isEqualTo(LocalDate.of(2026, 12, 13));
+        assertThat(detail.startTime()).isNull();
+        assertThat(detail.venue()).isNull();
+        assertThat(detail.uniforms()).isEmpty();
+        assertThat(detail.fees()).isEmpty();
+        assertThat(detail.published()).isTrue();
+        assertThat(detail.lastVerifiedDate()).isEqualTo(LocalDate.of(2026, 11, 2));
+        assertThat(detail.viewCount()).isEqualTo(9);
+        em.flush();
+        em.clear();
+        Competition reloaded = em.find(Competition.class, saved.getId());
+        assertThat(reloaded.getFees()).isEmpty();
+        assertThat(reloaded.getVenue()).isNull();
+    }
+
+    @Test
+    @DisplayName("고치기: 참가비 단계와 얼리버드 마감을 한 요청에서 같이 바꾼다")
+    void update_feesWithEarlyBird() {
+        Competition saved = save("서울 오픈", LocalDate.of(2026, 12, 6), true);
+
+        AdminCompetitionDetailResponse detail = adminCompetitionService.update(saved.getId(), request("서울 오픈", LocalDate.of(2026, 12, 6)));
+
+        assertThat(detail.earlyBirdDeadline()).isEqualTo(LocalDate.of(2026, 11, 16));
+        assertThat(detail.fees()).containsExactly(
+                new CompetitionFeeResponse("얼리버드", 60000, LocalDate.of(2026, 11, 16)),
+                new CompetitionFeeResponse("기본 참가비", 70000, null));
+    }
+
+    @Test
+    @DisplayName("고치기: 자동완성용 대회는 COMPETITION_CATALOG_NOT_EDITABLE, 없는 ID 는 COMPETITION_NOT_FOUND")
+    void update_catalogAndNotFound() {
+        Competition catalog = saveCatalog("작년 대회", 2026);
+
+        assertThatThrownBy(() -> adminCompetitionService.update(catalog.getId(), minimal("작년 대회", 2026, day(30))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE);
+        assertThatThrownBy(() -> adminCompetitionService.update(999_999L, minimal("없음", 2026, day(30))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("고치기: 다른 대회(자동완성용 포함)와 이름·연도가 겹치면 COMPETITION_DUPLICATED, 자기 이름 표기만 바꾸면 통과")
+    void update_renameDuplicate() {
+        Competition target = save("서울 오픈", LocalDate.of(2026, 12, 6), false);
+        save("부산 오픈", LocalDate.of(2026, 12, 13), true);
+        saveCatalog("대구 오픈", 2026);
+
+        assertThatThrownBy(() -> adminCompetitionService.update(target.getId(), minimal("부산오픈", 2026, LocalDate.of(2026, 12, 6))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_DUPLICATED);
+        assertThatThrownBy(() -> adminCompetitionService.update(target.getId(), minimal("대구 오픈", 2026, LocalDate.of(2026, 12, 6))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_DUPLICATED);
+        assertThat(adminCompetitionService.update(target.getId(), minimal("서울오픈", 2026, LocalDate.of(2026, 12, 6))).name())
+                .isEqualTo("서울오픈");
+    }
+
+    @Test
+    @DisplayName("고치기: 이름·연도를 바꾸면 그 대회를 고른 프로필 기록만 맞추고, 다른 기록은 그대로")
+    void update_renameSyncsRecords() {
+        Competition target = save("서울 오픈", LocalDate.of(2026, 3, 6), true);
+        Competition other = save("부산 오픈", LocalDate.of(2026, 4, 6), true);
+        CompetitionRecord first = saveRecord(target, "서울 오픈", 2026);
+        CompetitionRecord second = saveRecord(target, "서울 오픈", 2026);
+        CompetitionRecord otherRecord = saveRecord(other, "부산 오픈", 2026);
+        CompetitionRecord typed = saveRecord(null, "서울 오픈", 2026);   // 직접 입력 (연결 없음)
+
+        adminCompetitionService.update(target.getId(), minimal("제1회 서울 오픈", 2026, LocalDate.of(2026, 3, 6)));
+
+        assertThat(reload(first).getCompetitionName()).isEqualTo("제1회 서울 오픈");
+        assertThat(reload(second).getCompetitionName()).isEqualTo("제1회 서울 오픈");
+        assertThat(reload(otherRecord).getCompetitionName()).isEqualTo("부산 오픈");
+        assertThat(reload(typed).getCompetitionName()).isEqualTo("서울 오픈");
+    }
+
+    @Test
+    @DisplayName("고치기: 이름·연도가 그대로면 프로필 기록을 건드리지 않는다")
+    void update_noRenameKeepsRecords() {
+        Competition target = save("서울 오픈", LocalDate.of(2026, 3, 6), true);
+        CompetitionRecord record = saveRecord(target, "서울오픈 (예전 표기)", 2026);
+
+        adminCompetitionService.update(target.getId(), minimal("서울 오픈", 2026, LocalDate.of(2026, 3, 7)));
+
+        assertThat(reload(record).getCompetitionName()).isEqualTo("서울오픈 (예전 표기)");
+    }
+
+    @Test
+    @DisplayName("고치기: 연도만 바꿔도 연결된 프로필 기록의 연도를 맞춘다")
+    void update_yearChangeSyncsRecords() {
+        Competition target = save("서울 오픈", LocalDate.of(2026, 3, 6), true);
+        CompetitionRecord record = saveRecord(target, "서울 오픈", 2026);
+
+        adminCompetitionService.update(target.getId(), minimal("서울 오픈", 2025, LocalDate.of(2025, 3, 6)));
+
+        CompetitionRecord reloaded = reload(record);
+        assertThat(reloaded.getCompetitionYear()).isEqualTo(2025);
+        assertThat(reloaded.getCompetitionName()).isEqualTo("서울 오픈");
+    }
+
+    @Test
+    @DisplayName("만들기: 시작 시각에 초가 붙어 오면 분 단위로 잘라 저장한다")
+    void create_startTimeTruncatedToMinutes() {
+        AdminCompetitionRequest withSeconds = new AdminCompetitionRequest("서울 오픈", 2026, day(30), LocalTime.of(9, 0, 30), null, null, null, null,
+                null, null, null, null, null, null, null, null);
+
+        Long id = adminCompetitionService.create(withSeconds).competition().competitionId();
+        em.flush();
+        em.clear();
+
+        assertThat(em.find(Competition.class, id).getStartTime()).isEqualTo(LocalTime.of(9, 0));
+    }
+
+    @Test
+    @DisplayName("만들기·고치기: 연도 오타가 다른 대회의 이름·연도와 겹쳐도 중복이 아니라 COMPETITION_INVALID_EVENT_INFO")
+    void yearMismatchBeforeDuplicate() {
+        save("서울 오픈", LocalDate.of(2025, 3, 1), true);
+        Competition target = save("부산 오픈", LocalDate.of(2026, 12, 6), false);
+
+        assertThatThrownBy(() -> adminCompetitionService.create(minimal("서울 오픈", 2025, LocalDate.of(2026, 12, 6))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        assertThatThrownBy(() -> adminCompetitionService.update(target.getId(), minimal("서울 오픈", 2025, LocalDate.of(2026, 12, 6))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+    }
 }
+

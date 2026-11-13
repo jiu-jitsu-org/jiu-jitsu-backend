@@ -73,7 +73,7 @@ public class CompetitionService {
     }
 
     /**
-     * 등록 대회 일괄 등록 (관리자)
+     * 자동완성용 대회 일괄 등록 (관리자, POST /admin/competitions/catalog)
      * 정리하면 비거나 너무 긴 이름(INVALID_NAME), 이미 등록됐거나 요청 안에서 겹치는 대회(DUPLICATE)는
      * 건너뛰고 나머지만 등록한다. 한 건 때문에 전체가 거절되면 어느 항목이 문제인지 알 수 없기 때문
      */

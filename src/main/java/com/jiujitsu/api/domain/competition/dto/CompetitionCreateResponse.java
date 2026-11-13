@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
-@Schema(description = "등록 대회 일괄 등록 결과 (관리자)")
+@Schema(description = "자동완성용 대회 일괄 등록 결과 (관리자)")
 public record CompetitionCreateResponse(
         @Schema(description = "새로 등록된 대회")
             List<CompetitionResponse> created,
