@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 public class CompetitionInfoReport {
 
     public static final int DETAIL_MAX_LENGTH = 200;
+    public static final int NOTE_MAX_LENGTH = 100;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -55,6 +56,13 @@ public class CompetitionInfoReport {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    // 운영자 처리 (#222) — 처리한 시각(null = 미처리)과 메모(무엇을 했는지, 선택)
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
+
+    @Column(name = "resolution_note", length = NOTE_MAX_LENGTH)
+    private String resolutionNote;
+
     /**
      * 내용은 앞뒤 공백을 지우고, 비면 null. "다른 정보"는 무엇이 다른지 알 수 없으므로 내용이 있어야 한다
      */
@@ -71,5 +79,30 @@ public class CompetitionInfoReport {
         report.field = field;
         report.detail = cleaned;
         return report;
+    }
+
+    /**
+     * 처리 완료 (#222). 처음 처리한 시각을 남기고, 다시 처리해도 시각은 그대로 둔다
+     * 메모: null(요청에서 빼거나 null) 이면 그대로(다시 눌러도 지워지지 않게), 공백뿐이면 지움, 나머지는 앞뒤 공백을 지워 저장
+     */
+    public void resolve(LocalDateTime now, String note) {
+        if (note != null) {
+            String cleaned = note.isBlank() ? null : note.strip();
+            if (cleaned != null && cleaned.length() > NOTE_MAX_LENGTH) {
+                throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+            }
+            resolutionNote = cleaned;
+        }
+        if (resolvedAt == null) {
+            resolvedAt = now;
+        }
+    }
+
+    /**
+     * 처리 되돌리기 — 시각 · 메모를 지운다 (미처리 제보에 처리 메모가 남지 않게)
+     */
+    public void unresolve() {
+        resolvedAt = null;
+        resolutionNote = null;
     }
 }

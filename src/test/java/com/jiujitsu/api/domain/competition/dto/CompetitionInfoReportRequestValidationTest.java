@@ -20,4 +20,12 @@ class CompetitionInfoReportRequestValidationTest {
         assertThat(validator.validate(new CompetitionInfoReportRequest(CompetitionInfoField.FEE, "가".repeat(201)))).hasSize(1);
         assertThat(validator.validate(new CompetitionInfoReportRequest(null, "내용"))).hasSize(1);
     }
+
+    @Test
+    @DisplayName("처리 메모는 선택, 100자까지")
+    void resolveNote() {
+        assertThat(validator.validate(new CompetitionInfoReportResolveRequest(null))).isEmpty();
+        assertThat(validator.validate(new CompetitionInfoReportResolveRequest("가".repeat(100)))).isEmpty();
+        assertThat(validator.validate(new CompetitionInfoReportResolveRequest("가".repeat(101)))).hasSize(1);
+    }
 }

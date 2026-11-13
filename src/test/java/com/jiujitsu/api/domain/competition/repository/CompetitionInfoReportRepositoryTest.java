@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
+import jakarta.persistence.PersistenceUnitUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static com.jiujitsu.api.domain.competition.repository.CompetitionInfoReportSpecifications.unresolvedFirstThenLatest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
@@ -82,24 +84,36 @@ class CompetitionInfoReportRepositoryTest {
                 .isEqualTo(2);
     }
 
+    // 관리자 목록 정렬 (필터 조합은 CompetitionInfoReportServiceAdminTest 에서 서비스를 거쳐 검증)
+    private Page<CompetitionInfoReport> adminList(int page, int size) {
+        return competitionInfoReportRepository.findAll(unresolvedFirstThenLatest(), PageRequest.of(page, size));
+    }
+
     @Test
-    @DisplayName("관리자 목록: 최신순(같은 시각은 id 역순)으로, 대회·제보자를 함께 가져온다")
-    void findAllWithCompetitionAndUser() {
+    @DisplayName("관리자 목록: 미처리 먼저 → 최신순(같은 시각은 id 역순), 페이지 · 개수, 대회·제보자를 함께 가져온다")
+    void adminList_unresolvedFirstThenLatest() {
         User me = saveUser("나");
         Competition seoul = saveCompetition("서울 오픈");
         CompetitionInfoReport oldest = report(seoul, me, CompetitionInfoField.FEE, START_OF_TODAY.minusDays(1));
         CompetitionInfoReport sameTimeFirst = report(seoul, me, CompetitionInfoField.PLACE, START_OF_TODAY);
         CompetitionInfoReport sameTimeSecond = report(seoul, me, CompetitionInfoField.SCHEDULE, START_OF_TODAY);
+        CompetitionInfoReport newestResolved = report(seoul, me, CompetitionInfoField.OTHER, START_OF_TODAY.plusHours(5));
+        em.getEntityManager().createNativeQuery("UPDATE competition_info_reports SET resolved_at = :at WHERE id = :id")
+                .setParameter("at", START_OF_TODAY.plusHours(6)).setParameter("id", newestResolved.getId()).executeUpdate();
         em.clear();
 
-        Page<CompetitionInfoReport> first = competitionInfoReportRepository.findAllWithCompetitionAndUser(PageRequest.of(0, 2));
-        Page<CompetitionInfoReport> second = competitionInfoReportRepository.findAllWithCompetitionAndUser(PageRequest.of(1, 2));
+        Page<CompetitionInfoReport> first = adminList(0, 3);
+        Page<CompetitionInfoReport> second = adminList(1, 3);
 
-        assertThat(first.getTotalElements()).isEqualTo(3);
+        assertThat(first.getTotalElements()).isEqualTo(4);
         assertThat(first.getContent()).extracting(CompetitionInfoReport::getId)
-                .containsExactly(sameTimeSecond.getId(), sameTimeFirst.getId());
-        assertThat(second.getContent()).extracting(CompetitionInfoReport::getId).containsExactly(oldest.getId());
+                .containsExactly(sameTimeSecond.getId(), sameTimeFirst.getId(), oldest.getId());
+        assertThat(second.getContent()).extracting(CompetitionInfoReport::getId).containsExactly(newestResolved.getId());
+        // 대회 · 제보자는 @EntityGraph 로 한 번에 로드 (N+1 방지)
+        PersistenceUnitUtil util = em.getEntityManager().getEntityManagerFactory().getPersistenceUnitUtil();
         CompetitionInfoReport loaded = first.getContent().get(0);
+        assertThat(util.isLoaded(loaded, "competition")).isTrue();
+        assertThat(util.isLoaded(loaded, "user")).isTrue();
         assertThat(loaded.getCompetition().getName()).isEqualTo("서울 오픈");
         assertThat(loaded.getUser().getNickname()).isEqualTo("나");
     }

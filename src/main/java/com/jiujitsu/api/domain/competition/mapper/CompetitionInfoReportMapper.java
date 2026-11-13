@@ -17,7 +17,9 @@ public class CompetitionInfoReportMapper {
                 report.getDetail(),
                 report.getUser().getId(),
                 report.getUser().getNickname(),
-                report.getCreatedAt()
+                report.getCreatedAt(),
+                report.getResolvedAt(),
+                report.getResolutionNote()
         );
     }
 }

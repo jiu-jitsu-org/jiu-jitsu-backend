@@ -170,7 +170,8 @@ src/main/java/com/jiujitsu/api/
 | PUT | `/admin/competitions/{competitionId}/links/{type}` | 관리자 대회 상태 링크 넣기·바꾸기 (신청·참가자 현황·대진표·실시간 매트·결과, 종류별 하나, 새로 넣거나 바뀌면 승인 전) |
 | DELETE | `/admin/competitions/{competitionId}/links/{type}` | 상태 링크 지우기 |
 | PATCH | `/admin/competitions/{competitionId}/links/{type}/approve` · `/hide` | 상태 링크 승인(켜기)·숨기기(끄기). 보이는 기간은 서버 계산(`CompetitionLinkWindow`) |
-| GET | `/admin/competitions/info-reports` | 대회 정보 제보 목록 (최신순 페이지) |
+| GET | `/admin/competitions/info-reports` | 대회 정보 제보 목록 (미처리 먼저 → 최신순 페이지, `resolved`·`competitionId` 필터) |
+| PATCH | `/admin/competitions/info-reports/{reportId}/resolve` · `/unresolve` | 제보 처리 완료(메모 선택) · 되돌리기 |
 
 ### 관리자 관장/사범 인증 (`/api/admin/owner-requests`)
 
