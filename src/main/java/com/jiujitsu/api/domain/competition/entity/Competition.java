@@ -10,7 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.DynamicUpdate;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
@@ -40,7 +39,6 @@ import java.util.stream.Stream;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@DynamicUpdate  // 바뀐 컬럼만 UPDATE — 관리자 쓰기(고치기·확인·공개)가 그사이 올라간 조회수(incrementViewCount)나 다른 관리자 요청이 바꾼 칸을 읽어 둔 값으로 덮지 않게
 public class Competition extends BaseEntity {
 
     @Id
@@ -147,7 +145,9 @@ public class Competition extends BaseEntity {
     private LocalDate lastVerifiedDate;      // 정보 기준일(마지막 확인일)
 
     @ColumnDefault("0")
-    @Column(name = "view_count", nullable = false)
+    // 엔티티 저장(관리자 고치기·확인·공개)에서는 쓰지 않는다 — 읽어 둔 값으로 그사이 올라간 조회수를 덮지 않게
+    // @DynamicUpdate 로 바뀐 칸만 쓰면 동시 고치기에서 서로 다른 칸이 섞여 일정 규칙을 어긴 행이 생길 수 있어, 행 전체 저장은 두고 이 칸만 뺀다
+    @Column(name = "view_count", nullable = false, updatable = false)
     private long viewCount;                  // 조회수 (CompetitionRepository#incrementViewCount 로만 올린다)
 
     // 웹 페이지(공개 일정)에서 복사한 대회명에 섞여 들어오는 문자를 정리한다

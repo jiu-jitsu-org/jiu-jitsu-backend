@@ -394,7 +394,7 @@ class CompetitionTest {
     }
 
     @Test
-    @DisplayName("publish: 마지막 확인일을 뺀 필수 칸이 다 있으면 공개하고 확인일을 오늘로 (확인일이 비어 있어도)")
+    @DisplayName("publish: 필수 칸이 다 있으면 공개하고 확인일을 오늘로 (확인일이 비어 있어도)")
     void publish_setsVerifiedDate() {
         Competition competition = filledForPublish().lastVerifiedDate(null).build();
 

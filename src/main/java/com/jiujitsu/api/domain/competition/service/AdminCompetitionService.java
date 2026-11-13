@@ -145,7 +145,7 @@ public class AdminCompetitionService {
     }
 
     /**
-     * 공개 — 필수 칸(마지막 확인일 제외)이 비면 COMPETITION_REQUIRED_FIELDS_MISSING, 공개하면 마지막 확인일도 오늘로. 이미 공개면 그대로
+     * 공개 — 필수 칸이 비면 COMPETITION_REQUIRED_FIELDS_MISSING, 공개하면 마지막 확인일도 오늘로. 이미 공개면 그대로
      */
     @Transactional
     public AdminCompetitionDetailResponse publish(Long competitionId) {
