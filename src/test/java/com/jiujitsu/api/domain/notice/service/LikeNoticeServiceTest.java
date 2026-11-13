@@ -130,12 +130,12 @@ class LikeNoticeServiceTest {
     }
 
     @Test
-    @DisplayName("2~4개는 푸시 없음, 카드 그대로 (읽음 상태·시각 유지)")
-    void betweenThresholds_noPush() {
+    @DisplayName("2~4개는 푸시 없음, 카드는 안 읽음으로 맨 위로 올리고 제목은 지금 개수 (보낸 기준은 1 그대로, #215)")
+    void betweenThresholds_noPushButMovesUp() {
         contentLikes(1);
         service.handle(contentLike());
+        card.pushLike(1, card.getTitle(), LocalDateTime.of(2026, 11, 1, 9, 0));   // 1개 푸시가 열흘 전이었다고 치고
         card.setRead();
-        LocalDateTime pushedAt = card.getNotifiedAt();
 
         for (long n = 2; n <= 4; n++) {
             contentLikes(n);
@@ -143,9 +143,10 @@ class LikeNoticeServiceTest {
         }
 
         verify(fcmPushEventPublisher).publish(anyLong(), any(), anyMap(), anyString(), any()); // 1개 때 한 번뿐
-        assertThat(card.getIsRead()).isTrue();
-        assertThat(card.getNotifiedAt()).isEqualTo(pushedAt);
+        assertThat(card.getIsRead()).isFalse();
+        assertThat(card.getNotifiedAt()).isEqualTo(LocalDateTime.of(2026, 11, 11, 18, 0));
         assertThat(card.getLikePushedCount()).isEqualTo(1);
+        assertThat(card.getTitle()).isEqualTo("내 게시글에 좋아요가 4개 달렸어요");
     }
 
     @Test

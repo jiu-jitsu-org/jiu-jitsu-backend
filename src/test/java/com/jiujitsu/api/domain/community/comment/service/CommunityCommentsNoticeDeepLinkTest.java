@@ -81,7 +81,7 @@ class CommunityCommentsNoticeDeepLinkTest {
         stubCreateComment(content, parent);
 
         // when
-        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 100L, "대댓글"));
+        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 100L, "대댓글", null));
 
         // then - 부모 댓글 작성자 알림 한 건만, 밸런스 상세로 향한다
         CommentNoticeEvent event = capturePublishedEvents(1).get(0);
@@ -98,10 +98,10 @@ class CommunityCommentsNoticeDeepLinkTest {
         given(content.getContentType()).willReturn(ContentType.BALANCE);
         given(authenticationFacade.getCurrentUser()).willReturn(mock(User.class));
         given(contentRepository.findById(CONTENT_ID)).willReturn(Optional.of(content));
-        given(commentFactory.createComments(any(), any(), any())).willReturn(mock(CommunityComments.class));
+        given(commentFactory.createComments(any(), any(), any(), any())).willReturn(mock(CommunityComments.class));
 
         // when
-        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 0L, "가드 패스가 낫죠"));
+        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 0L, "가드 패스가 낫죠", null));
 
         // then
         verifyNoInteractions(eventPublisher);
@@ -117,7 +117,7 @@ class CommunityCommentsNoticeDeepLinkTest {
         stubCreateComment(content, parent);
 
         // when
-        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 100L, "대댓글"));
+        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 100L, "대댓글", null));
 
         // then
         assertThat(capturePublishedEvents(2))
@@ -135,7 +135,7 @@ class CommunityCommentsNoticeDeepLinkTest {
         stubCreateComment(content, parent);
 
         // when
-        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 100L, "대댓글"));
+        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 100L, "대댓글", null));
 
         // then
         CommentNoticeEvent event = capturePublishedEvents(1).get(0);
@@ -188,7 +188,7 @@ class CommunityCommentsNoticeDeepLinkTest {
         given(authenticationFacade.getCurrentUser()).willReturn(me);
         given(contentRepository.findById(CONTENT_ID)).willReturn(Optional.of(content));
         given(communityCommentsRepository.findById(parent.getId())).willReturn(Optional.of(parent));
-        given(commentFactory.createComments(any(), any(), any())).willReturn(mock(CommunityComments.class));
+        given(commentFactory.createComments(any(), any(), any(), any())).willReturn(mock(CommunityComments.class));
     }
 
     private Content stubContent(ContentType contentType) {

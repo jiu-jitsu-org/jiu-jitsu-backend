@@ -114,7 +114,7 @@ class NoticeServiceLikeTest {
     }
 
     @Test
-    @DisplayName("게시글 좋아요 카드: 제목은 지금 좋아요 수(기준 사이 7개), 본문 게시글 제목, 시각은 마지막 푸시")
+    @DisplayName("게시글 좋아요 카드: 제목은 지금 좋아요 수(기준 사이 7개), 본문 게시글 제목, 시각은 마지막 좋아요(notifiedAt)")
     void contentLikeCard_titleUsesCurrentCount() {
         given(noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(1L)).willReturn(List.of(contentLikeCard(1, 10, true)));
         given(contentLikeRepository.countContentLikeByContentIds(List.of(10L)))
@@ -166,7 +166,7 @@ class NoticeServiceLikeTest {
     }
 
     @Test
-    @DisplayName("푸시가 한 번도 안 간 카드(첫 기준 전)와 마지막 푸시가 30일 지난 카드는 목록·안 읽은 수에서 빠진다")
+    @DisplayName("푸시가 한 번도 안 간 카드(첫 기준 전)와 마지막 좋아요가 30일 지난 카드는 목록·안 읽은 수에서 빠진다")
     void beforeFirstPushOrExpired_hidden() {
         Notice beforeFirstPush = Notice.builder().id(1L).userId(1L)
                 .pushType(FcmPushType.CONTENTS_LIKE).pushActionType(PushActionType.BOARD_DETAIL)
@@ -198,4 +198,28 @@ class NoticeServiceLikeTest {
 
         assertThat(noticeService.getUnreadCount()).isEqualTo(1);
     }
+
+    @Test
+    @DisplayName("대댓글 알림 본문(#216): 태그 답글이면 태그된 대댓글, 아니면 부모 댓글을 한 번에 불러 보여 준다")
+    void replyNotice_bodyIsRepliedComment() {
+        Notice mentionReply = Notice.builder().id(1L).userId(1L)
+                .pushType(FcmPushType.NEW_CHILD_COMMENTS).pushActionType(PushActionType.BOARD_DETAIL)
+                .title("내 댓글에 답글이 달렸어요").data("10").refId(300L).senderUserId(5L)
+                .notifiedAt(PUSHED_AT).isRead(false).build();
+        given(noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(1L)).willReturn(List.of(mentionReply));
+        stubContentExists(10L, "글 제목");
+        CommunityComments reply = mock(CommunityComments.class);   // 새 대댓글 300: 스레드 100 안에서 대댓글 200 을 태그
+        given(reply.getId()).willReturn(300L);
+        given(reply.repliedCommentId()).willReturn(200L);
+        CommunityComments mentioned = mock(CommunityComments.class);
+        given(mentioned.getId()).willReturn(200L);
+        given(mentioned.getBody()).willReturn("기 입고 해요");
+        given(communityCommentsRepository.findAllById(anySet())).willAnswer(inv -> {
+            java.util.Set<Long> ids = inv.getArgument(0);
+            return ids.contains(300L) ? List.of(reply) : ids.contains(200L) ? List.of(mentioned) : List.of();
+        });
+
+        assertThat(noticeService.getNoticeList().get(0).body()).isEqualTo("기 입고 해요");
+    }
 }
+
