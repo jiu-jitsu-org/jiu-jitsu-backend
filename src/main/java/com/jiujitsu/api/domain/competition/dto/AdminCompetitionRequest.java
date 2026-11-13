@@ -36,8 +36,10 @@ public record AdminCompetitionRequest(
         @Schema(description = "개최 연도. 대회일 연도와 같아야 함", example = "2026", requiredMode = Schema.RequiredMode.REQUIRED)
             Integer competitionYear,
         @NotNull
-        @Schema(description = "대회일", example = "2026-12-06", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "대회일 (여러 날 대회면 첫날)", example = "2026-12-06", requiredMode = Schema.RequiredMode.REQUIRED)
             LocalDate openDate,
+        @Schema(description = "여러 날 대회의 마지막 날. 하루짜리면 비움(대회일과 같으면 비운 것으로 저장). 대회일보다 앞이거나 14일 넘게 뒤면 400. 고치기(PUT)에서 빼면 비워짐", example = "2026-12-07", nullable = true)
+            LocalDate endDate,
         @Schema(description = "시작 시각 HH:mm (초를 붙여 보내면 분 단위로 잘라 저장)", type = "string", example = "09:00", nullable = true)
             LocalTime startTime,
         @Schema(description = "지역(시·도)", nullable = true)
@@ -80,6 +82,7 @@ public record AdminCompetitionRequest(
     public CompetitionEventInfo toEventInfo() {
         return new CompetitionEventInfo(
                 openDate,
+                endDate,
                 startTime == null ? null : startTime.truncatedTo(ChronoUnit.MINUTES),   // 응답이 HH:mm 라 초를 남기면 보이지 않는 값이 생긴다
                 region,
                 blankToNull(place),

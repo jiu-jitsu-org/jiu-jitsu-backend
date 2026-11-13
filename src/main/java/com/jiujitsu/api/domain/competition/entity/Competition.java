@@ -46,6 +46,8 @@ public class Competition extends BaseEntity {
     private Long id;
 
     public static final int NAME_MAX_LENGTH = 100;
+    // 여러 날 대회 기간 상한 (대회일 + 이 일수까지). 국내 대회는 길어야 2~3일 — 연도·월 오타로 대회가 몇 달씩 진행 중으로 남지 않게
+    public static final int MAX_EVENT_DAYS = 14;
 
     @Column(nullable = false, length = NAME_MAX_LENGTH)
     private String name;    // 대회명 (표시용)
@@ -71,7 +73,10 @@ public class Competition extends BaseEntity {
     private boolean published;
 
     @Column(name = "open_date")
-    private LocalDate openDate;              // 대회일
+    private LocalDate openDate;              // 대회일 (여러 날 대회면 첫날)
+
+    @Column(name = "end_date")
+    private LocalDate endDate;               // 여러 날 대회의 마지막 날. 하루짜리면 null (대회일과 같은 값은 넣지 않음 — changeEventInfo)
 
     @Column(name = "start_time")
     private LocalTime startTime;             // 시작 시각 (모르면 null)
@@ -276,6 +281,13 @@ public class Competition extends BaseEntity {
     }
 
     /**
+     * 대회 마지막 날 — 종료일, 하루짜리면 대회일. 대회일 없는 자동완성용 대회는 null
+     */
+    public LocalDate lastDay() {
+        return endDate != null ? endDate : openDate;
+    }
+
+    /**
      * 자동완성용 카탈로그 엔트리인가 (대회일 없음 — 관리자 일괄 등록으로만 생긴다)
      */
     public boolean isCatalogEntry() {
@@ -302,6 +314,8 @@ public class Competition extends BaseEntity {
      */
     public void changeEventInfo(CompetitionEventInfo info) {
         this.openDate = info.openDate();
+        // 하루짜리는 null 하나로 표현 (종료일 = 대회일을 따로 두지 않음)
+        this.endDate = info.endDate() != null && info.endDate().equals(info.openDate()) ? null : info.endDate();
         this.startTime = info.startTime();
         this.region = info.region();
         this.place = info.place();
@@ -324,7 +338,7 @@ public class Competition extends BaseEntity {
      * 이벤트 정보 불변식 검증. 위반이면 COMPETITION_INVALID_EVENT_INFO
      * - 공개 대회는 대회일이 있어야 한다
      * - 대회일과 연도가 둘 다 있으면 연도 = 대회일 연도 (자동완성용 대회와 이름 + 연도로 이어 붙이므로 어긋나면 엉뚱한 행에 붙거나 중복이 생긴다)
-     * - 일정 순서: 접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 (비어 있는 값은 건너뛰고 채워진 것끼리 비교)
+     * - 일정 순서: 접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 ≤ 종료일, 종료일은 대회일 + MAX_EVENT_DAYS 이내 (비어 있는 값은 건너뛰고 채워진 것끼리 비교)
      * - 참가비 단계: validateFees 참고
      * 저장 직전(@PrePersist/@PreUpdate)에 항상 확인해 어떤 쓰기 경로로도 잘못된 데이터가 저장되지 않게 한다.
      * 쓰기 쪽(관리자 입력·정보 수집)은 저장 전에 직접 호출해 400 으로 응답할 것 —
@@ -337,7 +351,10 @@ public class Competition extends BaseEntity {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
         validateYear(competitionYear, openDate);
-        List<LocalDate> schedule = Stream.of(registrationStartDate, earlyBirdDeadline, registrationDeadline, openDate)
+        if (openDate != null && endDate != null && endDate.isAfter(openDate.plusDays(MAX_EVENT_DAYS))) {
+            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        }
+        List<LocalDate> schedule = Stream.of(registrationStartDate, earlyBirdDeadline, registrationDeadline, openDate, endDate)
                 .filter(Objects::nonNull)
                 .toList();
         for (int i = 1; i < schedule.size(); i++) {

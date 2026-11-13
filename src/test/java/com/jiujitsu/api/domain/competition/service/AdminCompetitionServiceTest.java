@@ -217,7 +217,7 @@ class AdminCompetitionServiceTest {
 
         AdminCompetitionListItem item = adminCompetitionService.getList(ALL, FIRST_PAGE).getContent().get(0);
 
-        assertThat(item).isEqualTo(new AdminCompetitionListItem(saved.getId(), "서울 오픈", 2026, true, day(10),
+        assertThat(item).isEqualTo(new AdminCompetitionListItem(saved.getId(), "서울 오픈", 2026, true, day(10), null,
                 CompetitionRegion.SEOUL, "서울 송파", day(5), day(-11),
                 List.of(CompetitionRequiredField.START_TIME, CompetitionRequiredField.REGISTRATION_START_DATE)));
     }
@@ -304,7 +304,7 @@ class AdminCompetitionServiceTest {
     // ---- 만들기·고치기 (#208) ----
 
     private static AdminCompetitionRequest request(String name, LocalDate openDate) {
-        return new AdminCompetitionRequest(name, openDate.getYear(), openDate, LocalTime.of(9, 0), CompetitionRegion.SEOUL,
+        return new AdminCompetitionRequest(name, openDate.getYear(), openDate, null, LocalTime.of(9, 0), CompetitionRegion.SEOUL,
                 " 서울 송파 ", "올림픽홀", "서울시주짓수회", "https://example.com/notice", List.of(CompetitionUniform.GI, CompetitionUniform.GI),
                 null, openDate.minusDays(30), openDate.minusDays(20), openDate.minusDays(10),
                 List.of(new AdminCompetitionRequest.Fee("얼리버드", 60000, openDate.minusDays(20)), new AdminCompetitionRequest.Fee("기본 참가비", 70000, null)),
@@ -313,7 +313,7 @@ class AdminCompetitionServiceTest {
 
     // 이름·연도·대회일만, 나머지 칸 비움
     private static AdminCompetitionRequest minimal(String name, int year, LocalDate openDate) {
-        return new AdminCompetitionRequest(name, year, openDate, null, null, "  ", null, null, null, null, null,
+        return new AdminCompetitionRequest(name, year, openDate, null, null, null, "  ", null, null, null, null, null,
                 null, null, null, null, null);
     }
 
@@ -418,7 +418,7 @@ class AdminCompetitionServiceTest {
     @Test
     @DisplayName("만들기: 일정 순서가 틀리면 COMPETITION_INVALID_EVENT_INFO 이고 저장되지 않는다")
     void create_invalidSchedule() {
-        AdminCompetitionRequest reversed = new AdminCompetitionRequest("서울 오픈", 2026, day(30), null, null, null, null, null, null, null, null,
+        AdminCompetitionRequest reversed = new AdminCompetitionRequest("서울 오픈", 2026, day(30), null, null, null, null, null, null, null, null, null,
                 null, null, day(40), null, null);
 
         assertThatThrownBy(() -> adminCompetitionService.create(reversed))
@@ -544,7 +544,7 @@ class AdminCompetitionServiceTest {
     @Test
     @DisplayName("만들기: 시작 시각에 초가 붙어 오면 분 단위로 잘라 저장한다")
     void create_startTimeTruncatedToMinutes() {
-        AdminCompetitionRequest withSeconds = new AdminCompetitionRequest("서울 오픈", 2026, day(30), LocalTime.of(9, 0, 30), null, null, null, null,
+        AdminCompetitionRequest withSeconds = new AdminCompetitionRequest("서울 오픈", 2026, day(30), null, LocalTime.of(9, 0, 30), null, null, null, null,
                 null, null, null, null, null, null, null, null);
 
         Long id = adminCompetitionService.create(withSeconds).competition().competitionId();
@@ -730,6 +730,38 @@ class AdminCompetitionServiceTest {
         Competition reloaded = em.find(Competition.class, published.getId());
         assertThat(reloaded.getViewCount()).isEqualTo(1);
         assertThat(reloaded.getLastVerifiedDate()).isEqualTo(BASE);
+    }
+
+    // ---- 대회 종료일 (#220) ----
+
+    private static AdminCompetitionRequest withEndDate(String name, LocalDate openDate, LocalDate endDate) {
+        return new AdminCompetitionRequest(name, openDate.getYear(), openDate, endDate, null, null, null, null, null, null, null,
+                null, null, null, null, null, null);
+    }
+
+    @Test
+    @DisplayName("종료일: 만들기·고치기에 저장되고 목록·상세에 나온다. 대회일과 같으면 비운 것(하루짜리)으로")
+    void endDate_savedAndShown() {
+        AdminCompetitionDetailResponse created = adminCompetitionService.create(
+                withEndDate("이틀 대회", LocalDate.of(2026, 12, 5), LocalDate.of(2026, 12, 6))).competition();
+        assertThat(created.endDate()).isEqualTo(LocalDate.of(2026, 12, 6));
+        assertThat(adminCompetitionService.getList(ALL, FIRST_PAGE).getContent().get(0).endDate()).isEqualTo(LocalDate.of(2026, 12, 6));
+
+        AdminCompetitionDetailResponse sameDay = adminCompetitionService.update(created.competitionId(),
+                withEndDate("이틀 대회", LocalDate.of(2026, 12, 5), LocalDate.of(2026, 12, 5)));
+        assertThat(sameDay.endDate()).isNull();
+        em.flush();
+        em.clear();
+        assertThat(em.find(Competition.class, created.competitionId()).getEndDate()).isNull();
+    }
+
+    @Test
+    @DisplayName("종료일이 대회일보다 앞이면 COMPETITION_INVALID_EVENT_INFO")
+    void endDate_beforeOpenDate_rejected() {
+        assertThatThrownBy(() -> adminCompetitionService.create(
+                withEndDate("거꾸로", LocalDate.of(2026, 12, 6), LocalDate.of(2026, 12, 5))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
     }
 }
 

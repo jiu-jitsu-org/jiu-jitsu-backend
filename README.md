@@ -162,7 +162,7 @@ src/main/java/com/jiujitsu/api/
 | POST | `/admin/competitions/catalog` | 자동완성용 대회 일괄 등록 (회차 = 대회명 + 연도, 대회일 없는 미공개, 중복은 건너뜀) |
 | GET | `/admin/competitions` | 관리자 대회 목록 (대회일 있는 대회, 공개·미공개 모두. 공개 여부·대회명·대회일 기간 필터, 대회일 순 페이지, 비어 있는 공개 필수 칸) |
 | GET | `/admin/competitions/{competitionId}` | 관리자 대회 상세 (공개 여부 무관, 입력 화면 전체 칸 + 조회수·관심 수·비어 있는 공개 필수 칸) |
-| POST | `/admin/competitions` | 관리자 대회 만들기 (미공개, 대회명·연도·대회일 필수. 같은 이름·연도의 자동완성용 대회가 있으면 그 행에 채움) |
+| POST | `/admin/competitions` | 관리자 대회 만들기 (미공개, 대회명·연도·대회일 필수, 여러 날 대회는 종료일. 같은 이름·연도의 자동완성용 대회가 있으면 그 행에 채움) |
 | PUT | `/admin/competitions/{competitionId}` | 관리자 대회 고치기 (전체 교체, 공개 여부·확인일 제외. 대회명·연도를 바꾸면 연결된 프로필 대회 기록도 맞춤) |
 | PATCH | `/admin/competitions/{competitionId}/verify` | 관리자 대회 확인 완료 (마지막 확인일 = 오늘) |
 | PATCH | `/admin/competitions/{competitionId}/publish` | 관리자 대회 공개 (필수 칸 검사, 마지막 확인일 = 오늘. 이미 공개면 그대로) |

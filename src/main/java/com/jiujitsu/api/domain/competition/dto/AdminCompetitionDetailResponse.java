@@ -22,8 +22,10 @@ public record AdminCompetitionDetailResponse(
             Integer competitionYear,
         @Schema(description = "대회 탭 공개 여부")
             boolean published,
-        @Schema(description = "대회일 (자동완성용 대회는 null)", example = "2026-11-22", nullable = true)
+        @Schema(description = "대회일 — 여러 날 대회면 첫날 (자동완성용 대회는 null)", example = "2026-11-22", nullable = true)
             LocalDate openDate,
+        @Schema(description = "여러 날 대회의 마지막 날. 하루짜리면 null", nullable = true)
+            LocalDate endDate,
         @JsonFormat(pattern = "HH:mm")   // 초는 쓰지 않음
         @Schema(description = "시작 시각 HH:mm", type = "string", example = "09:00", nullable = true)
             LocalTime startTime,
