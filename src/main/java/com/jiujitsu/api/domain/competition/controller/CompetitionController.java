@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionRegionsResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionViewResponse;
 import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
@@ -98,6 +99,18 @@ public class CompetitionController {
             @RequestParam(required = false) String keyword
     ) {
         return competitionQueryService.getPicker(keyword);
+    }
+
+    @Operation(
+            summary = "대회가 있는 지역 (대회 탭 지역 필터)",
+            description = "공개 대회가 하나라도 있는 지역(시·도)을 반환합니다. 비로그인도 조회할 수 있습니다.\n\n"
+                    + "- 지난 대회도 포함합니다 (지난 대회만 있는 지역도 포함, 고르면 지난 대회만 나옴)\n"
+                    + "- 관심·상태 등 다른 필터와 상관없이 공개 대회 전체 기준입니다\n"
+                    + "- 순서는 지역 enum 선언 순서, 대회가 없으면 빈 배열"
+    )
+    @GetMapping("/regions")
+    public CompetitionRegionsResponse regions() {
+        return competitionQueryService.getRegions();
     }
 
     @Operation(

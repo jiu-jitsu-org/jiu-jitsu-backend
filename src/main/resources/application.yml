@@ -72,6 +72,10 @@ fcm:
 competition:
   deadline-notice:
     cron: "0 0 18 * * *"
+  # 관심 많은 대회 표시 (#210): 같은 달 끝나지 않은 공개 대회 중 관심 수 상위 top 개, 단 관심 min-interests 개 이상. 오픈 뒤 분포를 보고 바꾼다
+  popular:
+    top: 3
+    min-interests: 5
 
 # 좋아요 알림 푸시 기준 (#196): 1·5·10개, 그 뒤 10개마다. 사용자가 늘면 간격을 넓힌다
 notice:

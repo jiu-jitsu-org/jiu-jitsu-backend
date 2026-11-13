@@ -307,6 +307,6 @@ class BoardServiceCompetitionTest {
 
     private static CompetitionListItem card(Long id) {
         return new CompetitionListItem(id, "대회" + id, LocalDate.of(2026, 12, 6), null, null, List.of(), null,
-                null, false, null, null, null, 0, 0, false);
+                null, false, null, null, null, 0, 0, false, false);
     }
 }

@@ -24,7 +24,7 @@ public class CompetitionMapper {
     }
 
     // 공개 대회만 (status 는 미공개면 예외 — 조회 쪽 published 필터 누락을 바로 드러낸다)
-    public CompetitionListItem toListItem(Competition competition, LocalDate today, long interestCount, boolean interested) {
+    public CompetitionListItem toListItem(Competition competition, LocalDate today, long interestCount, boolean interested, boolean popular) {
         return new CompetitionListItem(
                 competition.getId(),
                 competition.getName(),
@@ -40,7 +40,8 @@ public class CompetitionMapper {
                 competition.getRegistrationDeadline(),
                 competition.getViewCount(),
                 interestCount,
-                interested
+                interested,
+                popular
         );
     }
 
