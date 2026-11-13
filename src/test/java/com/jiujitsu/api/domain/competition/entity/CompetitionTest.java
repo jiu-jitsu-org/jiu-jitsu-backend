@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -245,5 +246,58 @@ class CompetitionTest {
         assertThatThrownBy(competition::validateEventInfo)
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+    }
+
+    private static Competition.CompetitionBuilder filledForPublish() {
+        return Competition.builder()
+                .name("서울 오픈")
+                .searchName("서울오픈")
+                .competitionYear(2026)
+                .published(false)
+                .openDate(LocalDate.of(2026, 12, 6))
+                .startTime(LocalTime.of(9, 0))
+                .region(CompetitionRegion.SEOUL)
+                .uniforms(new LinkedHashSet<>(Set.of(CompetitionUniform.GI)))
+                .registrationStartDate(LocalDate.of(2026, 11, 1))
+                .registrationDeadline(LocalDate.of(2026, 11, 30))
+                .noticeUrl("https://example.com/notice")
+                .lastVerifiedDate(LocalDate.of(2026, 11, 13));
+    }
+
+    @Test
+    @DisplayName("missingRequiredFields: 공개 필수 칸이 다 채워졌으면 빈 목록")
+    void missingRequiredFields_allFilled() {
+        assertThat(filledForPublish().build().missingRequiredFields()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("missingRequiredFields: 시작 시각·접수 시작이 빈 대회는 그 칸만 (dev 시드 대회 모양)")
+    void missingRequiredFields_onlyEmptyOnes() {
+        Competition competition = filledForPublish()
+                .startTime(null)
+                .registrationStartDate(null)
+                .build();
+
+        assertThat(competition.missingRequiredFields())
+                .containsExactly(CompetitionRequiredField.START_TIME, CompetitionRequiredField.REGISTRATION_START_DATE);
+    }
+
+    @Test
+    @DisplayName("missingRequiredFields: 공지 링크가 공백뿐이면 빈 칸, 종목이 비어 있으면 빈 칸")
+    void missingRequiredFields_blankUrlAndNoUniforms() {
+        Competition competition = filledForPublish()
+                .noticeUrl("  ")
+                .uniforms(new LinkedHashSet<>())
+                .build();
+
+        assertThat(competition.missingRequiredFields())
+                .containsExactly(CompetitionRequiredField.UNIFORMS, CompetitionRequiredField.NOTICE_URL);
+    }
+
+    @Test
+    @DisplayName("missingRequiredFields: 자동완성용 대회(이름·연도만)는 모든 칸이 선언 순서대로")
+    void missingRequiredFields_catalogEntry() {
+        assertThat(Competition.of("서울 오픈", 2025).missingRequiredFields())
+                .containsExactly(CompetitionRequiredField.values());
     }
 }

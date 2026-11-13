@@ -60,8 +60,9 @@ public class Competition extends BaseEntity {
 
     // --- 대회 이벤트 정보 (대회 탭 노출용) ---
     // 하나의 Competition 은 데이터 완성도만 다를 뿐 같은 개념이다.
-    // published=false 는 프로필 대회 기록 자동완성용 "이름(+연도)" 카탈로그 엔트리로,
-    // 아래 이벤트 필드가 비어 있고 대회 탭 목록/상세에는 노출하지 않는다.
+    // published=false 는 대회 탭 목록/상세에 노출하지 않는다. 두 가지다:
+    // - 대회일 없음: 프로필 대회 기록 자동완성용 "이름(+연도)" 카탈로그 엔트리 (아래 이벤트 필드가 비어 있음)
+    // - 대회일 있음: 관리자가 정보를 채우는 중인, 공개 전 대회 (관리자 대회 목록에 나옴)
     // published=true 는 관리자가 일정·장소 등을 채워 공개한 대회(쓰기/수집은 별도 이슈).
     // NOT NULL 컬럼은 DB 기본값을 함께 둔다: ddl-auto update 로 기존 행이 있는 테이블에 추가될 때
     // 기본값이 없으면 PostgreSQL 이 ADD COLUMN 을 거부한다
@@ -180,7 +181,7 @@ public class Competition extends BaseEntity {
      * 비어 있는 일정은 제약으로 보지 않는다(채워진 정보로만 판단). 대회 당일은 접수 마감 뒤라면 CLOSED.
      * 오늘 날짜는 호출부가 Clock 으로 구해 넘긴다(테스트에서 날짜 고정).
      *
-     * @throws IllegalStateException 미공개(카탈로그) 엔트리 — 일정이 없어 상태를 판단할 수 없다.
+     * @throws IllegalStateException 미공개 대회 — 대회 탭에 없는 대회라 상태를 판단하지 않는다.
      *                               조회 쪽에서 published 필터를 빠뜨린 프로그래밍 오류를 바로 드러낸다
      */
     public CompetitionStatus status(LocalDate today) {
@@ -208,6 +209,40 @@ public class Competition extends BaseEntity {
         return status(today) == CompetitionStatus.OPEN
                 && earlyBirdDeadline != null
                 && !today.isAfter(earlyBirdDeadline);
+    }
+
+    /**
+     * 공개에 필요한데 비어 있는 칸 (CompetitionRequiredField 선언 순서). 다 채워졌으면 빈 목록
+     * 관리자 목록·상세에서 채울 칸을 보여 준다. 저장 시 강제하지 않으므로(validateEventInfo 는 공개 대회의 대회일만 확인)
+     * 공개 대회도 빈 칸이 있을 수 있다 — 공개 전환 검사(#209)가 이 기준을 쓸 예정
+     */
+    public List<CompetitionRequiredField> missingRequiredFields() {
+        List<CompetitionRequiredField> missing = new ArrayList<>();
+        if (openDate == null) {
+            missing.add(CompetitionRequiredField.OPEN_DATE);
+        }
+        if (startTime == null) {
+            missing.add(CompetitionRequiredField.START_TIME);
+        }
+        if (region == null) {
+            missing.add(CompetitionRequiredField.REGION);
+        }
+        if (uniforms.isEmpty()) {
+            missing.add(CompetitionRequiredField.UNIFORMS);
+        }
+        if (registrationStartDate == null) {
+            missing.add(CompetitionRequiredField.REGISTRATION_START_DATE);
+        }
+        if (registrationDeadline == null) {
+            missing.add(CompetitionRequiredField.REGISTRATION_DEADLINE);
+        }
+        if (noticeUrl == null || noticeUrl.isBlank()) {
+            missing.add(CompetitionRequiredField.NOTICE_URL);
+        }
+        if (lastVerifiedDate == null) {
+            missing.add(CompetitionRequiredField.LAST_VERIFIED_DATE);
+        }
+        return missing;
     }
 
     /**
