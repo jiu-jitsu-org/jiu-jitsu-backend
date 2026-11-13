@@ -32,7 +32,7 @@ public class NoticePreview {
      * 알림 종류별 미리보기 본문 (규칙 한 곳)
      *
      * @param contentId         게시글·밸런스 게임 contentId
-     * @param refId             NEW_CHILD_COMMENTS = 새 대댓글, COMMENTS_LIKE = 좋아요 받은 댓글
+     * @param refId             NEW_CHILD_COMMENTS = 새 대댓글(받는 사람이 쓴 댓글 = 태그한 대댓글, 없으면 부모 댓글을 보여 줌), COMMENTS_LIKE = 좋아요 받은 댓글
      * @param boardTitleOf      contentId → 게시글 제목 (없으면 null)
      * @param commentOf         댓글 id → 댓글 (없으면 null)
      */
@@ -44,8 +44,9 @@ public class NoticePreview {
             case NEW_CHILD_COMMENTS -> {
                 if (refId == null) yield null;
                 CommunityComments reply = commentOf.apply(refId);
-                if (reply == null || reply.getParentId() == null || reply.getParentId() == 0) yield null;
-                yield commentPreview(commentOf.apply(reply.getParentId()));
+                Long replied = reply == null ? null : repliedCommentId(reply);
+                if (replied == null || replied == 0) yield null;
+                yield commentPreview(commentOf.apply(replied));
             }
             case COMMENTS_LIKE -> refId == null ? null : commentPreview(commentOf.apply(refId));
             default -> null;
@@ -57,6 +58,14 @@ public class NoticePreview {
         return body(pushType, contentId, refId,
                 id -> boardRepository.findByContent_Id(id).map(Board::getTitle).orElse(null),
                 id -> communityCommentsRepository.findById(id).orElse(null));
+    }
+
+    /**
+     * 대댓글이 답한 댓글 = 답글 알림을 받는 사람이 쓴 댓글. 태그한 대댓글이 있으면 그 대댓글(#216), 없으면 부모(최상위) 댓글
+     */
+    public static Long repliedCommentId(CommunityComments reply) {
+        Long mentioned = reply.getMentionCommentId();
+        return mentioned != null && mentioned != 0 ? mentioned : reply.getParentId();
     }
 
     private static String commentPreview(CommunityComments comment) {

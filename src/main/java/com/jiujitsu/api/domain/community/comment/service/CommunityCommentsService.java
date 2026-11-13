@@ -28,6 +28,7 @@ import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.notice.event.LikeNoticeEvent;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
@@ -184,9 +185,12 @@ public class CommunityCommentsService {
         Long parentID = request.parentId() == null ? 0L : request.parentId();
         Optional<CommunityComments> parentComments = communityCommentsRepository.findById(parentID);
 
+        // 대댓글의 답글 버튼으로 쓴 답글이면 그 대댓글 (#216). 지워졌으면 태그 없는 답글로
+        Optional<CommunityComments> mentioned = findMentionedReply(request.mentionCommentId(), parentID, parentComments.isPresent());
 
         // 댓글 entity 생성
         CommunityComments communityComments = commentFactory.createComments(content, parentID, request.body());
+        mentioned.ifPresent(reply -> communityComments.mention(reply.getId()));
         communityCommentsRepository.save(communityComments);
 
         // 알림 설정 (커밋 후 FCM 발송 + 알림 저장)
@@ -195,13 +199,22 @@ public class CommunityCommentsService {
         // 딥링크 목적지는 푸시 종류가 아니라 대상 컨텐츠 타입이 결정한다 (게시글 / 밸런스 게임)
         PushActionType actionType = content.getContentType().getPushActionType();
 
+        // 알림2 받는 사람 - 태그한 대댓글 작성자(탈퇴 회원이면 없음), 태그가 없으면 부모(최상위) 댓글 작성자. 본인에게는 없음
+        Optional<User> replyRecipient = mentioned.isPresent()
+                ? mentioned.map(CommunityComments::getCreatedBy).filter(recipient -> recipient.getStatus() != UserStatus.DELETED)
+                : parentComments.map(CommunityComments::getCreatedBy);
+        Long replyRecipientId = replyRecipient
+                .filter(recipient -> !Objects.equals(user.getId(), recipient.getId()))
+                .map(User::getId)
+                .orElse(null);
+
         // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
         // 글쓴이 알림을 받는 컨텐츠만 (밸런스 게임 제외, ContentType#notifiesWriter)
-        // 단, 게시글 작성자 == 부모댓글 작성자인 경우 알림2(NEW_CHILD_COMMENTS)로 대체되므로 중복 방지
+        // 단, 게시글 작성자가 이번 답글의 알림2를 받으면 그것으로 대체한다 (중복 방지).
+        // 태그 답글이면 알림2가 태그된 사람에게 가므로, 게시글 작성자가 최상위 댓글 작성자여도 알림1을 받는다 (#216)
         boolean notifyBoardWriter = content.getContentType().isNotifiesWriter();
-        boolean boardWriterIsParentAuthor = notifyBoardWriter && parentComments.isPresent() &&
-                Objects.equals(boardWriter.getId(), parentComments.get().getCreatedBy().getId());
-        if (notifyBoardWriter && !Objects.equals(user.getId(), boardWriter.getId()) && !boardWriterIsParentAuthor) {
+        if (notifyBoardWriter && !Objects.equals(user.getId(), boardWriter.getId())
+                && !Objects.equals(boardWriter.getId(), replyRecipientId)) {
             eventPublisher.publishEvent(new CommentNoticeEvent(
                     boardWriter.getId(),
                     content.getId(),
@@ -213,25 +226,46 @@ public class CommunityCommentsService {
             ));
         }
 
-        // 알림2 - 댓글에 대댓글 달렸을 때 댓글 작성자에게
-        if (parentComments.isPresent()) {
-            if (!Objects.equals(user.getId(), parentComments.get().getCreatedBy().getId())) {
-                eventPublisher.publishEvent(new CommentNoticeEvent(
-                        parentComments.get().getCreatedBy().getId(),
-                        content.getId(),
-                        FcmPushType.NEW_CHILD_COMMENTS,
-                        Map.of("type", actionType.name(),
-                               "data", content.getId().toString()),
-                        user.getId(),
-                        communityComments.getId()
-                ));
-            }
+        // 알림2 - 댓글에 대댓글 달렸을 때 (태그 답글이면 태그된 대댓글 작성자에게)
+        if (replyRecipientId != null) {
+            eventPublisher.publishEvent(new CommentNoticeEvent(
+                    replyRecipientId,
+                    content.getId(),
+                    FcmPushType.NEW_CHILD_COMMENTS,
+                    Map.of("type", actionType.name(),
+                           "data", content.getId().toString()),
+                    user.getId(),
+                    communityComments.getId()
+            ));
         }
 
         // 작성자 프로필 조회
         CommunityProfile authorProfile = communityProfileService.findProfile(user).orElse(null);
 
         return commentMapper.toCommunityCommentsResponse(communityComments, user, authorProfile, new ArrayList<>());
+    }
+
+    /**
+     * 답글 버튼을 누른 대댓글 (#216). 태그가 없거나 그 대댓글이 지워졌으면 비어 있다 (태그 없는 답글로 처리)
+     * - 대댓글 작성이 아닌데 태그하면 WRONG_PARAMETER
+     * - 같은 스레드가 아닌 댓글이면 WRONG_PARAMETER. 최상위 댓글 자신을 보내면 태그 없는 답글과 같다
+     * - 대댓글이 없는 댓글은 지우면 행이 사라져 없는 id 와 구분할 수 없으므로, 없는 id 도 지워진 것으로 본다
+     */
+    private Optional<CommunityComments> findMentionedReply(Long mentionCommentId, Long parentId, boolean isReply) {
+        if (mentionCommentId == null) {
+            return Optional.empty();
+        }
+        if (!isReply) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+        }
+        if (mentionCommentId.equals(parentId)) {
+            return Optional.empty();
+        }
+        Optional<CommunityComments> mentioned = communityCommentsRepository.findById(mentionCommentId);
+        if (mentioned.isPresent() && !Objects.equals(mentioned.get().getParentId(), parentId)) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+        }
+        return mentioned.filter(reply -> !reply.isDeleted());
     }
 
     /**

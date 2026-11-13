@@ -67,11 +67,13 @@ public class LikeNoticeService {
 
         long count = countLikes(event);
         int threshold = likePushProperties.reachedThreshold(count);
+        String title = Notice.likeTitle(event.pushType(), count);
+        // 기준 사이 좋아요도 알림함 맨 위로 올린다 — 알림함은 가장 최근에 일어난 일이 위 (#215). 푸시는 새 기준에 닿을 때만
         if (threshold <= card.getLikePushedCount()) {
+            card.touchLike(title, LocalDateTime.now(clock));
             return false;
         }
 
-        String title = Notice.likeTitle(event.pushType(), count);
         card.pushLike(threshold, title, LocalDateTime.now(clock));
         fcmPushEventPublisher.publish(recipientId, event.pushType(), event.pushData(), title,
                 noticePreview.of(event.pushType(), event.contentId(), event.commentId()));

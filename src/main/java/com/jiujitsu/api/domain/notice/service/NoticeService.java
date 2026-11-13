@@ -139,12 +139,12 @@ public class NoticeService {
                 : boardRepository.findAllByContentIdIn(List.copyOf(contentIds)).stream()
                         .collect(Collectors.toMap(b -> b.getContent().getId(), Board::getTitle));
 
-        // body 계산용: NEW_CHILD_COMMENTS 알림의 부모 댓글 일괄 조회
+        // body 계산용: NEW_CHILD_COMMENTS 알림이 보여 줄 댓글 일괄 조회 — 태그 답글이면 태그된 대댓글, 아니면 부모 댓글 (NoticePreview)
         Set<Long> parentIds = notices.stream()
                 .filter(n -> n.getPushType() == FcmPushType.NEW_CHILD_COMMENTS && n.getRefId() != null)
                 .map(n -> commentByRefId.get(n.getRefId()))
                 .filter(Objects::nonNull)
-                .map(CommunityComments::getParentId)
+                .map(NoticePreview::repliedCommentId)
                 .filter(id -> id != null && id != 0)
                 .collect(Collectors.toSet());
         Map<Long, CommunityComments> parentCommentById = parentIds.isEmpty()
@@ -370,7 +370,7 @@ public class NoticeService {
          * 알림함·안 읽은 수에서 뺄 좋아요 카드
          * - 좋아요가 전부 취소됨 (0개)
          * - 아직 푸시가 한 번도 안 감 (첫 기준 전 — 기준을 1보다 크게 바꾼 경우)
-         * - 마지막 푸시가 보관 기간(30일) 전 — 카드는 이미 보낸 기준을 들고 있어 정리에서 지우지 않으므로 여기서 숨긴다
+         * - 마지막 좋아요가 보관 기간(30일) 전 — 기준 사이 좋아요도 notifiedAt 을 올린다(#215). 카드는 이미 보낸 기준을 들고 있어 정리에서 지우지 않으므로 여기서 숨긴다
          */
         boolean isHidden(Notice n, LocalDateTime cutoff) {
             if (!n.isLikeCard()) return false;

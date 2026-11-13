@@ -108,7 +108,7 @@ src/main/java/com/jiujitsu/api/
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/community/comments` | 댓글 목록 조회 |
-| POST | `/community/comments` | 댓글 작성 |
+| POST | `/community/comments` | 댓글 작성 (대댓글의 답글 버튼이면 `mentionCommentId` — 답글 알림이 그 대댓글 작성자에게) |
 | POST | `/community/comments/like` | 댓글 좋아요 등록/취소 |
 | DELETE | `/community/comments/{id}` | 댓글 삭제 |
 

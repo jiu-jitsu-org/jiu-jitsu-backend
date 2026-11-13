@@ -9,8 +9,16 @@ public record CommunityCommentsWriteRequest(
         @Schema(description = "부모 댓글 ID (대댓글 아니라면 null 또는 0)", example = "null")
         Long parentId,
         @Schema(description = "댓글 내용", example = "test")
-        String body
+        String body,
+        @Schema(description = "대댓글의 답글 버튼으로 쓸 때 그 대댓글 ID (선택). 같은 스레드의 대댓글이어야 하고(아니면 400), 답글 알림이 최상위 댓글 작성자 대신 그 대댓글 작성자에게 간다. "
+                + "그 대댓글이 지워졌으면 태그 없는 답글로 처리", example = "null", nullable = true)
+        Long mentionCommentId
 ) {
+    // 태그 없이 쓰던 기존 호출 (mentionCommentId 없음)
+    public CommunityCommentsWriteRequest(Long contentId, Long parentId, String body) {
+        this(contentId, parentId, body, null);
+    }
+
     // AOS 에서 '부모 없음'을 0으로 보내는 경우를 정규화
     public Long normalizedParentId() {
         return (parentId == null || parentId == 0L) ? null : parentId;

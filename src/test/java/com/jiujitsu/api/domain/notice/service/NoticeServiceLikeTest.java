@@ -114,7 +114,7 @@ class NoticeServiceLikeTest {
     }
 
     @Test
-    @DisplayName("게시글 좋아요 카드: 제목은 지금 좋아요 수(기준 사이 7개), 본문 게시글 제목, 시각은 마지막 푸시")
+    @DisplayName("게시글 좋아요 카드: 제목은 지금 좋아요 수(기준 사이 7개), 본문 게시글 제목, 시각은 마지막 좋아요(notifiedAt)")
     void contentLikeCard_titleUsesCurrentCount() {
         given(noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(1L)).willReturn(List.of(contentLikeCard(1, 10, true)));
         given(contentLikeRepository.countContentLikeByContentIds(List.of(10L)))
@@ -166,7 +166,7 @@ class NoticeServiceLikeTest {
     }
 
     @Test
-    @DisplayName("푸시가 한 번도 안 간 카드(첫 기준 전)와 마지막 푸시가 30일 지난 카드는 목록·안 읽은 수에서 빠진다")
+    @DisplayName("푸시가 한 번도 안 간 카드(첫 기준 전)와 마지막 좋아요가 30일 지난 카드는 목록·안 읽은 수에서 빠진다")
     void beforeFirstPushOrExpired_hidden() {
         Notice beforeFirstPush = Notice.builder().id(1L).userId(1L)
                 .pushType(FcmPushType.CONTENTS_LIKE).pushActionType(PushActionType.BOARD_DETAIL)
