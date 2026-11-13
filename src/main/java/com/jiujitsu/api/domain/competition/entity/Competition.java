@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
@@ -39,6 +40,7 @@ import java.util.stream.Stream;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@DynamicUpdate  // 바뀐 컬럼만 UPDATE — 관리자 쓰기(고치기·확인·공개)가 그사이 올라간 조회수(incrementViewCount)나 다른 관리자 요청이 바꾼 칸을 읽어 둔 값으로 덮지 않게
 public class Competition extends BaseEntity {
 
     @Id
@@ -239,9 +241,6 @@ public class Competition extends BaseEntity {
         if (noticeUrl == null || noticeUrl.isBlank()) {
             missing.add(CompetitionRequiredField.NOTICE_URL);
         }
-        if (lastVerifiedDate == null) {
-            missing.add(CompetitionRequiredField.LAST_VERIFIED_DATE);
-        }
         return missing;
     }
 
@@ -254,16 +253,15 @@ public class Competition extends BaseEntity {
 
     /**
      * 대회 탭에 공개. 공개 = 운영자가 공지와 맞춰 본 대회라 마지막 확인일도 오늘로 바꾼다
-     * 그래서 마지막 확인일을 뺀 필수 칸이 하나라도 비면 COMPETITION_REQUIRED_FIELDS_MISSING (어떤 칸인지는 missingRequiredFields)
+     * 필수 칸이 하나라도 비면 COMPETITION_REQUIRED_FIELDS_MISSING (어떤 칸인지는 missingRequiredFields)
      * 이미 공개면 그대로 둔다 (확인일 갱신은 verify). 검사는 공개로 바꿀 때만 — 이미 공개된 대회는 빈 칸이 있어도 공개를 유지한다
+     * (그래서 빈 칸 있는 공개 대회를 비공개로 돌리면 채우기 전까지 다시 공개할 수 없다)
      */
     public void publish(LocalDate today) {
         if (published) {
             return;
         }
-        boolean missing = missingRequiredFields().stream()
-                .anyMatch(field -> field != CompetitionRequiredField.LAST_VERIFIED_DATE);
-        if (missing) {
+        if (!missingRequiredFields().isEmpty()) {
             throw new ErrorException(ErrorCode.COMPETITION_REQUIRED_FIELDS_MISSING);
         }
         this.published = true;

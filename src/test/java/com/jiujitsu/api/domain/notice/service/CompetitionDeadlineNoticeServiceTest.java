@@ -9,6 +9,8 @@ import com.jiujitsu.api.domain.notice.repository.UserNoticeSettingRepository;
 import com.jiujitsu.api.domain.notice.service.CompetitionDeadlineNoticeService.DueNotice;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
+import com.jiujitsu.api.domain.competition.entity.Competition;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -47,6 +51,13 @@ class CompetitionDeadlineNoticeServiceTest {
 
     private final DueNotice earlyBird = new DueNotice(7L, "서울 오픈",
             new CompetitionDeadline(CompetitionDeadlineType.EARLY_BIRD, "1차 얼리버드", D));
+
+    // 보내기 직전 공개 여부 확인 — 기본은 공개 (findDue 만 부르는 테스트도 있어 lenient)
+    @BeforeEach
+    void publishedByDefault() {
+        lenient().when(competitionRepository.findByIdAndPublishedTrue(anyLong()))
+                .thenReturn(Optional.of(Competition.builder().id(7L).published(true).build()));
+    }
 
     @Test
     @DisplayName("보내기: 아직 안 받은 유저에게만 기록·알림·푸시, 문구와 대회 상세 딥링크")
@@ -112,4 +123,14 @@ class CompetitionDeadlineNoticeServiceTest {
                 new DueNotice(7L, "서울 오픈", new CompetitionDeadline(CompetitionDeadlineType.REGISTRATION, "접수", D)),
                 new DueNotice(8L, "부산 오픈", new CompetitionDeadline(CompetitionDeadlineType.EARLY_BIRD, "얼리버드", D)));
     }
+
+    @Test
+    @DisplayName("보내기: 목록을 뽑은 뒤 비공개로 바뀐 대회는 보내지 않는다")
+    void send_skipsUnpublished() {
+        given(competitionRepository.findByIdAndPublishedTrue(7L)).willReturn(Optional.empty());
+
+        assertThat(service.send(earlyBird)).isZero();
+        verifyNoInteractions(userNoticeSettingRepository, logRepository, noticeService, fcmPushEventPublisher);
+    }
 }
+

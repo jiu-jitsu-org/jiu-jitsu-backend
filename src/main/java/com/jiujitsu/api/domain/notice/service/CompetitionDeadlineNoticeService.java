@@ -51,6 +51,10 @@ public class CompetitionDeadlineNoticeService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int send(DueNotice due) {
+        // 목록을 뽑은 뒤 보내기 전에 관리자가 비공개로 돌렸을 수 있다 — 공개 대회만 보낸다 (비공개 대회 알림은 열면 없는 대회)
+        if (competitionRepository.findByIdAndPublishedTrue(due.competitionId()).isEmpty()) {
+            return 0;
+        }
         List<Long> recipientIds = userNoticeSettingRepository.findCompetitionNoticeRecipientIds(due.competitionId());
         if (recipientIds.isEmpty()) {
             return 0;

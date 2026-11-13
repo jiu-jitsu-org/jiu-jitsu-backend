@@ -686,5 +686,50 @@ class AdminCompetitionServiceTest {
                     .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
         }
     }
+
+    @Test
+    @DisplayName("공개 기준과 missingFields 가 같다: 빈 칸이 없으면(확인일이 비어 있어도) 공개된다")
+    void missingFieldsMatchesPublishCheck() {
+        Competition ready = saveReady("서울 오픈");
+
+        assertThat(adminCompetitionService.getDetail(ready.getId()).missingFields()).isEmpty();
+        assertThat(adminCompetitionService.publish(ready.getId()).published()).isTrue();
+    }
+
+    @Test
+    @DisplayName("빈 칸 있는 공개 대회를 비공개로 돌리면, 채우기 전까지 다시 공개할 수 없다")
+    void unpublishedWithMissingFieldsCannotRepublish() {
+        Competition seeded = em.persist(Competition.builder()
+                .name("시드 대회").searchName("시드대회").competitionYear(2026)
+                .published(true).openDate(LocalDate.of(2026, 12, 6)).lastVerifiedDate(LocalDate.of(2026, 11, 2))
+                .build());
+
+        adminCompetitionService.unpublish(seeded.getId());
+
+        assertThatThrownBy(() -> adminCompetitionService.publish(seeded.getId()))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_REQUIRED_FIELDS_MISSING);
+    }
+
+    @Test
+    @DisplayName("관리자 쓰기는 바뀐 칸만 저장해, 그사이 올라간 조회수를 덮지 않는다")
+    void adminWriteKeepsConcurrentViewCount() {
+        Competition published = save("서울 오픈", LocalDate.of(2026, 12, 6), true);
+        em.flush();
+        em.clear();
+        Competition loaded = competitionRepository.findById(published.getId()).orElseThrow();   // 관리자 요청이 읽어 둔 상태 (조회수 0)
+
+        // 그사이 사용자 상세 조회가 조회수를 올림 (벌크 UPDATE — 영속성 컨텍스트의 loaded 는 그대로 0)
+        em.getEntityManager().createQuery("UPDATE Competition c SET c.viewCount = c.viewCount + 1 WHERE c.id = :id")
+                .setParameter("id", published.getId())
+                .executeUpdate();
+        loaded.verify(BASE);
+        em.flush();
+        em.clear();
+
+        Competition reloaded = em.find(Competition.class, published.getId());
+        assertThat(reloaded.getViewCount()).isEqualTo(1);
+        assertThat(reloaded.getLastVerifiedDate()).isEqualTo(BASE);
+    }
 }
 
