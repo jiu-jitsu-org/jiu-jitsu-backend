@@ -2,15 +2,21 @@ package com.jiujitsu.api.domain.competition.mapper;
 
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListItem;
+import com.jiujitsu.api.domain.competition.dto.AdminCompetitionRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionFeeResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.CompetitionEventInfo;
+import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class CompetitionMapper {
@@ -112,6 +118,37 @@ public class CompetitionMapper {
                 interestCount,
                 competition.missingRequiredFields()
         );
+    }
+
+    // 관리자 입력 → 대회 정보 칸. 글자 칸은 앞뒤 공백을 지우고 비면 null (빈 문자열이 "채워진 칸"으로 남지 않게), 빈 목록·null 은 빈 컬렉션
+    // 컬렉션은 가변으로 만든다 (엔티티가 addAll 로 옮겨 담음)
+    public CompetitionEventInfo toEventInfo(AdminCompetitionRequest request) {
+        return new CompetitionEventInfo(
+                request.openDate(),
+                request.startTime(),
+                request.region(),
+                blankToNull(request.place()),
+                blankToNull(request.venue()),
+                blankToNull(request.host()),
+                blankToNull(request.noticeUrl()),
+                request.uniforms() == null ? new LinkedHashSet<>() : new LinkedHashSet<>(request.uniforms()),
+                request.audience(),
+                request.registrationStartDate(),
+                request.earlyBirdDeadline(),
+                request.registrationDeadline(),
+                request.fees() == null ? new ArrayList<>() : request.fees().stream()
+                        .map(fee -> new CompetitionFee(fee.label().strip(), fee.amount(), fee.until()))
+                        .collect(Collectors.toCollection(ArrayList::new)),
+                blankToNull(request.feeNote())
+        );
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String stripped = value.strip();
+        return stripped.isEmpty() ? null : stripped;
     }
 
     private static List<CompetitionFeeResponse> toFeeResponses(Competition competition) {

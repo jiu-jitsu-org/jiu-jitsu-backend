@@ -34,6 +34,7 @@ public enum ErrorCode {
     COMPETITION_DUPLICATED(400, "R0008", "같은 연도에 같은 이름의 대회가 중복되었습니다."),
     COMPETITION_INVALID_EVENT_INFO(400, "R0009", "대회 일정·참가비 정보가 올바르지 않습니다."),
     COMPETITION_INFO_REPORT_LIMIT_EXCEEDED(400, "R0010", "같은 대회의 같은 항목은 하루 3번까지 제보할 수 있습니다."),
+    COMPETITION_CATALOG_NOT_EDITABLE(400, "R0011", "자동완성용 대회는 수정할 수 없습니다. 대회 만들기로 정보를 채워 주세요."),
 
 
     /**

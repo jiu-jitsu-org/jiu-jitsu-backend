@@ -246,6 +246,51 @@ public class Competition extends BaseEntity {
     }
 
     /**
+     * 자동완성용 카탈로그 엔트리인가 (대회일 없음 — 관리자 일괄 등록으로만 생긴다)
+     */
+    public boolean isCatalogEntry() {
+        return openDate == null;
+    }
+
+    /**
+     * 대회명·연도 바꾸기 (표시용·검색용 이름을 함께 정리). 등록할 수 없는 이름이면 WRONG_PARAMETER (isRegistrableName 참고)
+     * 다른 대회와 겹치는지는 호출부가 본다 (DB 유니크 uk_competition_search_name_year 가 최종 방어)
+     */
+    public void rename(String name, Integer competitionYear) {
+        if (!isRegistrableName(name)) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+        }
+        this.name = cleanDisplayName(name);
+        this.searchName = normalize(this.name);
+        this.competitionYear = competitionYear;
+    }
+
+    /**
+     * 대회 정보 칸 전부 교체 (관리자 입력 — 보낸 값 그대로, 비어 있는 칸은 비움). 공개 여부·마지막 확인일·조회수는 그대로
+     * 종목·참가비는 Hibernate 가 들고 있는 컬렉션을 비우고 채운다 (불변 리스트를 할당하면 merge 시 clear 에서 터진다)
+     * 참가비만 바뀌면 @PreUpdate 가 돌지 않을 수 있어 끝에 validateEventInfo 를 직접 부른다 — 위반이면 COMPETITION_INVALID_EVENT_INFO
+     */
+    public void changeEventInfo(CompetitionEventInfo info) {
+        this.openDate = info.openDate();
+        this.startTime = info.startTime();
+        this.region = info.region();
+        this.place = info.place();
+        this.venue = info.venue();
+        this.host = info.host();
+        this.noticeUrl = info.noticeUrl();
+        this.uniforms.clear();
+        this.uniforms.addAll(info.uniforms());
+        this.audience = info.audience();
+        this.registrationStartDate = info.registrationStartDate();
+        this.earlyBirdDeadline = info.earlyBirdDeadline();
+        this.registrationDeadline = info.registrationDeadline();
+        this.fees.clear();
+        this.fees.addAll(info.fees());
+        this.feeNote = info.feeNote();
+        validateEventInfo();
+    }
+
+    /**
      * 이벤트 정보 불변식 검증. 위반이면 COMPETITION_INVALID_EVENT_INFO
      * - 공개 대회는 대회일이 있어야 한다
      * - 일정 순서: 접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 (비어 있는 값은 건너뛰고 채워진 것끼리 비교)
