@@ -27,6 +27,6 @@ public record AdminCompetitionListItem(
             LocalDate registrationDeadline,
         @Schema(description = "정보 기준일(마지막 확인일)", nullable = true)
             LocalDate lastVerifiedDate,
-        @Schema(description = "공개에 필요한데 비어 있는 칸 (입력 화면 순서). 다 채워졌으면 빈 배열")
+        @Schema(description = "공개에 필요한데 비어 있는 칸 (입력 화면 순서). 빈 배열이면 공개할 수 있음 (마지막 확인일은 공개할 때 오늘로 채워져 넣지 않음)")
             List<CompetitionRequiredField> missingFields
 ) { }

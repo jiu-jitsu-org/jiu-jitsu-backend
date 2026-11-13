@@ -23,6 +23,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -30,7 +32,7 @@ import java.util.Optional;
 import static com.jiujitsu.api.domain.competition.repository.CompetitionSpecifications.*;
 
 /**
- * 관리자 대회 관리 — 대회 탭에 나갈 대회(대회일 있는 대회)를 공개 여부와 상관없이 보고, 만들고 고친다
+ * 관리자 대회 관리 — 대회 탭에 나갈 대회(대회일 있는 대회)를 공개 여부와 상관없이 보고, 만들고 고치고, 확인·공개·비공개한다
  * 사용자 읽기 모델(CompetitionQueryService)은 공개 대회만, 자동완성 카탈로그·일괄 등록은 CompetitionService
  */
 @Service
@@ -44,6 +46,7 @@ public class AdminCompetitionService {
     private final CompetitionInterestService competitionInterestService;
     private final CompetitionMapper competitionMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
     /**
      * 관리자 대회 목록 — 대회일 있는 대회만(자동완성용 카탈로그 엔트리 제외), 대회일·id 오름차순 고정 (클라이언트 sort 는 무시)
@@ -115,11 +118,7 @@ public class AdminCompetitionService {
      */
     @Transactional
     public AdminCompetitionDetailResponse update(Long competitionId, AdminCompetitionRequest request) {
-        Competition competition = competitionRepository.findById(competitionId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.COMPETITION_NOT_FOUND));
-        if (competition.isCatalogEntry()) {
-            throw new ErrorException(ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE);
-        }
+        Competition competition = getEditable(competitionId);
         Competition.validateYear(request.competitionYear(), request.openDate());
         Optional<Competition> sameKey = findSameKey(request.name(), request.competitionYear());
         if (sameKey.isPresent() && !sameKey.get().getId().equals(competitionId)) {
@@ -133,6 +132,46 @@ public class AdminCompetitionService {
             publishRenamed(competition);
         }
         return toDetail(competition);
+    }
+
+    /**
+     * 확인 완료 — 마지막 확인일을 오늘로 (공개·미공개 모두). 자동완성용 대회는 COMPETITION_CATALOG_NOT_EDITABLE
+     */
+    @Transactional
+    public AdminCompetitionDetailResponse verify(Long competitionId) {
+        Competition competition = getEditable(competitionId);
+        competition.verify(LocalDate.now(clock));
+        return toDetail(competition);
+    }
+
+    /**
+     * 공개 — 필수 칸이 비면 COMPETITION_REQUIRED_FIELDS_MISSING, 공개하면 마지막 확인일도 오늘로. 이미 공개면 그대로
+     */
+    @Transactional
+    public AdminCompetitionDetailResponse publish(Long competitionId) {
+        Competition competition = getEditable(competitionId);
+        competition.publish(LocalDate.now(clock));
+        return toDetail(competition);
+    }
+
+    /**
+     * 비공개 — 대회 탭·상세·관심 등록·마감 알림·게시글 대회 카드에서 숨겨진다. 관심·알림 설정·게시글 연결은 그대로라 다시 공개하면 돌아온다
+     */
+    @Transactional
+    public AdminCompetitionDetailResponse unpublish(Long competitionId) {
+        Competition competition = getEditable(competitionId);
+        competition.unpublish();
+        return toDetail(competition);
+    }
+
+    // 관리자가 고치는 대회 (대회일 있는 대회). 없으면 COMPETITION_NOT_FOUND, 자동완성용이면 COMPETITION_CATALOG_NOT_EDITABLE
+    private Competition getEditable(Long competitionId) {
+        Competition competition = competitionRepository.findById(competitionId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.COMPETITION_NOT_FOUND));
+        if (competition.isCatalogEntry()) {
+            throw new ErrorException(ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE);
+        }
+        return competition;
     }
 
     // 이름(정규화) + 연도가 같은 대회 (유니크라 많아야 하나)

@@ -145,7 +145,9 @@ public class Competition extends BaseEntity {
     private LocalDate lastVerifiedDate;      // 정보 기준일(마지막 확인일)
 
     @ColumnDefault("0")
-    @Column(name = "view_count", nullable = false)
+    // 엔티티 저장(관리자 고치기·확인·공개)에서는 쓰지 않는다 — 읽어 둔 값으로 그사이 올라간 조회수를 덮지 않게
+    // @DynamicUpdate 로 바뀐 칸만 쓰면 동시 고치기에서 서로 다른 칸이 섞여 일정 규칙을 어긴 행이 생길 수 있어, 행 전체 저장은 두고 이 칸만 뺀다
+    @Column(name = "view_count", nullable = false, updatable = false)
     private long viewCount;                  // 조회수 (CompetitionRepository#incrementViewCount 로만 올린다)
 
     // 웹 페이지(공개 일정)에서 복사한 대회명에 섞여 들어오는 문자를 정리한다
@@ -214,7 +216,7 @@ public class Competition extends BaseEntity {
     /**
      * 공개에 필요한데 비어 있는 칸 (CompetitionRequiredField 선언 순서). 다 채워졌으면 빈 목록
      * 관리자 목록·상세에서 채울 칸을 보여 준다. 저장 시 강제하지 않으므로(validateEventInfo 의 필수 칸 검사는 공개 대회의 대회일뿐 — 그 밖엔 연도·일정 순서·참가비 규칙)
-     * 공개 대회도 빈 칸이 있을 수 있다 — 공개 전환 검사(#209)가 이 기준을 쓸 예정
+     * 공개 대회도 빈 칸이 있을 수 있다 (공개 전환 때만 검사 — publish 참고)
      */
     public List<CompetitionRequiredField> missingRequiredFields() {
         List<CompetitionRequiredField> missing = new ArrayList<>();
@@ -239,10 +241,38 @@ public class Competition extends BaseEntity {
         if (noticeUrl == null || noticeUrl.isBlank()) {
             missing.add(CompetitionRequiredField.NOTICE_URL);
         }
-        if (lastVerifiedDate == null) {
-            missing.add(CompetitionRequiredField.LAST_VERIFIED_DATE);
-        }
         return missing;
+    }
+
+    /**
+     * 확인 완료 — 운영자가 대회 공지와 맞춰 본 날로 마지막 확인일을 바꾼다 (공개 여부와 무관)
+     */
+    public void verify(LocalDate today) {
+        this.lastVerifiedDate = today;
+    }
+
+    /**
+     * 대회 탭에 공개. 공개 = 운영자가 공지와 맞춰 본 대회라 마지막 확인일도 오늘로 바꾼다
+     * 필수 칸이 하나라도 비면 COMPETITION_REQUIRED_FIELDS_MISSING (어떤 칸인지는 missingRequiredFields)
+     * 이미 공개면 그대로 둔다 (확인일 갱신은 verify). 검사는 공개로 바꿀 때만 — 이미 공개된 대회는 빈 칸이 있어도 공개를 유지한다
+     * (그래서 빈 칸 있는 공개 대회를 비공개로 돌리면 채우기 전까지 다시 공개할 수 없다)
+     */
+    public void publish(LocalDate today) {
+        if (published) {
+            return;
+        }
+        if (!missingRequiredFields().isEmpty()) {
+            throw new ErrorException(ErrorCode.COMPETITION_REQUIRED_FIELDS_MISSING);
+        }
+        this.published = true;
+        this.lastVerifiedDate = today;
+    }
+
+    /**
+     * 대회 탭에서 내림. 관심·알림 설정·게시글 연결은 지우지 않는다 — 공개 대회만 보는 곳에서 숨겨졌다가 다시 공개하면 돌아온다
+     */
+    public void unpublish() {
+        this.published = false;
     }
 
     /**
