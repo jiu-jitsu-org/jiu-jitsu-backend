@@ -22,6 +22,7 @@ import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.properties.PopularCompetitionProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
@@ -60,6 +62,12 @@ class CompetitionQueryServiceTest {
         @Bean
         Clock clock() {
             return Clock.fixed(TODAY.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant(), ZoneId.of("Asia/Seoul"));
+        }
+
+        // 관심 많은 대회: 테스트는 상위 2개, 관심 2개 이상 (#210)
+        @Bean
+        PopularCompetitionProperties popularCompetitionProperties() {
+            return new PopularCompetitionProperties(2, 2);
         }
     }
 
@@ -529,4 +537,42 @@ class CompetitionQueryServiceTest {
 
         assertThat(competitionQueryService.getRegions().regions()).isEmpty();
     }
+
+    // ---- 관심 많은 대회 (#210) — 테스트 설정: 상위 2개, 관심 2개 이상 ----
+
+    private void interests(Competition competition, int count) {
+        for (int i = 0; i < count; i++) {
+            em.persist(new CompetitionInterest(competition, em.persist(User.builder()
+                    .snsProvider(SnsProvider.KAKAO)
+                    .snsId(UUID.randomUUID().toString())
+                    .role(UserRole.USER)
+                    .status(UserStatus.ACTIVE)
+                    .build())));
+        }
+    }
+
+    @Test
+    @DisplayName("관심 많은 대회: 지역 필터를 걸어도 같은 달 전체 기준 순위, 끝난 대회는 false, 게시글 대회 카드도 같은 값")
+    void popular_monthWideIgnoringFilters() {
+        Competition seoulTop = saveIn("서울 1등", CompetitionRegion.SEOUL, TODAY.plusDays(3));
+        Competition busanSecond = saveIn("부산 2등", CompetitionRegion.BUSAN, TODAY.plusDays(4));
+        Competition seoulThird = saveIn("서울 3등", CompetitionRegion.SEOUL, TODAY.plusDays(5));
+        Competition endedHot = saveIn("끝난 인기", CompetitionRegion.SEOUL, TODAY.minusDays(2));
+        interests(seoulTop, 4);
+        interests(busanSecond, 3);
+        interests(seoulThird, 2);
+        interests(endedHot, 9);
+
+        CompetitionListResponse seoulOnly = competitionQueryService.getList(
+                new CompetitionListRequest(TODAY.withDayOfMonth(1), null, null, List.of(CompetitionRegion.SEOUL), null, null, null));
+
+        assertThat(seoulOnly.competitions())
+                .extracting(CompetitionListItem::name, CompetitionListItem::popular)
+                .containsExactly(
+                        tuple("끝난 인기", false),
+                        tuple("서울 1등", true),
+                        tuple("서울 3등", false));   // 같은 달 3등 (부산 2등이 위)
+        assertThat(competitionQueryService.getCards(List.of(busanSecond.getId())).get(busanSecond.getId()).popular()).isTrue();
+    }
 }
+

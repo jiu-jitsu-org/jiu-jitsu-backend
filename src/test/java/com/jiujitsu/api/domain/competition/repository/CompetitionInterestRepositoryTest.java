@@ -13,6 +13,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -150,4 +152,55 @@ class CompetitionInterestRepositoryTest {
 
         assertThat(competitionInterestRepository.count()).isZero();
     }
+
+    // ---- 관심 많은 대회 (#210) ----
+
+    private static final LocalDate TODAY = LocalDate.of(2026, 12, 10);
+
+    private Competition saveOn(String name, LocalDate openDate, boolean published) {
+        return em.persist(Competition.builder()
+                .name(name)
+                .searchName(Competition.normalize(name))
+                .competitionYear(openDate.getYear())
+                .published(published)
+                .openDate(openDate)
+                .build());
+    }
+
+    private Competition withInterests(Competition competition, int count) {
+        for (int i = 0; i < count; i++) {
+            interest(competition, saveUser());
+        }
+        return competition;
+    }
+
+    private List<Long> popular(int top, long min) {
+        return competitionInterestRepository.findPopularIds(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31), TODAY,
+                min, PageRequest.of(0, top));
+    }
+
+    @Test
+    @DisplayName("관심 많은 대회: 같은 달 관심 수 상위 N개, 관심 M개 미만은 빠지고, 동점은 대회일 빠른 순")
+    void findPopularIds_topNAboveMin() {
+        Competition seven = withInterests(saveOn("일곱", LocalDate.of(2026, 12, 20), true), 7);
+        Competition six = withInterests(saveOn("여섯", LocalDate.of(2026, 12, 27), true), 6);
+        Competition fiveEarly = withInterests(saveOn("다섯 앞", LocalDate.of(2026, 12, 12), true), 5);
+        withInterests(saveOn("다섯 뒤", LocalDate.of(2026, 12, 13), true), 5);
+        withInterests(saveOn("넷", LocalDate.of(2026, 12, 14), true), 4);
+
+        assertThat(popular(3, 5)).containsExactly(seven.getId(), six.getId(), fiveEarly.getId());
+        assertThat(popular(10, 5)).hasSize(4);
+    }
+
+    @Test
+    @DisplayName("관심 많은 대회: 끝난 대회(대회일 < 오늘)·다른 달·미공개 대회는 순위에 없다, 오늘 대회는 들어간다")
+    void findPopularIds_excludesEndedOtherMonthUnpublished() {
+        withInterests(saveOn("끝남", LocalDate.of(2026, 12, 6), true), 9);
+        withInterests(saveOn("다음 달", LocalDate.of(2027, 1, 3), true), 9);
+        withInterests(saveOn("미공개", LocalDate.of(2026, 12, 20), false), 9);
+        Competition today = withInterests(saveOn("오늘", LocalDate.of(2026, 12, 10), true), 5);
+
+        assertThat(popular(3, 5)).containsExactly(today.getId());
+    }
 }
+

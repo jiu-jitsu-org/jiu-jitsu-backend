@@ -40,5 +40,7 @@ public record CompetitionListItem(
         @Schema(description = "관심 수 (익명 집계)", example = "12")
             long interestCount,
         @Schema(description = "내 관심 여부 (비로그인은 false)")
-            boolean interested
+            boolean interested,
+        @Schema(description = "관심 많은 대회 — 같은 달(대회일 기준) 끝나지 않은 공개 대회 중 관심 수 상위 3개, 단 관심 5개 이상 (필터와 무관). 끝난 대회는 false")
+            boolean popular
 ) { }
