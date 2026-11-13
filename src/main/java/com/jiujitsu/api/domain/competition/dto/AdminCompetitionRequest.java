@@ -16,6 +16,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -37,7 +38,7 @@ public record AdminCompetitionRequest(
         @NotNull
         @Schema(description = "대회일", example = "2026-12-06", requiredMode = Schema.RequiredMode.REQUIRED)
             LocalDate openDate,
-        @Schema(description = "시작 시각 HH:mm (초를 붙여도 받음, 응답은 HH:mm)", type = "string", example = "09:00", nullable = true)
+        @Schema(description = "시작 시각 HH:mm (초를 붙여 보내면 분 단위로 잘라 저장)", type = "string", example = "09:00", nullable = true)
             LocalTime startTime,
         @Schema(description = "지역(시·도)", nullable = true)
             CompetitionRegion region,
@@ -79,7 +80,7 @@ public record AdminCompetitionRequest(
     public CompetitionEventInfo toEventInfo() {
         return new CompetitionEventInfo(
                 openDate,
-                startTime,
+                startTime == null ? null : startTime.truncatedTo(ChronoUnit.MINUTES),   // 응답이 HH:mm 라 초를 남기면 보이지 않는 값이 생긴다
                 region,
                 blankToNull(place),
                 blankToNull(venue),

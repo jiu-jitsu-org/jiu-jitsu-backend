@@ -213,7 +213,7 @@ public class Competition extends BaseEntity {
 
     /**
      * 공개에 필요한데 비어 있는 칸 (CompetitionRequiredField 선언 순서). 다 채워졌으면 빈 목록
-     * 관리자 목록·상세에서 채울 칸을 보여 준다. 저장 시 강제하지 않으므로(validateEventInfo 는 공개 대회의 대회일만 확인)
+     * 관리자 목록·상세에서 채울 칸을 보여 준다. 저장 시 강제하지 않으므로(validateEventInfo 의 필수 칸 검사는 공개 대회의 대회일뿐 — 그 밖엔 연도·일정 순서·참가비 규칙)
      * 공개 대회도 빈 칸이 있을 수 있다 — 공개 전환 검사(#209)가 이 기준을 쓸 예정
      */
     public List<CompetitionRequiredField> missingRequiredFields() {
@@ -306,9 +306,7 @@ public class Competition extends BaseEntity {
         if (published && openDate == null) {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
-        if (openDate != null && competitionYear != null && openDate.getYear() != competitionYear) {
-            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
-        }
+        validateYear(competitionYear, openDate);
         List<LocalDate> schedule = Stream.of(registrationStartDate, earlyBirdDeadline, registrationDeadline, openDate)
                 .filter(Objects::nonNull)
                 .toList();
@@ -362,6 +360,16 @@ public class Competition extends BaseEntity {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
         if (hasDeadlineTier && !earlyBirdDeadline.equals(previousUntil)) {
+            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        }
+    }
+
+    /**
+     * 대회일과 연도가 둘 다 있으면 연도 = 대회일 연도. 아니면 COMPETITION_INVALID_EVENT_INFO
+     * validateEventInfo 의 일부. 관리자 쓰기는 이름 + 연도로 같은 대회를 찾기 전에 먼저 부른다 — 연도 오타가 중복(R0008)으로 보이지 않게
+     */
+    public static void validateYear(Integer competitionYear, LocalDate openDate) {
+        if (openDate != null && competitionYear != null && openDate.getYear() != competitionYear) {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
     }

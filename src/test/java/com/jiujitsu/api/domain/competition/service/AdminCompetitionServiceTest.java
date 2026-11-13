@@ -523,5 +523,32 @@ class AdminCompetitionServiceTest {
         assertThat(reloaded.getCompetitionYear()).isEqualTo(2025);
         assertThat(reloaded.getCompetitionName()).isEqualTo("서울 오픈");
     }
+
+    @Test
+    @DisplayName("만들기: 시작 시각에 초가 붙어 오면 분 단위로 잘라 저장한다")
+    void create_startTimeTruncatedToMinutes() {
+        AdminCompetitionRequest withSeconds = new AdminCompetitionRequest("서울 오픈", 2026, day(30), LocalTime.of(9, 0, 30), null, null, null, null,
+                null, null, null, null, null, null, null, null);
+
+        Long id = adminCompetitionService.create(withSeconds).competition().competitionId();
+        em.flush();
+        em.clear();
+
+        assertThat(em.find(Competition.class, id).getStartTime()).isEqualTo(LocalTime.of(9, 0));
+    }
+
+    @Test
+    @DisplayName("만들기·고치기: 연도 오타가 다른 대회의 이름·연도와 겹쳐도 중복이 아니라 COMPETITION_INVALID_EVENT_INFO")
+    void yearMismatchBeforeDuplicate() {
+        save("서울 오픈", LocalDate.of(2025, 3, 1), true);
+        Competition target = save("부산 오픈", LocalDate.of(2026, 12, 6), false);
+
+        assertThatThrownBy(() -> adminCompetitionService.create(minimal("서울 오픈", 2025, LocalDate.of(2026, 12, 6))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        assertThatThrownBy(() -> adminCompetitionService.update(target.getId(), minimal("서울 오픈", 2025, LocalDate.of(2026, 12, 6))))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+    }
 }
 

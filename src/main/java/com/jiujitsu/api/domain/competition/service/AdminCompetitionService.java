@@ -88,6 +88,7 @@ public class AdminCompetitionService {
      */
     @Transactional
     public AdminCompetitionSaveResponse create(AdminCompetitionRequest request) {
+        Competition.validateYear(request.competitionYear(), request.openDate());
         Optional<Competition> sameKey = findSameKey(request.name(), request.competitionYear());
         if (sameKey.isPresent() && !sameKey.get().isCatalogEntry()) {
             throw new ErrorException(ErrorCode.COMPETITION_DUPLICATED);
@@ -119,6 +120,7 @@ public class AdminCompetitionService {
         if (competition.isCatalogEntry()) {
             throw new ErrorException(ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE);
         }
+        Competition.validateYear(request.competitionYear(), request.openDate());
         Optional<Competition> sameKey = findSameKey(request.name(), request.competitionYear());
         if (sameKey.isPresent() && !sameKey.get().getId().equals(competitionId)) {
             throw new ErrorException(ErrorCode.COMPETITION_DUPLICATED);
