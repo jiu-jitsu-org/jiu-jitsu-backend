@@ -382,4 +382,15 @@ class CompetitionTest {
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.WRONG_PARAMETER);
     }
+
+    @Test
+    @DisplayName("validateEventInfo: 대회일과 연도가 둘 다 있으면 연도 = 대회일 연도 (연도 없는 자동완성용·대회일 없는 대회는 보지 않음)")
+    void validateEventInfo_yearMatchesOpenDate() {
+        assertThatThrownBy(() -> filledForPublish().competitionYear(2025).build().validateEventInfo())
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        assertThatCode(() -> filledForPublish().competitionYear(null).build().validateEventInfo()).doesNotThrowAnyException();
+        assertThatCode(() -> Competition.of("작년 대회", 2025).validateEventInfo()).doesNotThrowAnyException();
+    }
 }
+

@@ -293,6 +293,7 @@ public class Competition extends BaseEntity {
     /**
      * 이벤트 정보 불변식 검증. 위반이면 COMPETITION_INVALID_EVENT_INFO
      * - 공개 대회는 대회일이 있어야 한다
+     * - 대회일과 연도가 둘 다 있으면 연도 = 대회일 연도 (자동완성용 대회와 이름 + 연도로 이어 붙이므로 어긋나면 엉뚱한 행에 붙거나 중복이 생긴다)
      * - 일정 순서: 접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 (비어 있는 값은 건너뛰고 채워진 것끼리 비교)
      * - 참가비 단계: validateFees 참고
      * 저장 직전(@PrePersist/@PreUpdate)에 항상 확인해 어떤 쓰기 경로로도 잘못된 데이터가 저장되지 않게 한다.
@@ -303,6 +304,9 @@ public class Competition extends BaseEntity {
     @PreUpdate
     public void validateEventInfo() {
         if (published && openDate == null) {
+            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        }
+        if (openDate != null && competitionYear != null && openDate.getYear() != competitionYear) {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
         List<LocalDate> schedule = Stream.of(registrationStartDate, earlyBirdDeadline, registrationDeadline, openDate)

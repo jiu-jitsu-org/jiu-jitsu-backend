@@ -1,10 +1,10 @@
 package com.jiujitsu.api.domain.competition.dto;
 
 import com.jiujitsu.api.domain.competition.entity.CompetitionAudience;
+import com.jiujitsu.api.domain.competition.entity.CompetitionEventInfo;
 import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -16,7 +16,10 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 // 만들기·고치기 공통. 고치기는 전체 교체 — 안 보낸 칸·null 은 비운다
 // 글자 칸 길이는 컬럼 길이와 같다 (넘으면 저장 시점 500 이 되므로 여기서 400)
@@ -34,8 +37,7 @@ public record AdminCompetitionRequest(
         @NotNull
         @Schema(description = "대회일", example = "2026-12-06", requiredMode = Schema.RequiredMode.REQUIRED)
             LocalDate openDate,
-        @JsonFormat(pattern = "HH:mm")
-        @Schema(description = "시작 시각 HH:mm", type = "string", example = "09:00", nullable = true)
+        @Schema(description = "시작 시각 HH:mm (초를 붙여도 받음, 응답은 HH:mm)", type = "string", example = "09:00", nullable = true)
             LocalTime startTime,
         @Schema(description = "지역(시·도)", nullable = true)
             CompetitionRegion region,
@@ -69,6 +71,39 @@ public record AdminCompetitionRequest(
         @Schema(description = "참가비 기준 문구", example = "성인 1종목 기준", nullable = true)
             String feeNote
 ) {
+
+    /**
+     * 대회 정보 칸으로 (Competition#changeEventInfo). 글자 칸은 앞뒤 공백을 지우고 비면 null — 빈 문자열이 "채워진 칸"으로 남지 않게
+     * 종목·참가비는 null 이면 빈 컬렉션, 엔티티가 옮겨 담으므로 가변으로 만든다
+     */
+    public CompetitionEventInfo toEventInfo() {
+        return new CompetitionEventInfo(
+                openDate,
+                startTime,
+                region,
+                blankToNull(place),
+                blankToNull(venue),
+                blankToNull(host),
+                blankToNull(noticeUrl),
+                uniforms == null ? new LinkedHashSet<>() : new LinkedHashSet<>(uniforms),
+                audience,
+                registrationStartDate,
+                earlyBirdDeadline,
+                registrationDeadline,
+                fees == null ? new ArrayList<>() : fees.stream()
+                        .map(fee -> new CompetitionFee(fee.label().strip(), fee.amount(), fee.until()))
+                        .collect(Collectors.toCollection(ArrayList::new)),
+                blankToNull(feeNote)
+        );
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String stripped = value.strip();
+        return stripped.isEmpty() ? null : stripped;
+    }
 
     @Schema(description = "참가비 한 단계")
     public record Fee(

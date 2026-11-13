@@ -510,5 +510,18 @@ class AdminCompetitionServiceTest {
 
         assertThat(reload(record).getCompetitionName()).isEqualTo("서울오픈 (예전 표기)");
     }
+
+    @Test
+    @DisplayName("고치기: 연도만 바꿔도 연결된 프로필 기록의 연도를 맞춘다")
+    void update_yearChangeSyncsRecords() {
+        Competition target = save("서울 오픈", LocalDate.of(2026, 3, 6), true);
+        CompetitionRecord record = saveRecord(target, "서울 오픈", 2026);
+
+        adminCompetitionService.update(target.getId(), minimal("서울 오픈", 2025, LocalDate.of(2025, 3, 6)));
+
+        CompetitionRecord reloaded = reload(record);
+        assertThat(reloaded.getCompetitionYear()).isEqualTo(2025);
+        assertThat(reloaded.getCompetitionName()).isEqualTo("서울 오픈");
+    }
 }
 

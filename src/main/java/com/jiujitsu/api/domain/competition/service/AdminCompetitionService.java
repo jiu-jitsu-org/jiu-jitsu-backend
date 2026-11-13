@@ -11,6 +11,7 @@ import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
 import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.util.ConstraintViolationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -87,7 +88,6 @@ public class AdminCompetitionService {
      */
     @Transactional
     public AdminCompetitionSaveResponse create(AdminCompetitionRequest request) {
-        validateNameAndYear(request);
         Optional<Competition> sameKey = findSameKey(request.name(), request.competitionYear());
         if (sameKey.isPresent() && !sameKey.get().isCatalogEntry()) {
             throw new ErrorException(ErrorCode.COMPETITION_DUPLICATED);
@@ -96,8 +96,8 @@ public class AdminCompetitionService {
         boolean catalogFilled = sameKey.isPresent();
         Competition competition = sameKey.orElseGet(() -> Competition.of(request.name(), request.competitionYear()));
         boolean renamed = catalogFilled && changeName(competition, request);
-        competition.changeEventInfo(competitionMapper.toEventInfo(request));
-        saveAndFlush(competition);
+        competition.changeEventInfo(request.toEventInfo());
+        saveCheckingDuplicate(competition);
         if (renamed) {
             publishRenamed(competition);
         }
@@ -108,6 +108,8 @@ public class AdminCompetitionService {
      * 대회 고치기 — 전체 교체 (안 보낸 칸·null 은 비운다). 공개 여부·마지막 확인일·조회수는 그대로
      * 대회일 있는 대회만. 자동완성용 대회는 COMPETITION_CATALOG_NOT_EDITABLE (대회 만들기가 그 행을 채운다)
      * 대회명·연도가 바뀌면 다른 대회와 겹치는지 보고(COMPETITION_DUPLICATED), 연결된 프로필 대회 기록도 같은 트랜잭션에서 맞춘다
+     * (기록끼리 겹치는지는 보지 않는다 — 같은 프로필에 바뀐 이름·연도로 직접 입력한 기록이 있으면 그 회원의 다음 프로필 저장이 중복으로 막힌다.
+     *  프로필 저장도 연결 기록을 대회 값으로 덮어써 결과는 같다)
      * 공개 중인 대회의 마감을 바꿔도 알림은 따로 처리하지 않는다 — 발송 기록이 마감 날짜 기준이라 바뀐 날짜로 다시 보낸다
      */
     @Transactional
@@ -117,30 +119,18 @@ public class AdminCompetitionService {
         if (competition.isCatalogEntry()) {
             throw new ErrorException(ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE);
         }
-        validateNameAndYear(request);
         Optional<Competition> sameKey = findSameKey(request.name(), request.competitionYear());
         if (sameKey.isPresent() && !sameKey.get().getId().equals(competitionId)) {
             throw new ErrorException(ErrorCode.COMPETITION_DUPLICATED);
         }
 
         boolean renamed = changeName(competition, request);
-        competition.changeEventInfo(competitionMapper.toEventInfo(request));
-        saveAndFlush(competition);
+        competition.changeEventInfo(request.toEventInfo());
+        saveCheckingDuplicate(competition);
         if (renamed) {
             publishRenamed(competition);
         }
         return toDetail(competition);
-    }
-
-    // 정리하면 비거나 너무 긴 이름 → WRONG_PARAMETER, 연도 ≠ 대회일 연도 → COMPETITION_INVALID_EVENT_INFO
-    // 연도가 어긋나면 이름 + 연도로 찾는 자동완성용 대회와 엉뚱하게 이어지거나 중복이 생긴다
-    private static void validateNameAndYear(AdminCompetitionRequest request) {
-        if (!Competition.isRegistrableName(request.name())) {
-            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
-        }
-        if (request.openDate().getYear() != request.competitionYear()) {
-            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
-        }
     }
 
     // 이름(정규화) + 연도가 같은 대회 (유니크라 많아야 하나)
@@ -161,11 +151,19 @@ public class AdminCompetitionService {
         return changed;
     }
 
-    // 동시에 같은 이름·연도로 저장하면 유니크(uk_competition_search_name_year)에 걸린다 — 바로 flush 해 중복 에러로 돌려준다
-    private void saveAndFlush(Competition competition) {
+    // 동시에 같은 이름·연도로 저장하면 유니크(uk_competition_search_name_year)에 걸린다 — 바로 반영해 중복 에러로 돌려준다
+    // 새 대회는 save(IDENTITY 라 이때 INSERT), 이미 있는 대회는 변경 감지라 flush 만. 둘 다 이 try 안에서 터진다
+    // 이 저장이 걸릴 수 있는 유니크는 그것뿐이다. 그 밖의 위반(CHECK·NOT NULL 등)은 원인이 드러나게 그대로 던진다
+    private void saveCheckingDuplicate(Competition competition) {
         try {
-            competitionRepository.saveAndFlush(competition);
+            if (competition.getId() == null) {
+                competitionRepository.save(competition);
+            }
+            competitionRepository.flush();
         } catch (DataIntegrityViolationException e) {
+            if (!ConstraintViolationUtil.isUniqueViolation(e)) {
+                throw e;
+            }
             throw new ErrorException(ErrorCode.COMPETITION_DUPLICATED);
         }
     }
