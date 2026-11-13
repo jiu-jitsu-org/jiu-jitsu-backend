@@ -47,11 +47,16 @@ public record CompetitionLinkWindow(LocalDateTime from, LocalDateTime until) {
         if (link.getStatus() != CompetitionLinkStatus.APPROVED) {
             return false;
         }
+        // 대한체육회로 바꾸는 요청과 신청 링크 넣기가 동시에 들어와 둘 다 저장된 경우에도 앱에 내보내지 않는다
+        if (link.getType() == CompetitionLinkType.REGISTRATION && competition.isClubRegistrationOnly()) {
+            return false;
+        }
         return of(link, competition).contains(now);
     }
 
+    // 끝은 23:59:59 로 표기하지만 그 초 안(23:59:59.5 등)까지 포함 — 다음 날 00:00 전이면 보임
     public boolean contains(LocalDateTime now) {
-        return from != null && !now.isBefore(from) && (until == null || !now.isAfter(until));
+        return from != null && !now.isBefore(from) && (until == null || now.isBefore(until.plusSeconds(1)));
     }
 
     private static boolean resultIsPermanent(Competition competition) {

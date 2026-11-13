@@ -62,7 +62,7 @@ public class AdminCompetitionController {
             description = "대회명·연도와 대회 정보를 함께 넣어 대회를 만듭니다. 처음엔 미공개입니다. 대회명·연도·대회일은 필수이고 연도는 대회일 연도와 같아야 합니다. "
                     + "같은 이름(공백·대소문자 무시) + 연도의 자동완성용 대회가 있으면 새로 만들지 않고 그 대회에 정보를 채웁니다 (catalogFilled = true, 프로필 대회 기록 연결 유지). "
                     + "대회일 있는 대회와 겹치면 R0008. 연도 ≠ 대회일 연도, 일정 순서(접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 ≤ 종료일), 참가비 단계 규칙이 틀리면 R0009. "
-                    + "여러 날 대회는 종료일(endDate, 대회일부터 14일 이내)을 넣고, 하루짜리는 비움. (ROLE_ADMIN 필요)"
+                    + "여러 날 대회는 종료일(endDate, 대회일부터 14일 이내)을 넣고, 하루짜리는 비움. 접수 사이트(registrationSite)는 결과 링크 유지 · 도장 신청 안내에 씀. (ROLE_ADMIN 필요)"
     )
     @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER, ErrorCode.WRONG_PARAMETER, ErrorCode.COMPETITION_DUPLICATED, ErrorCode.COMPETITION_INVALID_EVENT_INFO})
     @PostMapping
@@ -76,13 +76,15 @@ public class AdminCompetitionController {
                     + "공개 여부·마지막 확인일·조회수는 바뀌지 않습니다 (공개 중인 대회는 필수 칸을 비워도 공개가 유지되니 missingFields 확인). 대회일 있는 대회만 고칠 수 있고 자동완성용 대회는 R0011 (대회 만들기로 채움). "
                     + "대회명·연도를 바꾸면 다른 대회와 겹치는지 보고(R0008), 그 대회를 고른 프로필 대회 기록의 이름·연도도 함께 바뀝니다 "
                     + "(같은 프로필에 바뀐 이름·연도로 직접 입력한 기록이 있으면 그 회원의 다음 프로필 저장이 중복으로 막히니 주의). "
-                    + "여러 날 대회의 종료일(endDate)도 같이 보내야 함 — 빼면 하루짜리로 바뀜. "
+                    + "여러 날 대회의 종료일(endDate)과 접수 사이트(registrationSite)도 같이 보내야 함 — 빼면 하루짜리 · 접수 사이트 없음(기타)으로 바뀜. "
+                    + "신청 링크가 있는 대회를 대한체육회(KSOC)로 바꾸면 R0014 (신청 링크를 먼저 지움). "
                     + "연도 ≠ 대회일 연도·일정 순서(… ≤ 대회일 ≤ 종료일, 종료일은 대회일부터 14일 이내)·참가비 단계 규칙이 틀리면 R0009. "
                     + "공개 중인 대회의 마감을 바꾸면 바뀐 날짜 기준으로 마감 전날 알림이 갑니다. 단 매일 18시 발송 뒤에 마감을 내일로 당기면 그날 알림이 가지 않으니, "
                     + "자정 전에 POST /admin/competitions/deadline-notices 로 다시 돌려 주세요. (ROLE_ADMIN 필요)"
     )
     @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE, ErrorCode.REQUIRED_PARAMETER,
-            ErrorCode.WRONG_PARAMETER, ErrorCode.COMPETITION_DUPLICATED, ErrorCode.COMPETITION_INVALID_EVENT_INFO})
+            ErrorCode.WRONG_PARAMETER, ErrorCode.COMPETITION_DUPLICATED, ErrorCode.COMPETITION_INVALID_EVENT_INFO,
+            ErrorCode.COMPETITION_REGISTRATION_LINK_EXISTS})
     @PutMapping("/{competitionId}")
     public AdminCompetitionDetailResponse update(
             @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId,

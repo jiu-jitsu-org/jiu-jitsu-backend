@@ -3,10 +3,10 @@ package com.jiujitsu.api.domain.competition.service;
 import com.jiujitsu.api.domain.community.profile.event.CompetitionRenamedEventListener;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionLinkResponse;
+import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionLinkRequest;
 import com.jiujitsu.api.domain.competition.entity.Competition;
-import com.jiujitsu.api.domain.competition.entity.CompetitionLink;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLinkStatus;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLinkType;
 import com.jiujitsu.api.domain.competition.entity.RegistrationSite;
@@ -23,6 +23,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -146,7 +147,7 @@ class AdminCompetitionLinkServiceTest {
     }
 
     @Test
-    @DisplayName("신청 링크가 있는 대회를 대한체육회로 고치면 R0013, 링크가 없으면 됨. 고치기에서 접수 사이트를 빼면 비움")
+    @DisplayName("신청 링크가 있는 대회를 대한체육회로 고치면 R0014, 링크가 없으면 됨. 고치기에서 접수 사이트를 빼면 비움")
     void updateToKsocWithRegistrationLink() {
         Competition competition = save(RegistrationSite.FLOWCOMP);
         Long id = competition.getId();
@@ -155,7 +156,7 @@ class AdminCompetitionLinkServiceTest {
 
         assertThatThrownBy(() -> adminCompetitionService.update(id, request(RegistrationSite.KSOC)))
                 .isInstanceOf(ErrorException.class)
-                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_CLUB_REGISTRATION_ONLY);
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_REGISTRATION_LINK_EXISTS);
 
         adminCompetitionLinkService.delete(id, CompetitionLinkType.REGISTRATION);
         assertThat(adminCompetitionService.update(id, request(RegistrationSite.KSOC)).registrationSite()).isEqualTo(RegistrationSite.KSOC);
@@ -189,6 +190,29 @@ class AdminCompetitionLinkServiceTest {
         em.getEntityManager().createNativeQuery("delete from competitions where id = " + competition.getId()).executeUpdate();
 
         assertThat(em.getEntityManager().createQuery("select count(l) from CompetitionLink l", Long.class).getSingleResult()).isZero();
+    }
+
+    @Test
+    @DisplayName("만들기에서 접수 사이트를 저장하고 목록에도 나온다")
+    void createAndListRegistrationSite() {
+        AdminCompetitionDetailResponse created = adminCompetitionService.create(request(RegistrationSite.STREET_JIUJITSU)).competition();
+
+        assertThat(created.registrationSite()).isEqualTo(RegistrationSite.STREET_JIUJITSU);
+        assertThat(adminCompetitionService.getList(new AdminCompetitionListRequest(null, null, null, null),
+                PageRequest.of(0, 20)).getContent().get(0).registrationSite())
+                .isEqualTo(RegistrationSite.STREET_JIUJITSU);
+    }
+
+    @Test
+    @DisplayName("숨긴 링크에 같은 주소를 다시 넣으면 숨김 그대로")
+    void hiddenSameUrlStaysHidden() {
+        Long id = save(RegistrationSite.FLOWCOMP).getId();
+        adminCompetitionLinkService.put(id, CompetitionLinkType.BRACKET, url("https://a.example"));
+        adminCompetitionLinkService.approve(id, CompetitionLinkType.BRACKET);
+        adminCompetitionLinkService.hide(id, CompetitionLinkType.BRACKET);
+
+        assertThat(link(adminCompetitionLinkService.put(id, CompetitionLinkType.BRACKET, url("https://a.example")), CompetitionLinkType.BRACKET).status())
+                .isEqualTo(CompetitionLinkStatus.HIDDEN);
     }
 
     private static AdminCompetitionRequest request(RegistrationSite site) {

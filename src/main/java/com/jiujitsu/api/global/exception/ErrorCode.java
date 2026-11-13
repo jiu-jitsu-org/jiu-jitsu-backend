@@ -38,6 +38,7 @@ public enum ErrorCode {
     COMPETITION_CATALOG_NOT_EDITABLE(400, "R0011", "자동완성용 대회는 수정할 수 없습니다. 대회 만들기로 정보를 채워 주세요."),
     COMPETITION_REQUIRED_FIELDS_MISSING(400, "R0012", "공개에 필요한 칸이 비어 있습니다. 비어 있는 칸을 채운 뒤 다시 공개해 주세요."),
     COMPETITION_CLUB_REGISTRATION_ONLY(400, "R0013", "도장(감독·코치)을 통해 신청하는 대회라 신청 링크를 넣을 수 없습니다."),
+    COMPETITION_REGISTRATION_LINK_EXISTS(400, "R0014", "신청 링크가 있어 도장(감독·코치)을 통해 신청하는 접수 사이트로 바꿀 수 없습니다. 신청 링크를 먼저 지워 주세요."),
 
 
     /**

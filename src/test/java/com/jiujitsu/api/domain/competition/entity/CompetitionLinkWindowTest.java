@@ -95,4 +95,41 @@ class CompetitionLinkWindowTest {
         CompetitionLink pending = new CompetitionLink(competition, CompetitionLinkType.LIVE_MAT, "https://example.com");
         assertThat(CompetitionLinkWindow.isVisible(pending, competition, LocalDateTime.of(2026, 12, 5, 12, 0))).isFalse();
     }
+
+    @Test
+    @DisplayName("신청: 접수 시작만 비면 승인 시각부터 접수 마감까지")
+    void registration_startMissingOnly() {
+        assertThat(window(twoDay().registrationStartDate(null).build(), CompetitionLinkType.REGISTRATION)).isEqualTo(new CompetitionLinkWindow(
+                APPROVED_AT, LocalDateTime.of(2026, 11, 30, 23, 59, 59)));
+    }
+
+    @Test
+    @DisplayName("끝 23:59:59 의 그 초 안(소수 초)까지 보이고, 다음 날 00:00 부터 안 보임")
+    void endOfDayFractionalSecond() {
+        Competition competition = twoDay().build();
+        CompetitionLink live = approved(competition, CompetitionLinkType.LIVE_MAT);
+
+        assertThat(CompetitionLinkWindow.isVisible(live, competition, LocalDateTime.of(2026, 12, 6, 23, 59, 59, 999_000_000))).isTrue();
+        assertThat(CompetitionLinkWindow.isVisible(live, competition, LocalDateTime.of(2026, 12, 7, 0, 0))).isFalse();
+    }
+
+    @Test
+    @DisplayName("참가자 현황을 마지막 날 뒤에 승인하면 시작이 끝보다 늦어 보이지 않음")
+    void approvedAfterLastDay_neverVisible() {
+        Competition competition = twoDay().build();
+        CompetitionLink late = new CompetitionLink(competition, CompetitionLinkType.ENTRY_LIST, "https://example.com");
+        late.approve(LocalDateTime.of(2026, 12, 8, 10, 0));
+
+        assertThat(CompetitionLinkWindow.isVisible(late, competition, LocalDateTime.of(2026, 12, 8, 11, 0))).isFalse();
+    }
+
+    @Test
+    @DisplayName("대한체육회 대회에 (동시 요청으로) 신청 링크가 남아도 보이지 않음")
+    void clubRegistrationOnly_registrationNeverVisible() {
+        Competition competition = twoDay().registrationSite(RegistrationSite.KSOC).build();
+        CompetitionLink registration = approved(competition, CompetitionLinkType.REGISTRATION);
+
+        assertThat(CompetitionLinkWindow.isVisible(registration, competition, LocalDateTime.of(2026, 11, 10, 12, 0))).isFalse();
+    }
 }
+

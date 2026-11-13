@@ -293,10 +293,23 @@ public class Competition extends BaseEntity {
     }
 
     /**
-     * 접수 사이트 바꾸기 (#221). 신청 링크와 맞는지는 서비스가 본다 (대한체육회는 신청 링크를 둘 수 없음)
+     * 접수 사이트 바꾸기 (#221). 감독 · 코치만 신청하는 사이트(대한체육회)는 신청 링크를 둘 수 없어,
+     * 신청 링크가 있으면 COMPETITION_REGISTRATION_LINK_EXISTS — 링크부터 지운다
      */
-    public void changeRegistrationSite(RegistrationSite registrationSite) {
+    public void changeRegistrationSite(RegistrationSite registrationSite, boolean hasRegistrationLink) {
+        if (registrationSite != null && registrationSite.isClubRegistrationOnly() && hasRegistrationLink) {
+            throw new ErrorException(ErrorCode.COMPETITION_REGISTRATION_LINK_EXISTS);
+        }
         this.registrationSite = registrationSite;
+    }
+
+    /**
+     * 이 종류의 상태 링크를 둘 수 있는가 — 감독 · 코치만 신청하는 대회(대한체육회)는 신청 링크 불가 (COMPETITION_CLUB_REGISTRATION_ONLY)
+     */
+    public void validateLinkType(CompetitionLinkType type) {
+        if (type == CompetitionLinkType.REGISTRATION && isClubRegistrationOnly()) {
+            throw new ErrorException(ErrorCode.COMPETITION_CLUB_REGISTRATION_ONLY);
+        }
     }
 
     /**

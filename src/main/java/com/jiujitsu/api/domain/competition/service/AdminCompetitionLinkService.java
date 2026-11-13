@@ -37,9 +37,7 @@ public class AdminCompetitionLinkService {
      */
     public AdminCompetitionDetailResponse put(Long competitionId, CompetitionLinkType type, CompetitionLinkRequest request) {
         Competition competition = adminCompetitionService.getEditable(competitionId);
-        if (type == CompetitionLinkType.REGISTRATION && competition.isClubRegistrationOnly()) {
-            throw new ErrorException(ErrorCode.COMPETITION_CLUB_REGISTRATION_ONLY);
-        }
+        competition.validateLinkType(type);
         String url = request.trimmedUrl();
         saveCheckingDuplicate(() -> competitionLinkRepository.findByCompetitionIdAndType(competitionId, type)
                 .ifPresentOrElse(
@@ -83,7 +81,7 @@ public class AdminCompetitionLinkService {
     }
 
     // 같은 대회 · 종류를 동시에 넣으면 유니크(uk_competition_link_competition_type)에 걸린다 — 다시 보내면 덮어쓰므로 잘못된 요청으로
-    // 새 링크는 save(IDENTITY 라 이때 INSERT), 있는 링크는 flush 에서 터진다 — 둘 다 이 try 안
+    // 걸릴 수 있는 건 새 링크의 save(IDENTITY 라 이때 INSERT)뿐 — 있는 링크는 주소·상태만 바뀌어 유니크 칸이 그대로다
     private void saveCheckingDuplicate(Runnable write) {
         try {
             write.run();

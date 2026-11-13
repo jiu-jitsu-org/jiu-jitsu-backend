@@ -108,7 +108,7 @@ public class AdminCompetitionService {
         Competition competition = sameKey.orElseGet(() -> Competition.of(request.name(), request.competitionYear()));
         boolean renamed = catalogFilled && changeName(competition, request);
         competition.changeEventInfo(request.toEventInfo());
-        competition.changeRegistrationSite(request.registrationSite());
+        competition.changeRegistrationSite(request.registrationSite(), false);   // 만들기 — 링크가 아직 없다 (자동완성용 행에도 링크를 둘 수 없음)
         saveCheckingDuplicate(competition);
         if (renamed) {
             publishRenamed(competition);
@@ -134,13 +134,9 @@ public class AdminCompetitionService {
         }
 
         boolean renamed = changeName(competition, request);
-        // 대한체육회는 신청 링크를 둘 수 없다 — 신청 링크가 있는 대회를 대한체육회로 바꾸려면 링크부터 지운다
-        if (request.registrationSite() != null && request.registrationSite().isClubRegistrationOnly()
-                && competitionLinkRepository.existsByCompetitionIdAndType(competitionId, CompetitionLinkType.REGISTRATION)) {
-            throw new ErrorException(ErrorCode.COMPETITION_CLUB_REGISTRATION_ONLY);
-        }
         competition.changeEventInfo(request.toEventInfo());
-        competition.changeRegistrationSite(request.registrationSite());
+        competition.changeRegistrationSite(request.registrationSite(),
+                competitionLinkRepository.existsByCompetitionIdAndType(competitionId, CompetitionLinkType.REGISTRATION));
         saveCheckingDuplicate(competition);
         if (renamed) {
             publishRenamed(competition);
