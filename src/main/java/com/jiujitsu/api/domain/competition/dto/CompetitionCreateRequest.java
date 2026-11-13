@@ -6,7 +6,7 @@ import jakarta.validation.constraints.*;
 
 import java.util.List;
 
-@Schema(description = "등록 대회 일괄 등록 요청 (관리자)")
+@Schema(description = "자동완성용 대회 일괄 등록 요청 (관리자)")
 public record CompetitionCreateRequest(
         @NotEmpty
         @Size(max = 200)

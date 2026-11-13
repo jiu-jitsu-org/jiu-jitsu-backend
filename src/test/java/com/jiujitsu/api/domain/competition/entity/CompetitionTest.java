@@ -300,4 +300,97 @@ class CompetitionTest {
         assertThat(Competition.of("서울 오픈", 2025).missingRequiredFields())
                 .containsExactly(CompetitionRequiredField.values());
     }
+
+    private static CompetitionEventInfo eventInfo(LocalDate openDate, LocalDate earlyBird, List<CompetitionFee> fees) {
+        return new CompetitionEventInfo(openDate, LocalTime.of(10, 0), CompetitionRegion.BUSAN, "부산", "사직체육관", "부산협회",
+                "https://example.com/busan", new LinkedHashSet<>(Set.of(CompetitionUniform.NO_GI)), CompetitionAudience.ADULT,
+                LocalDate.of(2026, 11, 1), earlyBird, LocalDate.of(2026, 11, 30), new ArrayList<>(fees), "성인 기준");
+    }
+
+    @Test
+    @DisplayName("changeEventInfo: 칸을 전부 바꾸고 종목·참가비는 새 값으로 교체한다")
+    void changeEventInfo_replacesAll() {
+        Competition competition = filledForPublish()
+                .uniforms(new LinkedHashSet<>(Set.of(CompetitionUniform.GI)))
+                .fees(new ArrayList<>(List.of(new CompetitionFee("기본", 50000, null))))
+                .build();
+
+        competition.changeEventInfo(eventInfo(LocalDate.of(2026, 12, 13), LocalDate.of(2026, 11, 20),
+                List.of(new CompetitionFee("얼리버드", 40000, LocalDate.of(2026, 11, 20)), new CompetitionFee("기본", 60000, null))));
+
+        assertThat(competition.getOpenDate()).isEqualTo(LocalDate.of(2026, 12, 13));
+        assertThat(competition.getVenue()).isEqualTo("사직체육관");
+        assertThat(competition.getUniforms()).containsExactly(CompetitionUniform.NO_GI);
+        assertThat(competition.getFees()).extracting(CompetitionFee::getLabel).containsExactly("얼리버드", "기본");
+        assertThat(competition.getEarlyBirdDeadline()).isEqualTo(LocalDate.of(2026, 11, 20));
+        assertThat(competition.getLastVerifiedDate()).isEqualTo(LocalDate.of(2026, 11, 13));   // 마지막 확인일은 그대로
+    }
+
+    @Test
+    @DisplayName("changeEventInfo: null·빈 목록이면 그 칸을 비운다")
+    void changeEventInfo_clears() {
+        Competition competition = filledForPublish()
+                .fees(new ArrayList<>(List.of(new CompetitionFee("기본", 50000, null))))
+                .build();
+
+        competition.changeEventInfo(new CompetitionEventInfo(LocalDate.of(2026, 12, 6), null, null, null, null, null, null,
+                new LinkedHashSet<>(), null, null, null, null, new ArrayList<>(), null));
+
+        assertThat(competition.getStartTime()).isNull();
+        assertThat(competition.getRegion()).isNull();
+        assertThat(competition.getNoticeUrl()).isNull();
+        assertThat(competition.getUniforms()).isEmpty();
+        assertThat(competition.getFees()).isEmpty();
+        assertThat(competition.getRegistrationDeadline()).isNull();
+    }
+
+    @Test
+    @DisplayName("changeEventInfo: 일정 순서가 틀리면 COMPETITION_INVALID_EVENT_INFO")
+    void changeEventInfo_invalidSchedule() {
+        Competition competition = filledForPublish().build();
+
+        // 접수 마감(11/30)이 대회일(11/20)보다 뒤
+        assertThatThrownBy(() -> competition.changeEventInfo(eventInfo(LocalDate.of(2026, 11, 20), null, List.of())))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+    }
+
+    @Test
+    @DisplayName("changeEventInfo: 할인 단계 기한과 얼리버드 마감이 다르면 COMPETITION_INVALID_EVENT_INFO (같이 바꾸면 통과)")
+    void changeEventInfo_feesMustMatchEarlyBird() {
+        Competition competition = filledForPublish().build();
+        List<CompetitionFee> fees = List.of(new CompetitionFee("얼리버드", 40000, LocalDate.of(2026, 11, 20)), new CompetitionFee("기본", 60000, null));
+
+        assertThatThrownBy(() -> competition.changeEventInfo(eventInfo(LocalDate.of(2026, 12, 6), LocalDate.of(2026, 11, 15), fees)))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        assertThatCode(() -> competition.changeEventInfo(eventInfo(LocalDate.of(2026, 12, 6), LocalDate.of(2026, 11, 20), fees)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("rename: 표시·검색 이름과 연도를 바꾸고, 정리하면 비는 이름은 WRONG_PARAMETER")
+    void rename() {
+        Competition competition = Competition.of("서울 오픈", 2026);
+
+        competition.rename("  Seoul   Open ", 2027);
+
+        assertThat(competition.getName()).isEqualTo("Seoul Open");
+        assertThat(competition.getSearchName()).isEqualTo("seoulopen");
+        assertThat(competition.getCompetitionYear()).isEqualTo(2027);
+        assertThatThrownBy(() -> competition.rename("\u00A0", 2026))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.WRONG_PARAMETER);
+    }
+
+    @Test
+    @DisplayName("validateEventInfo: 대회일과 연도가 둘 다 있으면 연도 = 대회일 연도 (연도 없는 자동완성용·대회일 없는 대회는 보지 않음)")
+    void validateEventInfo_yearMatchesOpenDate() {
+        assertThatThrownBy(() -> filledForPublish().competitionYear(2025).build().validateEventInfo())
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        assertThatCode(() -> filledForPublish().competitionYear(null).build().validateEventInfo()).doesNotThrowAnyException();
+        assertThatCode(() -> Competition.of("작년 대회", 2025).validateEventInfo()).doesNotThrowAnyException();
+    }
 }
+

@@ -213,7 +213,7 @@ public class Competition extends BaseEntity {
 
     /**
      * 공개에 필요한데 비어 있는 칸 (CompetitionRequiredField 선언 순서). 다 채워졌으면 빈 목록
-     * 관리자 목록·상세에서 채울 칸을 보여 준다. 저장 시 강제하지 않으므로(validateEventInfo 는 공개 대회의 대회일만 확인)
+     * 관리자 목록·상세에서 채울 칸을 보여 준다. 저장 시 강제하지 않으므로(validateEventInfo 의 필수 칸 검사는 공개 대회의 대회일뿐 — 그 밖엔 연도·일정 순서·참가비 규칙)
      * 공개 대회도 빈 칸이 있을 수 있다 — 공개 전환 검사(#209)가 이 기준을 쓸 예정
      */
     public List<CompetitionRequiredField> missingRequiredFields() {
@@ -246,8 +246,54 @@ public class Competition extends BaseEntity {
     }
 
     /**
+     * 자동완성용 카탈로그 엔트리인가 (대회일 없음 — 관리자 일괄 등록으로만 생긴다)
+     */
+    public boolean isCatalogEntry() {
+        return openDate == null;
+    }
+
+    /**
+     * 대회명·연도 바꾸기 (표시용·검색용 이름을 함께 정리). 등록할 수 없는 이름이면 WRONG_PARAMETER (isRegistrableName 참고)
+     * 다른 대회와 겹치는지는 호출부가 본다 (DB 유니크 uk_competition_search_name_year 가 최종 방어)
+     */
+    public void rename(String name, Integer competitionYear) {
+        if (!isRegistrableName(name)) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+        }
+        this.name = cleanDisplayName(name);
+        this.searchName = normalize(this.name);
+        this.competitionYear = competitionYear;
+    }
+
+    /**
+     * 대회 정보 칸 전부 교체 (관리자 입력 — 보낸 값 그대로, 비어 있는 칸은 비움). 공개 여부·마지막 확인일·조회수는 그대로
+     * 종목·참가비는 Hibernate 가 들고 있는 컬렉션을 비우고 채운다 (불변 리스트를 할당하면 merge 시 clear 에서 터진다)
+     * 참가비만 바뀌면 @PreUpdate 가 돌지 않을 수 있어 끝에 validateEventInfo 를 직접 부른다 — 위반이면 COMPETITION_INVALID_EVENT_INFO
+     */
+    public void changeEventInfo(CompetitionEventInfo info) {
+        this.openDate = info.openDate();
+        this.startTime = info.startTime();
+        this.region = info.region();
+        this.place = info.place();
+        this.venue = info.venue();
+        this.host = info.host();
+        this.noticeUrl = info.noticeUrl();
+        this.uniforms.clear();
+        this.uniforms.addAll(info.uniforms());
+        this.audience = info.audience();
+        this.registrationStartDate = info.registrationStartDate();
+        this.earlyBirdDeadline = info.earlyBirdDeadline();
+        this.registrationDeadline = info.registrationDeadline();
+        this.fees.clear();
+        this.fees.addAll(info.fees());
+        this.feeNote = info.feeNote();
+        validateEventInfo();
+    }
+
+    /**
      * 이벤트 정보 불변식 검증. 위반이면 COMPETITION_INVALID_EVENT_INFO
      * - 공개 대회는 대회일이 있어야 한다
+     * - 대회일과 연도가 둘 다 있으면 연도 = 대회일 연도 (자동완성용 대회와 이름 + 연도로 이어 붙이므로 어긋나면 엉뚱한 행에 붙거나 중복이 생긴다)
      * - 일정 순서: 접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 (비어 있는 값은 건너뛰고 채워진 것끼리 비교)
      * - 참가비 단계: validateFees 참고
      * 저장 직전(@PrePersist/@PreUpdate)에 항상 확인해 어떤 쓰기 경로로도 잘못된 데이터가 저장되지 않게 한다.
@@ -260,6 +306,7 @@ public class Competition extends BaseEntity {
         if (published && openDate == null) {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
+        validateYear(competitionYear, openDate);
         List<LocalDate> schedule = Stream.of(registrationStartDate, earlyBirdDeadline, registrationDeadline, openDate)
                 .filter(Objects::nonNull)
                 .toList();
@@ -313,6 +360,16 @@ public class Competition extends BaseEntity {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
         if (hasDeadlineTier && !earlyBirdDeadline.equals(previousUntil)) {
+            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        }
+    }
+
+    /**
+     * 대회일과 연도가 둘 다 있으면 연도 = 대회일 연도. 아니면 COMPETITION_INVALID_EVENT_INFO
+     * validateEventInfo 의 일부. 관리자 쓰기는 이름 + 연도로 같은 대회를 찾기 전에 먼저 부른다 — 연도 오타가 중복(R0008)으로 보이지 않게
+     */
+    public static void validateYear(Integer competitionYear, LocalDate openDate) {
+        if (openDate != null && competitionYear != null && openDate.getYear() != competitionYear) {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
     }
