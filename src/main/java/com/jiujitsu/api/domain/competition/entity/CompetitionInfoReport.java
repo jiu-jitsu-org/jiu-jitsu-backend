@@ -82,25 +82,27 @@ public class CompetitionInfoReport {
     }
 
     /**
-     * 처리 완료 (#222). 처음 처리한 시각을 남기고, 다시 처리하면 메모만 바꾼다. 메모는 앞뒤 공백을 지우고 비면 null
+     * 처리 완료 (#222). 처음 처리한 시각을 남기고, 다시 처리해도 시각은 그대로 둔다
+     * 메모: null 이면 그대로(다시 눌러도 지워지지 않게), 공백뿐이면 지움, 나머지는 앞뒤 공백을 지워 저장
      */
     public void resolve(LocalDateTime now, String note) {
+        if (note != null) {
+            String cleaned = note.isBlank() ? null : note.strip();
+            if (cleaned != null && cleaned.length() > NOTE_MAX_LENGTH) {
+                throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+            }
+            resolutionNote = cleaned;
+        }
         if (resolvedAt == null) {
             resolvedAt = now;
         }
-        resolutionNote = note == null || note.isBlank() ? null : note.strip();
     }
 
     /**
-     * 처리 되돌리기 — 시각 · 메모를 지운다
+     * 처리 되돌리기 — 시각 · 메모를 지운다 (미처리 제보에 처리 메모가 남지 않게)
      */
     public void unresolve() {
         resolvedAt = null;
         resolutionNote = null;
     }
-
-    public boolean isResolved() {
-        return resolvedAt != null;
-    }
 }
-

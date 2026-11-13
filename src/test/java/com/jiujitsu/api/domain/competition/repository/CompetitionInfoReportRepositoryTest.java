@@ -126,13 +126,13 @@ class CompetitionInfoReportRepositoryTest {
                 .setParameter("at", START_OF_TODAY.plusHours(1)).setParameter("id", seoulDone.getId()).executeUpdate();
         em.clear();
 
-        assertThat(adminList(resolved(false), 0, 10).getContent()).extracting(CompetitionInfoReport::getId)
+        assertThat(adminList(resolvedIs(false), 0, 10).getContent()).extracting(CompetitionInfoReport::getId)
                 .containsExactlyInAnyOrder(seoulOpen.getId(), busanOpen.getId());
-        assertThat(adminList(resolved(true), 0, 10).getContent()).extracting(CompetitionInfoReport::getId)
+        assertThat(adminList(resolvedIs(true), 0, 10).getContent()).extracting(CompetitionInfoReport::getId)
                 .containsExactly(seoulDone.getId());
         assertThat(adminList(competitionIs(seoul.getId()), 0, 10).getContent()).extracting(CompetitionInfoReport::getId)
                 .containsExactly(seoulOpen.getId(), seoulDone.getId());   // 미처리 먼저
-        assertThat(adminList(competitionIs(busan.getId()).and(resolved(true)), 0, 10).getTotalElements()).isZero();
+        assertThat(adminList(competitionIs(busan.getId()).and(resolvedIs(true)), 0, 10).getTotalElements()).isZero();
     }
 
     @Test

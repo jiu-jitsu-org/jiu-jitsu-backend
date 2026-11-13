@@ -61,22 +61,42 @@ class CompetitionInfoReportTest {
     }
 
     @Test
-    @DisplayName("resolve: 처음 처리 시각을 남기고 메모는 공백 정리(비면 null), 다시 처리하면 메모만 바뀜, unresolve 는 둘 다 지움")
+    @DisplayName("resolve: 처음 처리 시각을 남기고, 다시 처리해도 시각은 그대로. 메모는 null 이면 그대로 · 공백이면 지움 · 앞뒤 공백 정리, unresolve 는 둘 다 지움")
     void resolve() {
         CompetitionInfoReport report = CompetitionInfoReport.of(
                 Competition.of("서울 오픈", 2026), null, CompetitionInfoField.FEE, null);
         LocalDateTime first = LocalDateTime.of(2026, 11, 13, 10, 0);
 
-        report.resolve(first, "  ");
-        assertThat(report.isResolved()).isTrue();
-        assertThat(report.getResolutionNote()).isNull();
-        report.resolve(first.plusHours(1), " 참가비 고침 ");
+        report.resolve(first, " 참가비 고침 ");
         assertThat(report.getResolvedAt()).isEqualTo(first);
         assertThat(report.getResolutionNote()).isEqualTo("참가비 고침");
 
+        report.resolve(first.plusHours(1), null);
+        assertThat(report.getResolvedAt()).isEqualTo(first);
+        assertThat(report.getResolutionNote()).isEqualTo("참가비 고침");
+
+        report.resolve(first.plusHours(2), "  ");
+        assertThat(report.getResolvedAt()).isEqualTo(first);
+        assertThat(report.getResolutionNote()).isNull();
+
         report.unresolve();
-        assertThat(report.isResolved()).isFalse();
+        assertThat(report.getResolvedAt()).isNull();
         assertThat(report.getResolutionNote()).isNull();
     }
-}
 
+    @Test
+    @DisplayName("resolve: 메모는 앞뒤 공백을 지운 뒤 100자까지, 넘으면 WRONG_PARAMETER 이고 처리되지 않는다")
+    void resolve_noteTooLong() {
+        CompetitionInfoReport report = CompetitionInfoReport.of(
+                Competition.of("서울 오픈", 2026), null, CompetitionInfoField.FEE, null);
+        LocalDateTime now = LocalDateTime.of(2026, 11, 13, 10, 0);
+
+        assertThatThrownBy(() -> report.resolve(now, "가".repeat(101)))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.WRONG_PARAMETER);
+        assertThat(report.getResolvedAt()).isNull();
+
+        report.resolve(now, " " + "가".repeat(100) + "\n");
+        assertThat(report.getResolutionNote()).hasSize(100);
+    }
+}

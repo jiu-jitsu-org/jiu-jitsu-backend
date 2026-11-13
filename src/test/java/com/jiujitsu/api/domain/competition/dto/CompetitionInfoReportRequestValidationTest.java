@@ -29,4 +29,3 @@ class CompetitionInfoReportRequestValidationTest {
         assertThat(validator.validate(new CompetitionInfoReportResolveRequest("가".repeat(101)))).hasSize(1);
     }
 }
-

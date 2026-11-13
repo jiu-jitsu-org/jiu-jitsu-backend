@@ -65,20 +65,20 @@ public class CompetitionInfoReportService {
      */
     @Transactional(readOnly = true)
     public Page<AdminCompetitionInfoReportResponse> getAdminReports(AdminCompetitionInfoReportListRequest request, Pageable pageable) {
-        Specification<CompetitionInfoReport> filter = unresolvedFirstThenLatest();
+        Specification<CompetitionInfoReport> spec = unresolvedFirstThenLatest();
         if (request.resolved() != null) {
-            filter = filter.and(resolved(request.resolved()));
+            spec = spec.and(resolvedIs(request.resolved()));
         }
         if (request.competitionId() != null) {
-            filter = filter.and(competitionIs(request.competitionId()));
+            spec = spec.and(competitionIs(request.competitionId()));
         }
-        Pageable unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-        return competitionInfoReportRepository.findAll(filter, unsorted)
+        Pageable unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());   // 정렬은 spec 에 — sort 를 넘기면 덮어씀
+        return competitionInfoReportRepository.findAll(spec, unsorted)
                 .map(competitionInfoReportMapper::toAdminResponse);
     }
 
     /**
-     * 관리자: 처리 완료 (메모 선택). 다시 처리하면 처음 처리 시각은 그대로, 메모만 바꾼다. 없으면 COMPETITION_INFO_REPORT_NOT_FOUND
+     * 관리자: 처리 완료 (메모 선택). 다시 처리하면 처음 처리 시각은 그대로, 메모는 보냈을 때만 바꾼다. 없으면 COMPETITION_INFO_REPORT_NOT_FOUND
      * 제보자에게 알리지 않는다 (푸시 정책과 같이 정할 것 — 백로그)
      */
     public AdminCompetitionInfoReportResponse resolve(Long reportId, CompetitionInfoReportResolveRequest request) {

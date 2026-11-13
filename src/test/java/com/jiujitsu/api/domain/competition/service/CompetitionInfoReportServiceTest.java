@@ -1,9 +1,9 @@
 package com.jiujitsu.api.domain.competition.service;
 
-import com.jiujitsu.api.domain.competition.dto.AdminCompetitionInfoReportResponse;
-import com.jiujitsu.api.domain.competition.dto.CompetitionInfoReportResolveRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionInfoReportListRequest;
+import com.jiujitsu.api.domain.competition.dto.AdminCompetitionInfoReportResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionInfoReportRequest;
+import com.jiujitsu.api.domain.competition.dto.CompetitionInfoReportResolveRequest;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInfoField;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInfoReport;
@@ -40,8 +40,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -186,7 +186,7 @@ class CompetitionInfoReportServiceTest {
     }
 
     @Test
-    @DisplayName("처리 완료: 지금 시각 · 메모를 남기고 응답에 담는다. 다시 처리하면 시각은 그대로 메모만 바뀜. 되돌리면 지움")
+    @DisplayName("처리 완료: 지금 시각 · 메모를 남기고 응답에 담는다. 본문 없이 다시 처리하면 시각 · 메모 그대로. 되돌리면 지움")
     void resolveAndUnresolve() {
         CompetitionInfoReport report = CompetitionInfoReport.of(competition, user, CompetitionInfoField.FEE, "8만 원");
         given(competitionInfoReportRepository.findById(5L)).willReturn(Optional.of(report));
@@ -197,7 +197,7 @@ class CompetitionInfoReportServiceTest {
 
         AdminCompetitionInfoReportResponse again = competitionInfoReportService.resolve(5L, null);
         assertThat(again.resolvedAt()).isEqualTo(TODAY.atTime(15, 0));
-        assertThat(again.resolutionNote()).isNull();
+        assertThat(again.resolutionNote()).isEqualTo("참가비 고침");
 
         AdminCompetitionInfoReportResponse undone = competitionInfoReportService.unresolve(5L);
         assertThat(undone.resolvedAt()).isNull();
@@ -217,4 +217,3 @@ class CompetitionInfoReportServiceTest {
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INFO_REPORT_NOT_FOUND);
     }
 }
-
