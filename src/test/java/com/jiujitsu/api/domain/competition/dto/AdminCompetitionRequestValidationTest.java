@@ -23,7 +23,7 @@ class AdminCompetitionRequestValidationTest {
     private static AdminCompetitionRequest request(String name, Integer year, LocalDate openDate, String place, String noticeUrl,
                                                    List<AdminCompetitionRequest.Fee> fees) {
         return new AdminCompetitionRequest(name, year, openDate, null, null, null, place, null, null, noticeUrl, null, null,
-                null, null, null, fees, null);
+                null, null, null, fees, null, null);
     }
 
     private Set<String> invalidFields(AdminCompetitionRequest request) {

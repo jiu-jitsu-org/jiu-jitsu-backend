@@ -29,6 +29,7 @@ public enum ErrorCode {
     CONTENT_SAVE_NOT_SUPPORTED(400, "C0008", "저장할 수 없는 게시물입니다."),
     BALANCE_GAME_END_AT_MUST_BE_FUTURE(400, "C0009", "마감 일시는 미래 시간이어야 합니다."),
     COMPETITION_NOT_FOUND(404, "C0010", "존재하지 않는 대회입니다."),
+    COMPETITION_LINK_NOT_FOUND(404, "C0013", "이 대회에 해당 종류의 링크가 없습니다."),
     EMAIL_DUPLICATED(400, "R0006", "이미 사용중인 이메일입니다."),
     COMPETITION_PIN_LIMIT_EXCEEDED(400, "R0007", "대표 기록은 3개까지 고정할 수 있습니다."),
     COMPETITION_DUPLICATED(400, "R0008", "같은 연도에 같은 이름의 대회가 중복되었습니다."),
@@ -36,6 +37,8 @@ public enum ErrorCode {
     COMPETITION_INFO_REPORT_LIMIT_EXCEEDED(400, "R0010", "같은 대회의 같은 항목은 하루 3번까지 제보할 수 있습니다."),
     COMPETITION_CATALOG_NOT_EDITABLE(400, "R0011", "자동완성용 대회는 수정할 수 없습니다. 대회 만들기로 정보를 채워 주세요."),
     COMPETITION_REQUIRED_FIELDS_MISSING(400, "R0012", "공개에 필요한 칸이 비어 있습니다. 비어 있는 칸을 채운 뒤 다시 공개해 주세요."),
+    COMPETITION_CLUB_REGISTRATION_ONLY(400, "R0013", "도장(감독·코치)을 통해 신청하는 대회라 신청 링크를 넣을 수 없습니다."),
+    COMPETITION_REGISTRATION_LINK_EXISTS(400, "R0014", "신청 링크가 있어 도장(감독·코치)을 통해 신청하는 접수 사이트로 바꿀 수 없습니다. 신청 링크를 먼저 지워 주세요."),
 
 
     /**

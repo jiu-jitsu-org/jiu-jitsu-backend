@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.competition.entity.CompetitionEventInfo;
 import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
+import com.jiujitsu.api.domain.competition.entity.RegistrationSite;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -72,7 +73,9 @@ public record AdminCompetitionRequest(
             List<@Valid @NotNull Fee> fees,
         @Size(max = 100)
         @Schema(description = "참가비 기준 문구", example = "성인 1종목 기준", nullable = true)
-            String feeNote
+            String feeNote,
+        @Schema(description = "접수 사이트 — 결과 링크 유지 · 도장 신청 안내에 씀. 비우면 기타. 고치기(PUT)에서 빼면 비워짐. 대한체육회(KSOC)는 신청 링크를 둘 수 없음 (신청 링크가 있는 대회를 KSOC로 바꾸면 R0014)", nullable = true)
+            RegistrationSite registrationSite
 ) {
 
     /**
