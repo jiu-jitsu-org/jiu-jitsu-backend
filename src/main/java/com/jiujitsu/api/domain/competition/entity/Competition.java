@@ -211,6 +211,39 @@ public class Competition extends BaseEntity {
     }
 
     /**
+     * 공개에 필요한데 비어 있는 칸 (CompetitionRequiredField 선언 순서). 다 채워졌으면 빈 목록
+     * 관리자 목록·상세에서 채울 칸을 보여 주는 데 쓰고, 공개 전환 검사도 이 기준을 따른다
+     */
+    public List<CompetitionRequiredField> missingRequiredFields() {
+        List<CompetitionRequiredField> missing = new ArrayList<>();
+        if (openDate == null) {
+            missing.add(CompetitionRequiredField.OPEN_DATE);
+        }
+        if (startTime == null) {
+            missing.add(CompetitionRequiredField.START_TIME);
+        }
+        if (region == null) {
+            missing.add(CompetitionRequiredField.REGION);
+        }
+        if (uniforms.isEmpty()) {
+            missing.add(CompetitionRequiredField.UNIFORMS);
+        }
+        if (registrationStartDate == null) {
+            missing.add(CompetitionRequiredField.REGISTRATION_START_DATE);
+        }
+        if (registrationDeadline == null) {
+            missing.add(CompetitionRequiredField.REGISTRATION_DEADLINE);
+        }
+        if (noticeUrl == null || noticeUrl.isBlank()) {
+            missing.add(CompetitionRequiredField.NOTICE_URL);
+        }
+        if (lastVerifiedDate == null) {
+            missing.add(CompetitionRequiredField.LAST_VERIFIED_DATE);
+        }
+        return missing;
+    }
+
+    /**
      * 이벤트 정보 불변식 검증. 위반이면 COMPETITION_INVALID_EVENT_INFO
      * - 공개 대회는 대회일이 있어야 한다
      * - 일정 순서: 접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 (비어 있는 값은 건너뛰고 채워진 것끼리 비교)

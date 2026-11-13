@@ -154,11 +154,13 @@ src/main/java/com/jiujitsu/api/
 | DELETE | `/competitions/{competitionId}/notice` | 이 대회 마감 알림 끄기 (관심 유지) |
 | POST | `/competitions/{competitionId}/info-reports` | 대회 정보 제보 (정보가 달라요, 공개 대회. 같은 항목은 하루 3번까지) |
 
-### 관리자 등록 대회 (`/api/admin/competitions`)
+### 관리자 대회 (`/api/admin/competitions`)
 
 | Method | Path | 설명 |
 |--------|----------|------|
 | POST | `/admin/competitions` | 등록 대회 일괄 등록 (회차 = 대회명 + 연도, 중복은 건너뜀) |
+| GET | `/admin/competitions` | 관리자 대회 목록 (대회일 있는 대회, 공개·미공개 모두. 공개 여부·대회명·대회일 기간 필터, 대회일 순 페이지, 비어 있는 공개 필수 칸) |
+| GET | `/admin/competitions/{competitionId}` | 관리자 대회 상세 (공개 여부 무관, 입력 화면 전체 칸 + 조회수·관심 수·비어 있는 공개 필수 칸) |
 | GET | `/admin/competitions/info-reports` | 대회 정보 제보 목록 (최신순 페이지) |
 
 ### 관리자 관장/사범 인증 (`/api/admin/owner-requests`)
