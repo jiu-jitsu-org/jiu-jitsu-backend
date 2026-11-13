@@ -28,6 +28,7 @@ import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.notice.event.LikeNoticeEvent;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
@@ -199,7 +200,7 @@ public class CommunityCommentsService {
         PushActionType actionType = content.getContentType().getPushActionType();
 
         // 알림2 받는 사람 - 태그한 대댓글 작성자, 태그가 없으면 부모(최상위) 댓글 작성자. 본인(내 댓글에 단 답글)에게는 없음
-        // (탈퇴·차단·숨김·신고·알림 설정은 CommentNoticeEventListener 가 거른다)
+        // (받는 사람 기준 탈퇴·받는 사람이 쓴 사람을 차단·글 숨김·신고·알림 설정은 CommentNoticeEventListener 가 거른다)
         Long replyRecipientId = mentioned.or(() -> parentComments)
                 .map(CommunityComments::getCreatedBy)
                 .map(User::getId)
@@ -211,7 +212,8 @@ public class CommunityCommentsService {
         // 단, 게시글 작성자가 이번 답글의 알림2를 받으면 그것으로 대체한다 (중복 방지).
         // 태그 답글이면 알림2가 태그된 사람에게 가므로, 게시글 작성자가 최상위 댓글 작성자여도 알림1을 받는다 (#216)
         boolean notifyBoardWriter = content.getContentType().isNotifiesWriter();
-        if (notifyBoardWriter && !Objects.equals(user.getId(), boardWriter.getId())
+        // 게시글 작성자가 탈퇴 정리로 지워졌으면(null) 보낼 사람이 없다
+        if (notifyBoardWriter && boardWriter != null && !Objects.equals(user.getId(), boardWriter.getId())
                 && !Objects.equals(boardWriter.getId(), replyRecipientId)) {
             eventPublisher.publishEvent(new CommentNoticeEvent(
                     boardWriter.getId(),
@@ -246,7 +248,8 @@ public class CommunityCommentsService {
     /**
      * 답글 버튼을 누른 대댓글 (#216). 태그가 없으면 비어 있다
      * - 대댓글 작성이 아닌데 태그하거나, 없는 댓글·다른 스레드의 댓글이면 WRONG_PARAMETER
-     * - 최상위 댓글 자신, 그사이 지워졌거나 숨겨진(신고 포함) 대댓글, 내 대댓글이면 비어 있다 = 태그 없는 답글 (최상위 댓글 작성자에게 알림)
+     * - 최상위 댓글 자신, 그사이 지워졌거나 숨겨진(신고 포함) 대댓글, 작성자가 탈퇴한 대댓글, 내 대댓글이면 비어 있다
+     *   = 태그 없는 답글 (최상위 댓글 작성자에게 알림)
      */
     private Optional<CommunityComments> findMentionedReply(Long mentionCommentId, Long parentId, boolean isReply, Long writerId) {
         if (mentionCommentId == null) {
@@ -263,7 +266,9 @@ public class CommunityCommentsService {
         if (!mentioned.isReplyIn(parentId)) {
             throw new ErrorException(ErrorCode.WRONG_PARAMETER);
         }
-        if (mentioned.isDeleted() || mentioned.isHidden() || Objects.equals(mentioned.getCreatedBy().getId(), writerId)) {
+        User author = mentioned.getCreatedBy();   // 탈퇴 정리(UserCleanupService)로 회원 행이 지워졌으면 null
+        boolean gone = author == null || author.getStatus() == UserStatus.DELETED;
+        if (mentioned.isDeleted() || mentioned.isHidden() || gone || Objects.equals(author.getId(), writerId)) {
             return Optional.empty();
         }
         return Optional.of(mentioned);

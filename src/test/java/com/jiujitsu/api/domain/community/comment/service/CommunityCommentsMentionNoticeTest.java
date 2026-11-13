@@ -296,4 +296,49 @@ class CommunityCommentsMentionNoticeTest {
                 .extracting("errorCode").isEqualTo(ErrorCode.WRONG_PARAMETER);
         verify(communityCommentsRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("탈퇴한 회원(정리 전·후)의 대댓글을 태그하면 태그 없는 답글처럼 최상위 댓글 작성자에게")
+    void mention_withdrawnAuthor_fallsBackToTopAuthor() {
+        CommunityComments withdrawn = comment(REPLY_ID, B, TOP_ID);
+        given(withdrawn.getCreatedBy().getStatus()).willReturn(UserStatus.DELETED);
+        givenThread(W, A, withdrawn);
+        givenCreated();
+
+        write(REPLY_ID);
+
+        assertThat(published(2)).containsExactlyInAnyOrderEntriesOf(Map.of(
+                A, FcmPushType.NEW_CHILD_COMMENTS,
+                W, FcmPushType.NEW_COMMENTS));
+        verify(commentFactory).createComments(any(), eq(TOP_ID), any(), isNull());
+    }
+
+    @Test
+    @DisplayName("탈퇴 정리로 작성자가 지워진(null) 대댓글을 태그해도 500 없이 태그 없는 답글로")
+    void mention_deletedAuthorRow_fallsBackToTopAuthor() {
+        CommunityComments orphan = comment(REPLY_ID, B, TOP_ID);
+        given(orphan.getCreatedBy()).willReturn(null);
+        givenThread(W, A, orphan);
+        givenCreated();
+
+        write(REPLY_ID);
+
+        assertThat(published(2)).containsExactlyInAnyOrderEntriesOf(Map.of(
+                A, FcmPushType.NEW_CHILD_COMMENTS,
+                W, FcmPushType.NEW_COMMENTS));
+    }
+
+    @Test
+    @DisplayName("게시글 작성자가 탈퇴 정리로 지워진(null) 글에도 댓글을 쓸 수 있고, 답글 알림만 간다")
+    void boardWriterDeleted_noNpe() {
+        given(content.getCreatedBy()).willReturn(null);
+        CommunityComments top = comment(TOP_ID, A, 0L);
+        given(communityCommentsRepository.findById(TOP_ID)).willReturn(Optional.of(top));
+        givenCreated();
+
+        write(null);
+
+        assertThat(published(1)).containsExactlyEntriesOf(Map.of(A, FcmPushType.NEW_CHILD_COMMENTS));
+    }
 }
+
