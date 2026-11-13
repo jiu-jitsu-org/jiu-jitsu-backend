@@ -23,9 +23,29 @@ public final class CompetitionSpecifications {
     private CompetitionSpecifications() {
     }
 
-    // 대회 탭에는 공개 대회만 (미공개 = 자동완성용 카탈로그 엔트리)
+    // 대회 탭에는 공개 대회만 (미공개 = 자동완성용 카탈로그 엔트리 또는 공개 전 대회)
     public static Specification<Competition> published() {
         return (root, query, cb) -> cb.isTrue(root.get("published"));
+    }
+
+    // 관리자 목록: 공개 여부
+    public static Specification<Competition> publishedIs(boolean published) {
+        return (root, query, cb) -> cb.equal(root.get("published"), published);
+    }
+
+    // 관리자 목록: 대회일이 있는 대회만 (대회일 없는 행 = 자동완성용 카탈로그 엔트리)
+    public static Specification<Competition> hasOpenDate() {
+        return (root, query, cb) -> cb.isNotNull(openDate(root));
+    }
+
+    // 대회일 from 이후 (당일 포함)
+    public static Specification<Competition> openDateFrom(LocalDate from) {
+        return (root, query, cb) -> cb.greaterThanOrEqualTo(openDate(root), from);
+    }
+
+    // 대회일 to 이전 (당일 포함)
+    public static Specification<Competition> openDateTo(LocalDate to) {
+        return (root, query, cb) -> cb.lessThanOrEqualTo(openDate(root), to);
     }
 
     // 정렬 (openDate, id) 에서 (openDate, id) 경계보다 뒤
