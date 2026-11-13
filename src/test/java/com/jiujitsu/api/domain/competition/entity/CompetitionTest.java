@@ -449,12 +449,19 @@ class CompetitionTest {
     }
 
     @Test
-    @DisplayName("validateEventInfo: 종료일은 대회일 이상, 접수 마감 ≤ 대회일 ≤ 종료일")
+    @DisplayName("validateEventInfo: 종료일은 대회일 이상 · 대회일 + 14일 이내, 접수 마감 ≤ 대회일 ≤ 종료일")
     void validateEventInfo_endDate() {
         assertThatThrownBy(() -> filledForPublish().endDate(LocalDate.of(2026, 12, 5)).build().validateEventInfo())
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         assertThatCode(() -> filledForPublish().endDate(LocalDate.of(2026, 12, 7)).build().validateEventInfo()).doesNotThrowAnyException();
+        // 기간 상한: 대회일(12/6) + 14일까지, 연도 오타 같은 값은 거절
+        assertThatCode(() -> filledForPublish().endDate(LocalDate.of(2026, 12, 20)).build().validateEventInfo()).doesNotThrowAnyException();
+        assertThatThrownBy(() -> filledForPublish().endDate(LocalDate.of(2026, 12, 21)).build().validateEventInfo())
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        assertThatThrownBy(() -> filledForPublish().endDate(LocalDate.of(2027, 12, 7)).build().validateEventInfo())
+                .isInstanceOf(ErrorException.class);
     }
 }
 

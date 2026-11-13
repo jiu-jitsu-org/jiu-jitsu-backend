@@ -38,7 +38,7 @@ public record AdminCompetitionRequest(
         @NotNull
         @Schema(description = "대회일 (여러 날 대회면 첫날)", example = "2026-12-06", requiredMode = Schema.RequiredMode.REQUIRED)
             LocalDate openDate,
-        @Schema(description = "여러 날 대회의 마지막 날. 하루짜리면 비움(대회일과 같으면 비운 것으로 저장). 대회일보다 앞이면 400", example = "2026-12-07", nullable = true)
+        @Schema(description = "여러 날 대회의 마지막 날. 하루짜리면 비움(대회일과 같으면 비운 것으로 저장). 대회일보다 앞이거나 14일 넘게 뒤면 400. 고치기(PUT)에서 빼면 비워짐", example = "2026-12-07", nullable = true)
             LocalDate endDate,
         @Schema(description = "시작 시각 HH:mm (초를 붙여 보내면 분 단위로 잘라 저장)", type = "string", example = "09:00", nullable = true)
             LocalTime startTime,

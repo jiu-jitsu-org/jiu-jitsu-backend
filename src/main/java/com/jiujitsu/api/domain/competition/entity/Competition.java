@@ -46,6 +46,8 @@ public class Competition extends BaseEntity {
     private Long id;
 
     public static final int NAME_MAX_LENGTH = 100;
+    // 여러 날 대회 기간 상한 (대회일 + 이 일수까지). 국내 대회는 길어야 2~3일 — 연도·월 오타로 대회가 몇 달씩 진행 중으로 남지 않게
+    public static final int MAX_EVENT_DAYS = 14;
 
     @Column(nullable = false, length = NAME_MAX_LENGTH)
     private String name;    // 대회명 (표시용)
@@ -336,7 +338,7 @@ public class Competition extends BaseEntity {
      * 이벤트 정보 불변식 검증. 위반이면 COMPETITION_INVALID_EVENT_INFO
      * - 공개 대회는 대회일이 있어야 한다
      * - 대회일과 연도가 둘 다 있으면 연도 = 대회일 연도 (자동완성용 대회와 이름 + 연도로 이어 붙이므로 어긋나면 엉뚱한 행에 붙거나 중복이 생긴다)
-     * - 일정 순서: 접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 ≤ 종료일 (비어 있는 값은 건너뛰고 채워진 것끼리 비교)
+     * - 일정 순서: 접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 ≤ 종료일, 종료일은 대회일 + MAX_EVENT_DAYS 이내 (비어 있는 값은 건너뛰고 채워진 것끼리 비교)
      * - 참가비 단계: validateFees 참고
      * 저장 직전(@PrePersist/@PreUpdate)에 항상 확인해 어떤 쓰기 경로로도 잘못된 데이터가 저장되지 않게 한다.
      * 쓰기 쪽(관리자 입력·정보 수집)은 저장 전에 직접 호출해 400 으로 응답할 것 —
@@ -349,6 +351,9 @@ public class Competition extends BaseEntity {
             throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
         }
         validateYear(competitionYear, openDate);
+        if (openDate != null && endDate != null && endDate.isAfter(openDate.plusDays(MAX_EVENT_DAYS))) {
+            throw new ErrorException(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        }
         List<LocalDate> schedule = Stream.of(registrationStartDate, earlyBirdDeadline, registrationDeadline, openDate, endDate)
                 .filter(Objects::nonNull)
                 .toList();
