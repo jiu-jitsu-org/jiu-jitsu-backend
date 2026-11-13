@@ -1,6 +1,8 @@
 package com.jiujitsu.api.domain.competition.service;
 
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionInfoReportResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionInfoReportResolveRequest;
+import com.jiujitsu.api.domain.competition.dto.AdminCompetitionInfoReportListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionInfoReportRequest;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInfoField;
@@ -26,6 +28,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -37,6 +40,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -163,11 +167,12 @@ class CompetitionInfoReportServiceTest {
     @DisplayName("관리자 목록: 클라이언트 sort 는 버리고 page·size 만 넘기며, 대회·제보자 정보를 담아 돌려준다")
     void getAdminReports() {
         CompetitionInfoReport report = CompetitionInfoReport.of(competition, user, CompetitionInfoField.FEE, "7만 원이 아니라 8만 원");
-        given(competitionInfoReportRepository.findAllWithCompetitionAndUser(PageRequest.of(1, 5)))
+        given(competitionInfoReportRepository.findAll(any(Specification.class), eq(PageRequest.of(1, 5))))
                 .willReturn(new PageImpl<>(List.of(report), PageRequest.of(1, 5), 6));
 
         Pageable requested = PageRequest.of(1, 5, Sort.by("detail"));
-        Page<AdminCompetitionInfoReportResponse> page = competitionInfoReportService.getAdminReports(requested);
+        Page<AdminCompetitionInfoReportResponse> page = competitionInfoReportService.getAdminReports(
+                new AdminCompetitionInfoReportListRequest(null, null), requested);
 
         assertThat(page.getTotalElements()).isEqualTo(6);
         AdminCompetitionInfoReportResponse item = page.getContent().get(0);
@@ -179,4 +184,37 @@ class CompetitionInfoReportServiceTest {
         assertThat(item.reporterUserId()).isEqualTo(1L);
         assertThat(item.reporterNickname()).isEqualTo("주짓수러");
     }
+
+    @Test
+    @DisplayName("처리 완료: 지금 시각 · 메모를 남기고 응답에 담는다. 다시 처리하면 시각은 그대로 메모만 바뀜. 되돌리면 지움")
+    void resolveAndUnresolve() {
+        CompetitionInfoReport report = CompetitionInfoReport.of(competition, user, CompetitionInfoField.FEE, "8만 원");
+        given(competitionInfoReportRepository.findById(5L)).willReturn(Optional.of(report));
+
+        AdminCompetitionInfoReportResponse resolved = competitionInfoReportService.resolve(5L, new CompetitionInfoReportResolveRequest(" 참가비 고침 "));
+        assertThat(resolved.resolvedAt()).isEqualTo(TODAY.atTime(15, 0));
+        assertThat(resolved.resolutionNote()).isEqualTo("참가비 고침");
+
+        AdminCompetitionInfoReportResponse again = competitionInfoReportService.resolve(5L, null);
+        assertThat(again.resolvedAt()).isEqualTo(TODAY.atTime(15, 0));
+        assertThat(again.resolutionNote()).isNull();
+
+        AdminCompetitionInfoReportResponse undone = competitionInfoReportService.unresolve(5L);
+        assertThat(undone.resolvedAt()).isNull();
+        assertThat(undone.resolutionNote()).isNull();
+    }
+
+    @Test
+    @DisplayName("없는 제보 처리 · 되돌리기는 COMPETITION_INFO_REPORT_NOT_FOUND")
+    void resolve_notFound() {
+        given(competitionInfoReportRepository.findById(9L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> competitionInfoReportService.resolve(9L, null))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INFO_REPORT_NOT_FOUND);
+        assertThatThrownBy(() -> competitionInfoReportService.unresolve(9L))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INFO_REPORT_NOT_FOUND);
+    }
 }
+

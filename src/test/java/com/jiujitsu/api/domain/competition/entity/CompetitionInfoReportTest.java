@@ -10,6 +10,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -57,4 +59,24 @@ class CompetitionInfoReportTest {
                 .isInstanceOf(ErrorException.class);
         assertThat(CompetitionInfoReport.of(competition, user, CompetitionInfoField.FEE, "가".repeat(200)).getDetail()).hasSize(200);
     }
+
+    @Test
+    @DisplayName("resolve: 처음 처리 시각을 남기고 메모는 공백 정리(비면 null), 다시 처리하면 메모만 바뀜, unresolve 는 둘 다 지움")
+    void resolve() {
+        CompetitionInfoReport report = CompetitionInfoReport.of(
+                Competition.of("서울 오픈", 2026), null, CompetitionInfoField.FEE, null);
+        LocalDateTime first = LocalDateTime.of(2026, 11, 13, 10, 0);
+
+        report.resolve(first, "  ");
+        assertThat(report.isResolved()).isTrue();
+        assertThat(report.getResolutionNote()).isNull();
+        report.resolve(first.plusHours(1), " 참가비 고침 ");
+        assertThat(report.getResolvedAt()).isEqualTo(first);
+        assertThat(report.getResolutionNote()).isEqualTo("참가비 고침");
+
+        report.unresolve();
+        assertThat(report.isResolved()).isFalse();
+        assertThat(report.getResolutionNote()).isNull();
+    }
 }
+
