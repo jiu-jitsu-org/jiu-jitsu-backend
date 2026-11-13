@@ -83,7 +83,7 @@ public class CompetitionInfoReport {
 
     /**
      * 처리 완료 (#222). 처음 처리한 시각을 남기고, 다시 처리해도 시각은 그대로 둔다
-     * 메모: null 이면 그대로(다시 눌러도 지워지지 않게), 공백뿐이면 지움, 나머지는 앞뒤 공백을 지워 저장
+     * 메모: null(요청에서 빼거나 null) 이면 그대로(다시 눌러도 지워지지 않게), 공백뿐이면 지움, 나머지는 앞뒤 공백을 지워 저장
      */
     public void resolve(LocalDateTime now, String note) {
         if (note != null) {

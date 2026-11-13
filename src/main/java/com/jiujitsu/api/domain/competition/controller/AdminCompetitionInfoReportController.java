@@ -44,7 +44,7 @@ public class AdminCompetitionInfoReportController {
 
     @Operation(summary = "대회 정보 제보 처리 완료",
             description = "제보를 처리한 것으로 표시합니다. 메모(note, 선택, 100자)로 무엇을 했는지 남깁니다. 다시 보내면 처음 처리 시각은 그대로 둡니다. "
-                    + "메모는 note 를 보냈을 때만 바꾸고(빼거나 본문 없이 보내면 그대로), 빈 문자열이면 지웁니다. 제보자에게 알리지 않습니다. (ROLE_ADMIN 필요)")
+                    + "메모는 note 에 값이 있을 때만 바꾸고(빼거나 null · 본문 없음이면 그대로), 빈 문자열이면 지웁니다. 제보자에게 알리지 않습니다. (ROLE_ADMIN 필요)")
     @ApiErrorCodeExamples({ErrorCode.COMPETITION_INFO_REPORT_NOT_FOUND, ErrorCode.WRONG_PARAMETER})
     @PatchMapping("/{reportId}/resolve")
     public AdminCompetitionInfoReportResponse resolve(

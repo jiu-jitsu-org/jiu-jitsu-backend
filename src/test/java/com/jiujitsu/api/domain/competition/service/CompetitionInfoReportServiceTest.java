@@ -3,7 +3,6 @@ package com.jiujitsu.api.domain.competition.service;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionInfoReportListRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionInfoReportResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionInfoReportRequest;
-import com.jiujitsu.api.domain.competition.dto.CompetitionInfoReportResolveRequest;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInfoField;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInfoReport;
@@ -183,25 +182,6 @@ class CompetitionInfoReportServiceTest {
         assertThat(item.detail()).isEqualTo("7만 원이 아니라 8만 원");
         assertThat(item.reporterUserId()).isEqualTo(1L);
         assertThat(item.reporterNickname()).isEqualTo("주짓수러");
-    }
-
-    @Test
-    @DisplayName("처리 완료: 지금 시각 · 메모를 남기고 응답에 담는다. 본문 없이 다시 처리하면 시각 · 메모 그대로. 되돌리면 지움")
-    void resolveAndUnresolve() {
-        CompetitionInfoReport report = CompetitionInfoReport.of(competition, user, CompetitionInfoField.FEE, "8만 원");
-        given(competitionInfoReportRepository.findById(5L)).willReturn(Optional.of(report));
-
-        AdminCompetitionInfoReportResponse resolved = competitionInfoReportService.resolve(5L, new CompetitionInfoReportResolveRequest(" 참가비 고침 "));
-        assertThat(resolved.resolvedAt()).isEqualTo(TODAY.atTime(15, 0));
-        assertThat(resolved.resolutionNote()).isEqualTo("참가비 고침");
-
-        AdminCompetitionInfoReportResponse again = competitionInfoReportService.resolve(5L, null);
-        assertThat(again.resolvedAt()).isEqualTo(TODAY.atTime(15, 0));
-        assertThat(again.resolutionNote()).isEqualTo("참가비 고침");
-
-        AdminCompetitionInfoReportResponse undone = competitionInfoReportService.unresolve(5L);
-        assertThat(undone.resolvedAt()).isNull();
-        assertThat(undone.resolutionNote()).isNull();
     }
 
     @Test

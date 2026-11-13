@@ -33,8 +33,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// 관리자 목록 조건 조립 · 처리 저장은 실제 쿼리 결과와 변경 감지에 달려 있어 DB 와 함께 검증한다 (AdminCompetitionServiceTest 와 같은 방식)
-// 제보 등록은 CompetitionInfoReportServiceTest (Mockito)
+// 관리자 목록 조건 조립(필터 · 정렬) · 처리 저장은 실제 쿼리 결과와 변경 감지에 달려 있어 DB 와 함께 검증한다 (AdminCompetitionServiceTest 와 같은 방식)
+// 제보 등록 · 관리자 응답 매핑 · 없는 제보는 CompetitionInfoReportServiceTest (Mockito)
 @DataJpaTest
 @Import({CompetitionInfoReportService.class, CompetitionInfoReportMapper.class})
 class CompetitionInfoReportServiceAdminTest {
