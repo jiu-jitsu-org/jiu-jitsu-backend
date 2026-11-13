@@ -78,6 +78,11 @@ public class Competition extends BaseEntity {
     @Column(name = "end_date")
     private LocalDate endDate;               // 여러 날 대회의 마지막 날. 하루짜리면 null (대회일과 같은 값은 넣지 않음 — changeEventInfo)
 
+    // 접수 사이트 (#221) — 상태 링크 규칙(결과 링크 유지, 도장 신청)에 씀. 모르면 null (기타와 같게)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "registration_site", length = 20)
+    private RegistrationSite registrationSite;
+
     @Column(name = "start_time")
     private LocalTime startTime;             // 시작 시각 (모르면 null)
 
@@ -285,6 +290,35 @@ public class Competition extends BaseEntity {
      */
     public LocalDate lastDay() {
         return endDate != null ? endDate : openDate;
+    }
+
+    /**
+     * 접수 사이트 바꾸기 (#221). 감독 · 코치만 신청하는 사이트(대한체육회)는 신청 링크를 둘 수 없어,
+     * 신청 링크가 있으면 COMPETITION_REGISTRATION_LINK_EXISTS — 링크부터 지운다
+     */
+    public void changeRegistrationSite(RegistrationSite registrationSite, boolean hasRegistrationLink) {
+        // 바꿀 때만 본다 — 이미 대한체육회인 대회(동시 요청으로 신청 링크가 남은 경우 포함)의 다른 칸 고치기는 막지 않는다 (그 링크는 앱에 안 나감)
+        if (registrationSite != this.registrationSite
+                && registrationSite != null && registrationSite.isClubRegistrationOnly() && hasRegistrationLink) {
+            throw new ErrorException(ErrorCode.COMPETITION_REGISTRATION_LINK_EXISTS);
+        }
+        this.registrationSite = registrationSite;
+    }
+
+    /**
+     * 이 종류의 상태 링크를 둘 수 있는가 — 감독 · 코치만 신청하는 대회(대한체육회)는 신청 링크 불가 (COMPETITION_CLUB_REGISTRATION_ONLY)
+     */
+    public void validateLinkType(CompetitionLinkType type) {
+        if (type == CompetitionLinkType.REGISTRATION && isClubRegistrationOnly()) {
+            throw new ErrorException(ErrorCode.COMPETITION_CLUB_REGISTRATION_ONLY);
+        }
+    }
+
+    /**
+     * 감독 · 코치만 신청할 수 있는 대회인가 (대한체육회) — 신청 링크를 두지 않고 "도장을 통해 신청" 안내
+     */
+    public boolean isClubRegistrationOnly() {
+        return registrationSite != null && registrationSite.isClubRegistrationOnly();
     }
 
     /**

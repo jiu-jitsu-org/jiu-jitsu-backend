@@ -1,15 +1,19 @@
 package com.jiujitsu.api.domain.competition.mapper;
 
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionDetailResponse;
+import com.jiujitsu.api.domain.competition.dto.AdminCompetitionLinkResponse;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionFeeResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLink;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLinkWindow;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -84,12 +88,13 @@ public class CompetitionMapper {
                 competition.getPlace(),
                 competition.getRegistrationDeadline(),
                 competition.getLastVerifiedDate(),
+                competition.getRegistrationSite(),
                 competition.missingRequiredFields()
         );
     }
 
     // 관리자 상세 — 공개 여부와 상관없이 (status 를 부르지 않는다)
-    public AdminCompetitionDetailResponse toAdminDetail(Competition competition, long interestCount) {
+    public AdminCompetitionDetailResponse toAdminDetail(Competition competition, long interestCount, List<AdminCompetitionLinkResponse> links) {
         return new AdminCompetitionDetailResponse(
                 competition.getId(),
                 competition.getName(),
@@ -113,6 +118,8 @@ public class CompetitionMapper {
                 competition.getLastVerifiedDate(),
                 competition.getViewCount(),
                 interestCount,
+                competition.getRegistrationSite(),
+                links,
                 competition.missingRequiredFields()
         );
     }
@@ -121,5 +128,19 @@ public class CompetitionMapper {
         return competition.getFees().stream()
                 .map(fee -> new CompetitionFeeResponse(fee.getLabel(), fee.getAmount(), fee.getUntil()))
                 .toList();
+    }
+
+    // 관리자 링크 — 보이는 기간과 지금 보임 여부를 같이 (운영자가 "승인했는데 왜 안 보이지"를 화면에서 알 수 있게)
+    public AdminCompetitionLinkResponse toAdminLink(CompetitionLink link, Competition competition, LocalDateTime now) {
+        CompetitionLinkWindow window = CompetitionLinkWindow.of(link, competition);
+        return new AdminCompetitionLinkResponse(
+                link.getType(),
+                link.getUrl(),
+                link.getStatus(),
+                link.getApprovedAt(),
+                window.from(),
+                window.until(),
+                CompetitionLinkWindow.isVisible(link, competition, now)
+        );
     }
 }

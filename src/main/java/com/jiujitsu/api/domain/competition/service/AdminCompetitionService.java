@@ -1,13 +1,17 @@
 package com.jiujitsu.api.domain.competition.service;
 
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionDetailResponse;
+import com.jiujitsu.api.domain.competition.dto.AdminCompetitionLinkResponse;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionSaveResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLink;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLinkType;
 import com.jiujitsu.api.domain.competition.event.CompetitionRenamedEvent;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
+import com.jiujitsu.api.domain.competition.repository.CompetitionLinkRepository;
 import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -25,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -46,6 +52,7 @@ public class AdminCompetitionService {
     private final CompetitionInterestService competitionInterestService;
     private final CompetitionMapper competitionMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final CompetitionLinkRepository competitionLinkRepository;
     private final Clock clock;
 
     /**
@@ -101,6 +108,7 @@ public class AdminCompetitionService {
         Competition competition = sameKey.orElseGet(() -> Competition.of(request.name(), request.competitionYear()));
         boolean renamed = catalogFilled && changeName(competition, request);
         competition.changeEventInfo(request.toEventInfo());
+        competition.changeRegistrationSite(request.registrationSite(), false);   // 만들기 — 링크가 아직 없다 (자동완성용 행에도 링크를 둘 수 없음)
         saveCheckingDuplicate(competition);
         if (renamed) {
             publishRenamed(competition);
@@ -127,6 +135,8 @@ public class AdminCompetitionService {
 
         boolean renamed = changeName(competition, request);
         competition.changeEventInfo(request.toEventInfo());
+        competition.changeRegistrationSite(request.registrationSite(),
+                competitionLinkRepository.existsByCompetitionIdAndType(competitionId, CompetitionLinkType.REGISTRATION));
         saveCheckingDuplicate(competition);
         if (renamed) {
             publishRenamed(competition);
@@ -165,7 +175,7 @@ public class AdminCompetitionService {
     }
 
     // 관리자가 고치는 대회 (대회일 있는 대회). 없으면 COMPETITION_NOT_FOUND, 자동완성용이면 COMPETITION_CATALOG_NOT_EDITABLE
-    private Competition getEditable(Long competitionId) {
+    Competition getEditable(Long competitionId) {
         Competition competition = competitionRepository.findById(competitionId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.COMPETITION_NOT_FOUND));
         if (competition.isCatalogEntry()) {
@@ -213,9 +223,14 @@ public class AdminCompetitionService {
         eventPublisher.publishEvent(new CompetitionRenamedEvent(competition.getId(), competition.getName(), competition.getCompetitionYear()));
     }
 
-    private AdminCompetitionDetailResponse toDetail(Competition competition) {
+    AdminCompetitionDetailResponse toDetail(Competition competition) {
         Long competitionId = competition.getId();
         long interestCount = competitionInterestService.getInterestCounts(List.of(competitionId)).getOrDefault(competitionId, 0L);
-        return competitionMapper.toAdminDetail(competition, interestCount);
+        LocalDateTime now = LocalDateTime.now(clock);
+        List<AdminCompetitionLinkResponse> links = competitionLinkRepository.findAllByCompetitionId(competitionId).stream()
+                .sorted(Comparator.comparing(CompetitionLink::getType))
+                .map(link -> competitionMapper.toAdminLink(link, competition, now))
+                .toList();
+        return competitionMapper.toAdminDetail(competition, interestCount, links);
     }
 }

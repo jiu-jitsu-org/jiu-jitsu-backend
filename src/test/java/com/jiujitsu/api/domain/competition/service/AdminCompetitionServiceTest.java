@@ -219,7 +219,7 @@ class AdminCompetitionServiceTest {
 
         assertThat(item).isEqualTo(new AdminCompetitionListItem(saved.getId(), "서울 오픈", 2026, true, day(10), null,
                 CompetitionRegion.SEOUL, "서울 송파", day(5), day(-11),
-                List.of(CompetitionRequiredField.START_TIME, CompetitionRequiredField.REGISTRATION_START_DATE)));
+                null, List.of(CompetitionRequiredField.START_TIME, CompetitionRequiredField.REGISTRATION_START_DATE)));
     }
 
     @Test
@@ -308,13 +308,13 @@ class AdminCompetitionServiceTest {
                 " 서울 송파 ", "올림픽홀", "서울시주짓수회", "https://example.com/notice", List.of(CompetitionUniform.GI, CompetitionUniform.GI),
                 null, openDate.minusDays(30), openDate.minusDays(20), openDate.minusDays(10),
                 List.of(new AdminCompetitionRequest.Fee("얼리버드", 60000, openDate.minusDays(20)), new AdminCompetitionRequest.Fee("기본 참가비", 70000, null)),
-                "성인 1종목 기준");
+                "성인 1종목 기준", null);
     }
 
     // 이름·연도·대회일만, 나머지 칸 비움
     private static AdminCompetitionRequest minimal(String name, int year, LocalDate openDate) {
         return new AdminCompetitionRequest(name, year, openDate, null, null, null, "  ", null, null, null, null, null,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 
     private CompetitionRecord saveRecord(Competition competition, String name, int year) {
@@ -419,7 +419,7 @@ class AdminCompetitionServiceTest {
     @DisplayName("만들기: 일정 순서가 틀리면 COMPETITION_INVALID_EVENT_INFO 이고 저장되지 않는다")
     void create_invalidSchedule() {
         AdminCompetitionRequest reversed = new AdminCompetitionRequest("서울 오픈", 2026, day(30), null, null, null, null, null, null, null, null, null,
-                null, null, day(40), null, null);
+                null, null, day(40), null, null, null);
 
         assertThatThrownBy(() -> adminCompetitionService.create(reversed))
                 .isInstanceOf(ErrorException.class)
@@ -545,7 +545,7 @@ class AdminCompetitionServiceTest {
     @DisplayName("만들기: 시작 시각에 초가 붙어 오면 분 단위로 잘라 저장한다")
     void create_startTimeTruncatedToMinutes() {
         AdminCompetitionRequest withSeconds = new AdminCompetitionRequest("서울 오픈", 2026, day(30), null, LocalTime.of(9, 0, 30), null, null, null, null,
-                null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null);
 
         Long id = adminCompetitionService.create(withSeconds).competition().competitionId();
         em.flush();
@@ -736,7 +736,7 @@ class AdminCompetitionServiceTest {
 
     private static AdminCompetitionRequest withEndDate(String name, LocalDate openDate, LocalDate endDate) {
         return new AdminCompetitionRequest(name, openDate.getYear(), openDate, endDate, null, null, null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     @Test
