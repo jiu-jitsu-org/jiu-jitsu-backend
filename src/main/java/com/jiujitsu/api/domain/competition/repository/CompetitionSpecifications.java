@@ -23,7 +23,7 @@ public final class CompetitionSpecifications {
     private CompetitionSpecifications() {
     }
 
-    // 대회 탭에는 공개 대회만 (미공개 = 자동완성용 카탈로그 엔트리)
+    // 대회 탭에는 공개 대회만 (미공개 = 자동완성용 카탈로그 엔트리 또는 공개 전 대회)
     public static Specification<Competition> published() {
         return (root, query, cb) -> cb.isTrue(root.get("published"));
     }

@@ -301,4 +301,3 @@ class CompetitionTest {
                 .containsExactly(CompetitionRequiredField.values());
     }
 }
-
