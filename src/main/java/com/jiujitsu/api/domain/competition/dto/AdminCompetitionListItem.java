@@ -17,8 +17,10 @@ public record AdminCompetitionListItem(
             Integer competitionYear,
         @Schema(description = "대회 탭 공개 여부")
             boolean published,
-        @Schema(description = "대회일", example = "2026-11-22")
+        @Schema(description = "대회일 (여러 날 대회면 첫날)", example = "2026-11-22")
             LocalDate openDate,
+        @Schema(description = "여러 날 대회의 마지막 날. 하루짜리면 null", nullable = true)
+            LocalDate endDate,
         @Schema(description = "지역(시·도)", nullable = true)
             CompetitionRegion region,
         @Schema(description = "짧은 장소 표기", example = "서울 송파", nullable = true)

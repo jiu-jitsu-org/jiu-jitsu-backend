@@ -56,7 +56,8 @@ public class AdminCompetitionController {
             summary = "관리자 대회 만들기",
             description = "대회명·연도와 대회 정보를 함께 넣어 대회를 만듭니다. 처음엔 미공개입니다. 대회명·연도·대회일은 필수이고 연도는 대회일 연도와 같아야 합니다. "
                     + "같은 이름(공백·대소문자 무시) + 연도의 자동완성용 대회가 있으면 새로 만들지 않고 그 대회에 정보를 채웁니다 (catalogFilled = true, 프로필 대회 기록 연결 유지). "
-                    + "대회일 있는 대회와 겹치면 R0008. 연도 ≠ 대회일 연도, 일정 순서(접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일), 참가비 단계 규칙이 틀리면 R0009. (ROLE_ADMIN 필요)"
+                    + "대회일 있는 대회와 겹치면 R0008. 연도 ≠ 대회일 연도, 일정 순서(접수 시작 ≤ 얼리버드 마감 ≤ 접수 마감 ≤ 대회일 ≤ 종료일), 참가비 단계 규칙이 틀리면 R0009. "
+                    + "여러 날 대회는 종료일(endDate)을 넣고, 하루짜리는 비움. (ROLE_ADMIN 필요)"
     )
     @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER, ErrorCode.WRONG_PARAMETER, ErrorCode.COMPETITION_DUPLICATED, ErrorCode.COMPETITION_INVALID_EVENT_INFO})
     @PostMapping

@@ -302,7 +302,7 @@ class CompetitionTest {
     }
 
     private static CompetitionEventInfo eventInfo(LocalDate openDate, LocalDate earlyBird, List<CompetitionFee> fees) {
-        return new CompetitionEventInfo(openDate, LocalTime.of(10, 0), CompetitionRegion.BUSAN, "부산", "사직체육관", "부산협회",
+        return new CompetitionEventInfo(openDate, null, LocalTime.of(10, 0), CompetitionRegion.BUSAN, "부산", "사직체육관", "부산협회",
                 "https://example.com/busan", new LinkedHashSet<>(Set.of(CompetitionUniform.NO_GI)), CompetitionAudience.ADULT,
                 LocalDate.of(2026, 11, 1), earlyBird, LocalDate.of(2026, 11, 30), new ArrayList<>(fees), "성인 기준");
     }
@@ -333,7 +333,7 @@ class CompetitionTest {
                 .fees(new ArrayList<>(List.of(new CompetitionFee("기본", 50000, null))))
                 .build();
 
-        competition.changeEventInfo(new CompetitionEventInfo(LocalDate.of(2026, 12, 6), null, null, null, null, null, null,
+        competition.changeEventInfo(new CompetitionEventInfo(LocalDate.of(2026, 12, 6), null, null, null, null, null, null, null,
                 new LinkedHashSet<>(), null, null, null, null, new ArrayList<>(), null));
 
         assertThat(competition.getStartTime()).isNull();
@@ -438,6 +438,23 @@ class CompetitionTest {
         assertThat(competition.isPublished()).isFalse();
         assertThat(competition.getLastVerifiedDate()).isEqualTo(LocalDate.of(2026, 11, 20));
         assertThat(competition.getOpenDate()).isEqualTo(LocalDate.of(2026, 12, 6));
+    }
+
+    @Test
+    @DisplayName("lastDay: 종료일이 있으면 종료일, 없으면 대회일, 자동완성용 대회는 null")
+    void lastDay() {
+        assertThat(filledForPublish().endDate(LocalDate.of(2026, 12, 7)).build().lastDay()).isEqualTo(LocalDate.of(2026, 12, 7));
+        assertThat(filledForPublish().build().lastDay()).isEqualTo(LocalDate.of(2026, 12, 6));
+        assertThat(Competition.of("작년 대회", 2025).lastDay()).isNull();
+    }
+
+    @Test
+    @DisplayName("validateEventInfo: 종료일은 대회일 이상, 접수 마감 ≤ 대회일 ≤ 종료일")
+    void validateEventInfo_endDate() {
+        assertThatThrownBy(() -> filledForPublish().endDate(LocalDate.of(2026, 12, 5)).build().validateEventInfo())
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INVALID_EVENT_INFO);
+        assertThatCode(() -> filledForPublish().endDate(LocalDate.of(2026, 12, 7)).build().validateEventInfo()).doesNotThrowAnyException();
     }
 }
 

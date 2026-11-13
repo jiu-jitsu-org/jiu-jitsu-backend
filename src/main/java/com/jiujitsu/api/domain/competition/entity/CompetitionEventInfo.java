@@ -11,6 +11,7 @@ import java.util.Set;
  */
 public record CompetitionEventInfo(
         LocalDate openDate,
+        LocalDate endDate,
         LocalTime startTime,
         CompetitionRegion region,
         String place,
