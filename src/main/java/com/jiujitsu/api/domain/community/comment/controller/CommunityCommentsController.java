@@ -79,7 +79,7 @@ public class CommunityCommentsController {
             description = "현재 커뮤니티 게시물의 댓글을 생성합니다."
     )
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND, ErrorCode.WRONG_PARAMETER})
     @PostMapping
     public CommunityCommentsResponse createComment(@RequestBody CommunityCommentsWriteRequest request) {
         return communityCommentsService.createComment(request);

@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.competition.entity;
 
 /**
  * 대회 개최 지역 (국내 시·도 17개). 지역 필터·목록 표시용.
+ * 선언 순서가 GET /competitions/regions 응답 순서다 (FE COMPETITION_REGIONS 와 같은 순서) — 순서를 바꾸면 FE 와 맞출 것
  */
 public enum CompetitionRegion {
     SEOUL,      // 서울

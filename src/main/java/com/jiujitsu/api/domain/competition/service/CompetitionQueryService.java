@@ -5,14 +5,18 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionRegionsResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
+import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
+import com.jiujitsu.api.domain.competition.repository.CompetitionInterestRepository;
 import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.properties.PopularCompetitionProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -21,13 +25,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,6 +59,8 @@ public class CompetitionQueryService {
     private final CompetitionInterestService competitionInterestService;
     private final AuthenticationFacade authenticationFacade;
     private final CompetitionMapper competitionMapper;
+    private final CompetitionInterestRepository competitionInterestRepository;
+    private final PopularCompetitionProperties popularProperties;
     private final Clock clock;
 
     /**
@@ -142,6 +152,18 @@ public class CompetitionQueryService {
     }
 
     /**
+     * 대회가 있는 지역 (비로그인 가능). 지역 시트에서 대회가 없는 지역을 비활성으로 두는 데 쓴다
+     * 지난 대회도 목록에 나오므로 지난 대회만 있는 지역도 포함한다. 다른 필터(관심·상태)는 반영하지 않는다
+     */
+    public CompetitionRegionsResponse getRegions() {
+        // enum 기본 정렬 = 선언 순서 (CompetitionRegion 참고)
+        List<CompetitionRegion> regions = competitionRepository.findPublishedRegions().stream()
+                .sorted()
+                .toList();
+        return new CompetitionRegionsResponse(regions);
+    }
+
+    /**
      * 공개 대회 (게시글에 대회를 연결할 때). 없거나 미공개면 COMPETITION_NOT_FOUND
      */
     public Competition getPublished(Long competitionId) {
@@ -203,10 +225,40 @@ public class CompetitionQueryService {
         List<Long> ids = page.stream().map(Competition::getId).toList();
         Map<Long, Long> interestCounts = competitionInterestService.getInterestCounts(ids);
         Set<Long> interestedIds = userId == null ? Set.of() : competitionInterestService.getInterestedIds(userId, ids);
+        Set<Long> popularIds = popularIds(page, today);
         return page.stream()
                 .map(competition -> competitionMapper.toListItem(competition, today,
                         interestCounts.getOrDefault(competition.getId(), 0L),
-                        interestedIds.contains(competition.getId())))
+                        interestedIds.contains(competition.getId()),
+                        popularIds.contains(competition.getId())))
                 .toList();
+    }
+
+    /**
+     * 관심 많은 대회 (#210): 이 대회들이 속한 달마다, 그 달 끝나지 않은 공개 대회 중 관심 수 상위 N개 (관심 M개 이상)
+     * 필터와 무관하게 달 전체에서 순위를 매긴다 — 지역·관심 필터를 바꿔도 같은 대회에 같은 표시
+     * 끝난 대회만 있는 달은 보지 않는다 (끝난 대회는 표시 대상이 아님). 여러 달이어도 한 번에 조회하고 달마다 자른다
+     */
+    private Set<Long> popularIds(List<Competition> page, LocalDate today) {
+        TreeSet<YearMonth> months = page.stream()
+                .map(Competition::getOpenDate)
+                .filter(openDate -> !openDate.isBefore(today))
+                .map(YearMonth::from)
+                .collect(Collectors.toCollection(TreeSet::new));
+        if (months.isEmpty()) {
+            return Set.of();
+        }
+        LocalDate from = months.first().atDay(1);
+        LocalDate to = months.last().atEndOfMonth();
+        Map<YearMonth, Integer> taken = new HashMap<>();
+        Set<Long> popular = new HashSet<>();
+        // 관심 수 → 대회일 → id 순으로 오므로 달마다 앞에서 N개
+        for (Object[] row : competitionInterestRepository.findPopularCandidates(from, to, today, popularProperties.minInterests())) {
+            YearMonth month = YearMonth.from((LocalDate) row[1]);
+            if (months.contains(month) && taken.merge(month, 1, Integer::sum) <= popularProperties.top()) {
+                popular.add((Long) row[0]);
+            }
+        }
+        return popular;
     }
 }

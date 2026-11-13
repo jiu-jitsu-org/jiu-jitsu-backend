@@ -168,14 +168,14 @@ class CommunityCommentsAuthorProfileTest {
         CommunityComments created = comment(100L, 0L, User.builder().id(1L).build(), content, 1);
         given(authenticationFacade.getCurrentUser()).willReturn(owner);
         given(contentRepository.findById(CONTENT_ID)).willReturn(Optional.of(content));
-        given(commentFactory.createComments(any(), any(), any())).willReturn(created);
+        given(commentFactory.createComments(any(), any(), any(), any())).willReturn(created);
         CommunityProfile ownerProfile = CommunityProfile.builder()
                 .user(owner).beltRank(BeltRank.BLACK).beltStripe(BeltStripe.STRIPE_1).build();
         given(communityProfileService.findProfile(owner)).willReturn(Optional.of(ownerProfile));
 
         // when
         CommunityCommentsResponse response = communityCommentsService.createComment(
-                new com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest(CONTENT_ID, null, "댓글"));
+                new com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsWriteRequest(CONTENT_ID, null, "댓글", null));
 
         // then
         assertThat(response.author().id()).isEqualTo(1L);

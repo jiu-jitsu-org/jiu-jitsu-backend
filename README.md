@@ -108,7 +108,7 @@ src/main/java/com/jiujitsu/api/
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/community/comments` | 댓글 목록 조회 |
-| POST | `/community/comments` | 댓글 작성 |
+| POST | `/community/comments` | 댓글 작성 (대댓글의 답글 버튼이면 `mentionCommentId` — 답글 알림이 그 대댓글 작성자에게) |
 | POST | `/community/comments/like` | 댓글 좋아요 등록/취소 |
 | DELETE | `/community/comments/{id}` | 댓글 삭제 |
 
@@ -142,9 +142,10 @@ src/main/java/com/jiujitsu/api/
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/competitions` | 대회 탭 목록 (공개 대회, 대회일순). 기준일 `date` + 양방향 커서(`nextCursor`·`previousCursor`), 필터 `region`·`status`·`interested`·`keyword`. 비로그인 가능 |
+| GET | `/competitions` | 대회 탭 목록 (공개 대회, 대회일순). 기준일 `date` + 양방향 커서(`nextCursor`·`previousCursor`), 필터 `region`·`status`·`interested`·`keyword`. 항목의 `popular` = 관심 많은 대회(같은 달 끝나지 않은 대회 중 관심 상위 `competition.popular.top`개, 관심 `min-interests`개 이상). 비로그인 가능 |
 | GET | `/competitions/{competitionId}` | 대회 상세 (공개 대회, 일정·참가비 단계·관심 수·조회수). 비로그인 가능, 조회수는 오르지 않음 |
 | POST | `/competitions/{competitionId}/views` | 대회 조회수 +1 (앱이 상세를 열 때, 중복 방지 없음) |
+| GET | `/competitions/regions` | 대회가 있는 지역 (대회 탭 지역 필터, 지난 대회 포함 공개 대회 전체, 지역 enum 순서). 비로그인 가능 |
 | GET | `/competitions/picker?keyword=` | 글쓰기 대회 고르기 (공개 대회, 다가오는 대회 → 끝난 대회, 최대 20개). 비로그인 가능 |
 | GET | `/competitions/{competitionId}/stories` | 대회 이야기 (이 대회를 고른 글 최대 5개: 반응 많은 2개 + 최신). 비로그인 가능 |
 | GET | `/competitions/autocomplete?keyword=` | 등록 대회 검색 (프로필 대회 기록용 대회명 자동완성, 지난 대회까지) |
@@ -289,6 +290,9 @@ IMAGEKIT_PRIVATE_KEY=<ImageKit Private Key>
 WEBHOOK_SECRET=<Webhook Secret>
 GHCR_USERNAME=<GitHub Container Registry Username>
 GHCR_PAT=<GitHub Personal Access Token>
+# 선택: 관심 많은 대회 기준 (기본은 application.yml competition.popular — 상위 3개, 관심 5개 이상). 바꾸면 재시작
+COMPETITION_POPULAR_TOP=3
+COMPETITION_POPULAR_MININTERESTS=5
 ```
 
 ### application.yml 주요 설정

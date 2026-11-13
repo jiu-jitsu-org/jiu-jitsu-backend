@@ -107,6 +107,15 @@ public class Notice extends BaseEntity {
     }
 
     /**
+     * 기준 사이의 좋아요(#215): 푸시는 보내지 않고 안 읽음으로 알림함 맨 위에 올린다. 보낸 기준(likePushedCount)은 그대로
+     */
+    public void touchLike(String title, LocalDateTime now) {
+        this.title = title;
+        this.notifiedAt = now;
+        this.isRead = false;
+    }
+
+    /**
      * 좋아요 카드가 새 기준에 닿아 푸시를 보낼 때: 안 읽음으로 알림함 맨 위에 올린다
      */
     public void pushLike(int threshold, String title, LocalDateTime now) {

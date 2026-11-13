@@ -4,7 +4,10 @@ import com.jiujitsu.api.domain.community.board.repository.BoardHideRepository;
 import com.jiujitsu.api.domain.community.report.repository.ReportRepository;
 import com.jiujitsu.api.domain.notice.service.NoticePreview;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserBlockRepository;
+import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import org.junit.jupiter.api.DisplayName;
@@ -15,8 +18,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -32,6 +37,7 @@ class CommentNoticeEventListenerTest {
     @Mock private UserBlockRepository userBlockRepository;
     @Mock private BoardHideRepository boardHideRepository;
     @Mock private ReportRepository reportRepository;
+    @Mock private UserRepository userRepository;
 
     private final Map<String, String> data = Map.of("type", "BOARD_DETAIL", "data", "10");
 
@@ -80,4 +86,17 @@ class CommentNoticeEventListenerTest {
 
         verifyNoInteractions(noticePreview, fcmPushEventPublisher);
     }
+
+    @Test
+    @DisplayName("받는 사람이 탈퇴했으면 푸시·저장 없이, 본문도 조회하지 않는다 (#216)")
+    void withdrawnRecipient_skipped() {
+        CommentNoticeEvent event = new CommentNoticeEvent(2L, 10L, FcmPushType.NEW_CHILD_COMMENTS, data, 1L, 100L);
+        given(noticeService.isContentNoticeEnabled(2L, 10L)).willReturn(true);
+        given(userRepository.findByIdAndStatus(2L, UserStatus.DELETED)).willReturn(Optional.of(mock(User.class)));
+
+        listener.handle(event);
+
+        verifyNoInteractions(noticePreview, fcmPushEventPublisher);
+    }
 }
+
