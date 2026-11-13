@@ -44,7 +44,7 @@ public class NoticePreview {
             case NEW_CHILD_COMMENTS -> {
                 if (refId == null) yield null;
                 CommunityComments reply = commentOf.apply(refId);
-                Long replied = reply == null ? null : repliedCommentId(reply);
+                Long replied = reply == null ? null : reply.repliedCommentId();
                 if (replied == null || replied == 0) yield null;
                 yield commentPreview(commentOf.apply(replied));
             }
@@ -58,14 +58,6 @@ public class NoticePreview {
         return body(pushType, contentId, refId,
                 id -> boardRepository.findByContent_Id(id).map(Board::getTitle).orElse(null),
                 id -> communityCommentsRepository.findById(id).orElse(null));
-    }
-
-    /**
-     * 대댓글이 답한 댓글 = 답글 알림을 받는 사람이 쓴 댓글. 태그한 대댓글이 있으면 그 대댓글(#216), 없으면 부모(최상위) 댓글
-     */
-    public static Long repliedCommentId(CommunityComments reply) {
-        Long mentioned = reply.getMentionCommentId();
-        return mentioned != null && mentioned != 0 ? mentioned : reply.getParentId();
     }
 
     private static String commentPreview(CommunityComments comment) {

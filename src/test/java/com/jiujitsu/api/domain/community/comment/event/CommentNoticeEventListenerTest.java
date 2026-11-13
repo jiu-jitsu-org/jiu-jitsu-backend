@@ -32,6 +32,7 @@ class CommentNoticeEventListenerTest {
     @Mock private UserBlockRepository userBlockRepository;
     @Mock private BoardHideRepository boardHideRepository;
     @Mock private ReportRepository reportRepository;
+    @Mock private com.jiujitsu.api.domain.user.repository.UserRepository userRepository;
 
     private final Map<String, String> data = Map.of("type", "BOARD_DETAIL", "data", "10");
 
@@ -80,4 +81,18 @@ class CommentNoticeEventListenerTest {
 
         verifyNoInteractions(noticePreview, fcmPushEventPublisher);
     }
+
+    @Test
+    @DisplayName("받는 사람이 탈퇴했으면 푸시·저장 없이, 본문도 조회하지 않는다 (#216)")
+    void withdrawnRecipient_skipped() {
+        CommentNoticeEvent event = new CommentNoticeEvent(2L, 10L, FcmPushType.NEW_CHILD_COMMENTS, data, 1L, 100L);
+        given(noticeService.isContentNoticeEnabled(2L, 10L)).willReturn(true);
+        given(userRepository.findByIdAndStatus(2L, com.jiujitsu.api.domain.user.entity.UserStatus.DELETED))
+                .willReturn(java.util.Optional.of(org.mockito.Mockito.mock(com.jiujitsu.api.domain.user.entity.User.class)));
+
+        listener.handle(event);
+
+        verifyNoInteractions(noticePreview, fcmPushEventPublisher);
+    }
 }
+

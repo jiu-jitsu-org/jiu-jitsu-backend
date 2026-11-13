@@ -29,8 +29,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -42,6 +40,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -52,7 +53,6 @@ import static org.mockito.Mockito.verify;
  * 스레드: 최상위 댓글(100, A) ← 대댓글(200, B). 나(ME)가 같은 스레드에 답글을 쓴다. 게시글 작성자는 W
  */
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)   // 스레드(게시글·최상위·대댓글)를 매번 같은 모양으로 스텁하고, 케이스마다 쓰는 부분만 다르다
 class CommunityCommentsMentionNoticeTest {
 
     @InjectMocks
@@ -85,9 +85,10 @@ class CommunityCommentsMentionNoticeTest {
 
     @BeforeEach
     void setUp() {
+        // 스레드는 매번 같은 모양으로 두고 케이스마다 쓰는 부분만 다르다 → 공통 스텁은 lenient
         content = mock(Content.class);
-        given(content.getId()).willReturn(CONTENT_ID);
-        given(content.getContentType()).willReturn(ContentType.BOARD);
+        lenient().when(content.getId()).thenReturn(CONTENT_ID);
+        lenient().when(content.getContentType()).thenReturn(ContentType.BOARD);
         User me = user(ME);
         given(authenticationFacade.getCurrentUser()).willReturn(me);
         given(contentRepository.findById(CONTENT_ID)).willReturn(Optional.of(content));
@@ -96,7 +97,7 @@ class CommunityCommentsMentionNoticeTest {
 
     private void givenThread(Long boardWriterId, Long topAuthorId, CommunityComments reply) {
         User boardWriter = user(boardWriterId);
-        given(content.getCreatedBy()).willReturn(boardWriter);
+        lenient().when(content.getCreatedBy()).thenReturn(boardWriter);
         CommunityComments top = comment(TOP_ID, topAuthorId, 0L);
         given(communityCommentsRepository.findById(TOP_ID)).willReturn(Optional.of(top));
         if (reply != null) {
@@ -105,21 +106,22 @@ class CommunityCommentsMentionNoticeTest {
     }
 
     private void givenCreated() {
-        given(commentFactory.createComments(any(), any(), any())).willReturn(newComment);
+        given(commentFactory.createComments(any(), any(), any(), any())).willReturn(newComment);
     }
 
     private CommunityComments comment(Long id, Long authorId, Long parentId) {
         User author = user(authorId);
         CommunityComments comment = mock(CommunityComments.class);
-        given(comment.getId()).willReturn(id);
-        given(comment.getCreatedBy()).willReturn(author);
-        given(comment.getParentId()).willReturn(parentId);
+        lenient().when(comment.getId()).thenReturn(id);
+        lenient().when(comment.getCreatedBy()).thenReturn(author);
+        lenient().when(comment.getParentId()).thenReturn(parentId);
+        lenient().when(comment.isReplyIn(any())).thenAnswer(inv -> parentId != 0 && parentId.equals(inv.getArgument(0)));
         return comment;
     }
 
     private User user(Long id) {
         User user = mock(User.class);
-        given(user.getId()).willReturn(id);
+        lenient().when(user.getId()).thenReturn(id);
         return user;
     }
 
@@ -146,7 +148,7 @@ class CommunityCommentsMentionNoticeTest {
         assertThat(published(2)).containsExactlyInAnyOrderEntriesOf(Map.of(
                 B, FcmPushType.NEW_CHILD_COMMENTS,
                 W, FcmPushType.NEW_COMMENTS));
-        verify(newComment).mention(REPLY_ID);
+        verify(commentFactory).createComments(any(), eq(TOP_ID), any(), eq(REPLY_ID));
     }
 
     @Test
@@ -174,31 +176,50 @@ class CommunityCommentsMentionNoticeTest {
     }
 
     @Test
-    @DisplayName("태그 답글: 내 대댓글에 답하면 답글 알림 없음 (최상위 작성자에게도 안 감)")
-    void mention_self_noReplyNotice() {
+    @DisplayName("내 대댓글의 답글 버튼으로 이어 쓰면 태그 없는 답글처럼 최상위 댓글 작성자에게 (나에게는 없음)")
+    void mention_ownReply_sameAsNoMention() {
         givenThread(W, A, comment(REPLY_ID, ME, TOP_ID));
         givenCreated();
 
         write(REPLY_ID);
 
-        assertThat(published(1)).containsExactlyEntriesOf(Map.of(W, FcmPushType.NEW_COMMENTS));
+        assertThat(published(2)).containsExactlyInAnyOrderEntriesOf(Map.of(
+                A, FcmPushType.NEW_CHILD_COMMENTS,
+                W, FcmPushType.NEW_COMMENTS));
+        verify(commentFactory).createComments(any(), eq(TOP_ID), any(), isNull());
     }
 
     @Test
-    @DisplayName("태그 답글: 태그된 사람이 탈퇴했으면 답글 알림 없음")
-    void mention_withdrawn_noReplyNotice() {
-        CommunityComments reply = comment(REPLY_ID, B, TOP_ID);
-        given(reply.getCreatedBy().getStatus()).willReturn(UserStatus.DELETED);
-        givenThread(W, A, reply);
+    @DisplayName("최상위 댓글 작성자의 대댓글을 태그하면 그 사람에게 답글 알림 한 번")
+    void mention_topAuthorsReply_once() {
+        givenThread(W, A, comment(REPLY_ID, A, TOP_ID));
         givenCreated();
 
         write(REPLY_ID);
 
-        assertThat(published(1)).containsExactlyEntriesOf(Map.of(W, FcmPushType.NEW_COMMENTS));
+        assertThat(published(2)).containsExactlyInAnyOrderEntriesOf(Map.of(
+                A, FcmPushType.NEW_CHILD_COMMENTS,
+                W, FcmPushType.NEW_COMMENTS));
     }
 
     @Test
-    @DisplayName("태그한 대댓글이 지워졌으면(소프트 삭제·행 없음) 태그 없는 답글처럼 최상위 댓글 작성자에게, 태그도 남기지 않는다")
+    @DisplayName("숨겨진(신고 포함) 대댓글을 태그하면 지운 대댓글처럼 태그 없는 답글로")
+    void mention_hidden_fallsBackToTopAuthor() {
+        CommunityComments hidden = comment(REPLY_ID, B, TOP_ID);
+        given(hidden.isHidden()).willReturn(true);
+        givenThread(W, A, hidden);
+        givenCreated();
+
+        write(REPLY_ID);
+
+        assertThat(published(2)).containsExactlyInAnyOrderEntriesOf(Map.of(
+                A, FcmPushType.NEW_CHILD_COMMENTS,
+                W, FcmPushType.NEW_COMMENTS));
+        verify(commentFactory).createComments(any(), eq(TOP_ID), any(), isNull());
+    }
+
+    @Test
+    @DisplayName("태그한 대댓글이 지워졌으면 태그 없는 답글처럼 최상위 댓글 작성자에게, 태그도 남기지 않는다")
     void mention_deleted_fallsBackToTopAuthor() {
         CommunityComments deleted = comment(REPLY_ID, B, TOP_ID);
         given(deleted.isDeleted()).willReturn(true);
@@ -210,21 +231,32 @@ class CommunityCommentsMentionNoticeTest {
         assertThat(published(2)).containsExactlyInAnyOrderEntriesOf(Map.of(
                 A, FcmPushType.NEW_CHILD_COMMENTS,
                 W, FcmPushType.NEW_COMMENTS));
-        verify(newComment, never()).mention(any());
+        verify(commentFactory).createComments(any(), eq(TOP_ID), any(), isNull());
     }
 
     @Test
-    @DisplayName("태그한 댓글 id 가 없으면(지워져 행이 사라짐) 태그 없는 답글처럼")
-    void mention_missing_fallsBackToTopAuthor() {
+    @DisplayName("없는 댓글을 태그하면 WRONG_PARAMETER (댓글은 소프트 삭제라 없는 id 는 잘못된 값)")
+    void mention_missing_rejected() {
         givenThread(W, A, null);
         given(communityCommentsRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> write(999L))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.WRONG_PARAMETER);
+        verify(communityCommentsRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("태그 없음을 0으로 보내도 최상위 댓글을 쓸 수 있다 (parentId 와 같은 관례)")
+    void mention_zero_isNone() {
+        User boardWriter = user(W);
+        given(content.getCreatedBy()).willReturn(boardWriter);
+        given(communityCommentsRepository.findById(0L)).willReturn(Optional.empty());
         givenCreated();
 
-        write(999L);
+        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, 0L, "본문", 0L));
 
-        assertThat(published(2)).containsExactlyInAnyOrderEntriesOf(Map.of(
-                A, FcmPushType.NEW_CHILD_COMMENTS,
-                W, FcmPushType.NEW_COMMENTS));
+        verify(communityCommentsRepository).save(newComment);
     }
 
     @Test
@@ -238,7 +270,7 @@ class CommunityCommentsMentionNoticeTest {
         assertThat(published(2)).containsExactlyInAnyOrderEntriesOf(Map.of(
                 A, FcmPushType.NEW_CHILD_COMMENTS,
                 W, FcmPushType.NEW_COMMENTS));
-        verify(newComment, never()).mention(any());
+        verify(commentFactory).createComments(any(), eq(TOP_ID), any(), isNull());
     }
 
     @Test

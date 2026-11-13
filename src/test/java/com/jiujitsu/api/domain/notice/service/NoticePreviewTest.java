@@ -33,6 +33,7 @@ class NoticePreviewTest {
         CommunityComments c = mock(CommunityComments.class);
         lenient().when(c.getId()).thenReturn(id);
         lenient().when(c.getParentId()).thenReturn(parentId);
+        lenient().when(c.repliedCommentId()).thenReturn(parentId);
         lenient().when(c.getBody()).thenReturn(body);
         lenient().when(c.isDeleted()).thenReturn("삭제".equals(state));
         lenient().when(c.isHidden()).thenReturn("숨김".equals(state));
@@ -114,12 +115,12 @@ class NoticePreviewTest {
         comment(1L, 0L, "최상위 댓글", "정상");
         comment(2L, 1L, "기 입고 해요", "정상");
         CommunityComments reply = comment(101L, 1L, "@B 혹시 기 입고 하시나요?", "정상");
-        given(reply.getMentionCommentId()).willReturn(2L);
+        given(reply.repliedCommentId()).willReturn(2L);
 
         assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isEqualTo("기 입고 해요");
 
         comment(3L, 1L, "지운 대댓글", "삭제");
-        given(reply.getMentionCommentId()).willReturn(3L);
+        given(reply.repliedCommentId()).willReturn(3L);
         assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isNull();
     }
 }

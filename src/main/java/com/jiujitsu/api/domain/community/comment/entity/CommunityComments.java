@@ -63,9 +63,18 @@ public class CommunityComments extends BaseEntity implements Hideable {
     @Column(name = "mention_comment_id")
     private Long mentionCommentId;
 
-    // 대댓글에 답한 대댓글로 표시 (#216)
-    public void mention(Long mentionCommentId) {
-        this.mentionCommentId = mentionCommentId;
+    /**
+     * 이 대댓글이 답한 댓글 = 답글 알림을 받는 사람이 쓴 댓글. 태그한 대댓글이 있으면 그 대댓글(#216), 없으면 부모(최상위) 댓글. 최상위 댓글이면 0
+     */
+    public Long repliedCommentId() {
+        return mentionCommentId != null && mentionCommentId != 0 ? mentionCommentId : parentId;
+    }
+
+    /**
+     * 최상위 댓글 parentId 스레드의 대댓글인가 (#216 태그 검증)
+     */
+    public boolean isReplyIn(Long parentId) {
+        return this.parentId != null && this.parentId != 0 && this.parentId.equals(parentId);
     }
 
     // 수정권한 체크

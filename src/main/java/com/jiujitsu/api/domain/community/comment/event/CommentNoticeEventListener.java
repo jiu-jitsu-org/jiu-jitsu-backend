@@ -5,7 +5,9 @@ import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.repository.ReportRepository;
 import com.jiujitsu.api.domain.notice.service.NoticePreview;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserBlockRepository;
+import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -24,12 +26,17 @@ public class CommentNoticeEventListener {
     private final UserBlockRepository userBlockRepository;
     private final BoardHideRepository boardHideRepository;
     private final ReportRepository reportRepository;
+    private final UserRepository userRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(CommentNoticeEvent event) {
         // 게시물 알림 설정 체크
         if (!noticeService.isContentNoticeEnabled(event.recipientUserId(), event.contentId())) {
+            return;
+        }
+        // 수신자가 탈퇴한 경우 → 생성/푸시 안 함 (#216)
+        if (userRepository.findByIdAndStatus(event.recipientUserId(), UserStatus.DELETED).isPresent()) {
             return;
         }
         // 수신자가 발신자를 차단한 경우 → 생성/푸시 안 함

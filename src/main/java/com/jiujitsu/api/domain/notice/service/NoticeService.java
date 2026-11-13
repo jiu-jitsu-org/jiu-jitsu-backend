@@ -140,16 +140,16 @@ public class NoticeService {
                         .collect(Collectors.toMap(b -> b.getContent().getId(), Board::getTitle));
 
         // body 계산용: NEW_CHILD_COMMENTS 알림이 보여 줄 댓글 일괄 조회 — 태그 답글이면 태그된 대댓글, 아니면 부모 댓글 (NoticePreview)
-        Set<Long> parentIds = notices.stream()
+        Set<Long> repliedIds = notices.stream()
                 .filter(n -> n.getPushType() == FcmPushType.NEW_CHILD_COMMENTS && n.getRefId() != null)
                 .map(n -> commentByRefId.get(n.getRefId()))
                 .filter(Objects::nonNull)
-                .map(NoticePreview::repliedCommentId)
+                .map(CommunityComments::repliedCommentId)
                 .filter(id -> id != null && id != 0)
                 .collect(Collectors.toSet());
-        Map<Long, CommunityComments> parentCommentById = parentIds.isEmpty()
+        Map<Long, CommunityComments> repliedCommentById = repliedIds.isEmpty()
                 ? Map.of()
-                : communityCommentsRepository.findAllById(parentIds).stream()
+                : communityCommentsRepository.findAllById(repliedIds).stream()
                         .collect(Collectors.toMap(CommunityComments::getId, c -> c));
 
         // 대회 알림: 지금 공개인 대회 id (없거나 미공개면 deletedStatus COMPETITION)
@@ -171,7 +171,7 @@ public class NoticeService {
                         isCompetitionNotice(n)
                                 ? computeCompetitionDeletedStatus(n, publishedCompetitionIds)
                                 : computeDeletedStatus(n, existingContentIds, commentByRefId),
-                        computeBody(n, boardTitleByContentId, commentByRefId, parentCommentById)))
+                        computeBody(n, boardTitleByContentId, commentByRefId, repliedCommentById)))
                 .toList();
     }
 
@@ -409,7 +409,7 @@ public class NoticeService {
     private String computeBody(Notice notice,
                                Map<Long, String> boardTitleByContentId,
                                Map<Long, CommunityComments> commentByRefId,
-                               Map<Long, CommunityComments> parentCommentById) {
+                               Map<Long, CommunityComments> repliedCommentById) {
         return switch (notice.getPushType()) {
             // 대회 이름·마감 단계가 들어간 문구를 발송 때 저장해 둔다
             case COMPETITION_EARLY_BIRD_DEADLINE, COMPETITION_REGISTRATION_DEADLINE -> notice.getBody();
@@ -418,7 +418,7 @@ public class NoticeService {
                     notice.getData() == null ? null : Long.parseLong(notice.getData()),
                     notice.getRefId(),
                     boardTitleByContentId::get,
-                    id -> commentByRefId.containsKey(id) ? commentByRefId.get(id) : parentCommentById.get(id));
+                    id -> commentByRefId.containsKey(id) ? commentByRefId.get(id) : repliedCommentById.get(id));
         };
     }
 

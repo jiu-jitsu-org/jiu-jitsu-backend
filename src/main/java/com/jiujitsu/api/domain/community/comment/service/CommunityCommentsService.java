@@ -28,7 +28,6 @@ import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.notice.event.LikeNoticeEvent;
 import com.jiujitsu.api.domain.user.entity.User;
-import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
@@ -185,12 +184,12 @@ public class CommunityCommentsService {
         Long parentID = request.parentId() == null ? 0L : request.parentId();
         Optional<CommunityComments> parentComments = communityCommentsRepository.findById(parentID);
 
-        // 대댓글의 답글 버튼으로 쓴 답글이면 그 대댓글 (#216). 지워졌으면 태그 없는 답글로
-        Optional<CommunityComments> mentioned = findMentionedReply(request.mentionCommentId(), parentID, parentComments.isPresent());
+        // 대댓글의 답글 버튼으로 쓴 답글이면 그 대댓글 (#216). 지워졌거나 숨겨졌거나 내 대댓글이면 태그 없는 답글로
+        Optional<CommunityComments> mentioned = findMentionedReply(request.normalizedMentionCommentId(), parentID, parentComments.isPresent(), user.getId());
 
         // 댓글 entity 생성
-        CommunityComments communityComments = commentFactory.createComments(content, parentID, request.body());
-        mentioned.ifPresent(reply -> communityComments.mention(reply.getId()));
+        CommunityComments communityComments = commentFactory.createComments(content, parentID, request.body(),
+                mentioned.map(CommunityComments::getId).orElse(null));
         communityCommentsRepository.save(communityComments);
 
         // 알림 설정 (커밋 후 FCM 발송 + 알림 저장)
@@ -199,13 +198,12 @@ public class CommunityCommentsService {
         // 딥링크 목적지는 푸시 종류가 아니라 대상 컨텐츠 타입이 결정한다 (게시글 / 밸런스 게임)
         PushActionType actionType = content.getContentType().getPushActionType();
 
-        // 알림2 받는 사람 - 태그한 대댓글 작성자(탈퇴 회원이면 없음), 태그가 없으면 부모(최상위) 댓글 작성자. 본인에게는 없음
-        Optional<User> replyRecipient = mentioned.isPresent()
-                ? mentioned.map(CommunityComments::getCreatedBy).filter(recipient -> recipient.getStatus() != UserStatus.DELETED)
-                : parentComments.map(CommunityComments::getCreatedBy);
-        Long replyRecipientId = replyRecipient
-                .filter(recipient -> !Objects.equals(user.getId(), recipient.getId()))
+        // 알림2 받는 사람 - 태그한 대댓글 작성자, 태그가 없으면 부모(최상위) 댓글 작성자. 본인(내 댓글에 단 답글)에게는 없음
+        // (탈퇴·차단·숨김·신고·알림 설정은 CommentNoticeEventListener 가 거른다)
+        Long replyRecipientId = mentioned.or(() -> parentComments)
+                .map(CommunityComments::getCreatedBy)
                 .map(User::getId)
+                .filter(recipientId -> !Objects.equals(user.getId(), recipientId))
                 .orElse(null);
 
         // 알림1 - 게시글에 댓글 달렸을 때 게시글 작성자에게
@@ -246,12 +244,11 @@ public class CommunityCommentsService {
     }
 
     /**
-     * 답글 버튼을 누른 대댓글 (#216). 태그가 없거나 그 대댓글이 지워졌으면 비어 있다 (태그 없는 답글로 처리)
-     * - 대댓글 작성이 아닌데 태그하면 WRONG_PARAMETER
-     * - 같은 스레드가 아닌 댓글이면 WRONG_PARAMETER. 최상위 댓글 자신을 보내면 태그 없는 답글과 같다
-     * - 대댓글이 없는 댓글은 지우면 행이 사라져 없는 id 와 구분할 수 없으므로, 없는 id 도 지워진 것으로 본다
+     * 답글 버튼을 누른 대댓글 (#216). 태그가 없으면 비어 있다
+     * - 대댓글 작성이 아닌데 태그하거나, 없는 댓글·다른 스레드의 댓글이면 WRONG_PARAMETER
+     * - 최상위 댓글 자신, 그사이 지워졌거나 숨겨진(신고 포함) 대댓글, 내 대댓글이면 비어 있다 = 태그 없는 답글 (최상위 댓글 작성자에게 알림)
      */
-    private Optional<CommunityComments> findMentionedReply(Long mentionCommentId, Long parentId, boolean isReply) {
+    private Optional<CommunityComments> findMentionedReply(Long mentionCommentId, Long parentId, boolean isReply, Long writerId) {
         if (mentionCommentId == null) {
             return Optional.empty();
         }
@@ -261,11 +258,15 @@ public class CommunityCommentsService {
         if (mentionCommentId.equals(parentId)) {
             return Optional.empty();
         }
-        Optional<CommunityComments> mentioned = communityCommentsRepository.findById(mentionCommentId);
-        if (mentioned.isPresent() && !Objects.equals(mentioned.get().getParentId(), parentId)) {
+        CommunityComments mentioned = communityCommentsRepository.findById(mentionCommentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.WRONG_PARAMETER));
+        if (!mentioned.isReplyIn(parentId)) {
             throw new ErrorException(ErrorCode.WRONG_PARAMETER);
         }
-        return mentioned.filter(reply -> !reply.isDeleted());
+        if (mentioned.isDeleted() || mentioned.isHidden() || Objects.equals(mentioned.getCreatedBy().getId(), writerId)) {
+            return Optional.empty();
+        }
+        return Optional.of(mentioned);
     }
 
     /**

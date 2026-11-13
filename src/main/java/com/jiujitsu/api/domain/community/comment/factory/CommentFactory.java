@@ -11,11 +11,13 @@ public class CommentFactory {
     /**
      * Create Comments
      */
-    public CommunityComments createComments(Content content, Long parentId, String body) {
+    // mentionCommentId: 대댓글의 답글 버튼으로 쓴 답글이면 그 대댓글 id, 아니면 null (#216)
+    public CommunityComments createComments(Content content, Long parentId, String body, Long mentionCommentId) {
         return CommunityComments.builder()
                 .content(content)
                 .parentId(parentId)
                 .body(body)
+                .mentionCommentId(mentionCommentId)
                 .build();
     }
 }
