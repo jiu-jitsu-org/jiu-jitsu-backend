@@ -166,6 +166,9 @@ src/main/java/com/jiujitsu/api/
 | PATCH | `/admin/competitions/{competitionId}/verify` | 관리자 대회 확인 완료 (마지막 확인일 = 오늘) |
 | PATCH | `/admin/competitions/{competitionId}/publish` | 관리자 대회 공개 (필수 칸 검사, 마지막 확인일 = 오늘. 이미 공개면 그대로) |
 | PATCH | `/admin/competitions/{competitionId}/unpublish` | 관리자 대회 비공개 (관심·알림 설정·게시글 연결은 유지) |
+| PUT | `/admin/competitions/{competitionId}/links/{type}` | 관리자 대회 상태 링크 넣기·바꾸기 (신청·참가자 현황·대진표·실시간 매트·결과, 종류별 하나, 새로 넣거나 바뀌면 승인 전) |
+| DELETE | `/admin/competitions/{competitionId}/links/{type}` | 상태 링크 지우기 |
+| PATCH | `/admin/competitions/{competitionId}/links/{type}/approve` · `/hide` | 상태 링크 승인(켜기)·숨기기(끄기). 보이는 기간은 서버 계산(`CompetitionLinkWindow`) |
 | GET | `/admin/competitions/info-reports` | 대회 정보 제보 목록 (최신순 페이지) |
 
 ### 관리자 관장/사범 인증 (`/api/admin/owner-requests`)

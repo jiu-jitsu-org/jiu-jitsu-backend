@@ -78,6 +78,11 @@ public class Competition extends BaseEntity {
     @Column(name = "end_date")
     private LocalDate endDate;               // 여러 날 대회의 마지막 날. 하루짜리면 null (대회일과 같은 값은 넣지 않음 — changeEventInfo)
 
+    // 접수 사이트 (#221) — 상태 링크 규칙(결과 링크 유지, 도장 신청)에 씀. 모르면 null (기타와 같게)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "registration_site", length = 20)
+    private RegistrationSite registrationSite;
+
     @Column(name = "start_time")
     private LocalTime startTime;             // 시작 시각 (모르면 null)
 
@@ -285,6 +290,20 @@ public class Competition extends BaseEntity {
      */
     public LocalDate lastDay() {
         return endDate != null ? endDate : openDate;
+    }
+
+    /**
+     * 접수 사이트 바꾸기 (#221). 신청 링크와 맞는지는 서비스가 본다 (대한체육회는 신청 링크를 둘 수 없음)
+     */
+    public void changeRegistrationSite(RegistrationSite registrationSite) {
+        this.registrationSite = registrationSite;
+    }
+
+    /**
+     * 감독 · 코치만 신청할 수 있는 대회인가 (대한체육회) — 신청 링크를 두지 않고 "도장을 통해 신청" 안내
+     */
+    public boolean isClubRegistrationOnly() {
+        return registrationSite != null && registrationSite.isClubRegistrationOnly();
     }
 
     /**

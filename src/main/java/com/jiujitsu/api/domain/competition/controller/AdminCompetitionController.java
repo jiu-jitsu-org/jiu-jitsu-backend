@@ -6,7 +6,10 @@ import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionSaveResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionCreateRequest;
+import com.jiujitsu.api.domain.competition.dto.CompetitionLinkRequest;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLinkType;
 import com.jiujitsu.api.domain.competition.dto.CompetitionCreateResponse;
+import com.jiujitsu.api.domain.competition.service.AdminCompetitionLinkService;
 import com.jiujitsu.api.domain.competition.service.AdminCompetitionService;
 import com.jiujitsu.api.domain.competition.service.CompetitionService;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -21,6 +24,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,7 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "admin-competition-controller", description = "관리자 대회 API (대회 목록·상세·만들기·고치기·확인·공개·비공개, 자동완성용 대회 일괄 등록)")
+@Tag(name = "admin-competition-controller", description = "관리자 대회 API (대회 목록·상세·만들기·고치기·확인·공개·비공개·상태 링크, 자동완성용 대회 일괄 등록)")
 @CommonApiResponses
 @RestController
 @RequestMapping("/admin/competitions")
@@ -39,6 +43,7 @@ public class AdminCompetitionController {
 
     private final CompetitionService competitionService;
     private final AdminCompetitionService adminCompetitionService;
+    private final AdminCompetitionLinkService adminCompetitionLinkService;
 
     @Operation(
             summary = "자동완성용 대회 일괄 등록",
@@ -140,5 +145,53 @@ public class AdminCompetitionController {
     @PatchMapping("/{competitionId}/unpublish")
     public AdminCompetitionDetailResponse unpublish(@Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId) {
         return adminCompetitionService.unpublish(competitionId);
+    }
+
+    @Operation(
+            summary = "관리자 대회 상태 링크 넣기 · 바꾸기",
+            description = "대회 상태에 맞는 접수 사이트 페이지 주소를 종류별로 하나 넣습니다 (REGISTRATION 신청, ENTRY_LIST 참가자 현황, BRACKET 대진표·시간표, LIVE_MAT 실시간 매트, RESULT 결과). "
+                    + "새로 넣거나 주소가 바뀌면 승인 전(PENDING)이라 앱에 보이지 않습니다 — 원문을 확인한 뒤 approve. 같은 주소면 상태 그대로. "
+                    + "대한체육회(KSOC) 대회의 신청 링크는 R0013. 응답은 관리자 대회 상세(links 포함). (ROLE_ADMIN 필요)"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE,
+            ErrorCode.COMPETITION_CLUB_REGISTRATION_ONLY, ErrorCode.REQUIRED_PARAMETER, ErrorCode.WRONG_PARAMETER})
+    @PutMapping("/{competitionId}/links/{type}")
+    public AdminCompetitionDetailResponse putLink(
+            @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId,
+            @Parameter(description = "링크 종류", required = true) @PathVariable CompetitionLinkType type,
+            @Valid @RequestBody CompetitionLinkRequest request) {
+        return adminCompetitionLinkService.put(competitionId, type, request);
+    }
+
+    @Operation(summary = "관리자 대회 상태 링크 지우기", description = "없으면 그대로 둡니다. (ROLE_ADMIN 필요)")
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE})
+    @DeleteMapping("/{competitionId}/links/{type}")
+    public AdminCompetitionDetailResponse deleteLink(
+            @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId,
+            @Parameter(description = "링크 종류", required = true) @PathVariable CompetitionLinkType type) {
+        return adminCompetitionLinkService.delete(competitionId, type);
+    }
+
+    @Operation(
+            summary = "관리자 대회 상태 링크 승인(켜기)",
+            description = "원문을 확인한 링크를 켭니다. 보이는 기간(신청: 접수 시작~접수 마감 23:59 / 참가자 현황·대진표: 승인~마지막 날 23:59 / "
+                    + "실시간 매트: 첫날~마지막 날 23:59 / 결과: 다음 날 00:00~14일, FLOWCOMP·주대플·대한체육회는 끝 없음, 한국 시간) 안에서만 앱에 나갑니다. "
+                    + "미리 승인해 둬도 기간 전엔 안 보입니다. 처음 승인한 시각을 남깁니다. (ROLE_ADMIN 필요)"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE, ErrorCode.COMPETITION_LINK_NOT_FOUND})
+    @PatchMapping("/{competitionId}/links/{type}/approve")
+    public AdminCompetitionDetailResponse approveLink(
+            @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId,
+            @Parameter(description = "링크 종류", required = true) @PathVariable CompetitionLinkType type) {
+        return adminCompetitionLinkService.approve(competitionId, type);
+    }
+
+    @Operation(summary = "관리자 대회 상태 링크 숨기기(끄기)", description = "조기 마감 · 틀린 페이지 등으로 바로 내립니다. 다시 켜려면 approve. (ROLE_ADMIN 필요)")
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE, ErrorCode.COMPETITION_LINK_NOT_FOUND})
+    @PatchMapping("/{competitionId}/links/{type}/hide")
+    public AdminCompetitionDetailResponse hideLink(
+            @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId,
+            @Parameter(description = "링크 종류", required = true) @PathVariable CompetitionLinkType type) {
+        return adminCompetitionLinkService.hide(competitionId, type);
     }
 }
