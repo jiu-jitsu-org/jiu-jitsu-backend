@@ -66,7 +66,8 @@ class CompetitionQueryServiceTest {
     static class FixedClock {
         @Bean
         Clock clock() {
-            return Clock.fixed(TODAY.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant(), ZoneId.of("Asia/Seoul"));
+            // 낮 시각 — 상세 링크가 "오늘 00:00"이 아니라 지금 시각으로 걸러지는지 볼 수 있게 (#223)
+            return Clock.fixed(TODAY.atTime(12, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant(), ZoneId.of("Asia/Seoul"));
         }
 
         // 관심 많은 대회: 테스트는 상위 2개, 관심 2개 이상 (#210)
@@ -428,9 +429,9 @@ class CompetitionQueryServiceTest {
         assertThat(detail.status()).isEqualTo(CompetitionStatus.CLOSED);
     }
 
-    // ---- 상태 링크 · 접수 사이트 (#223). 테스트 시계 = TODAY 00:00 (한국 시간) ----
+    // ---- 상태 링크 · 접수 사이트 (#223). 테스트 시계 = TODAY 12:00 (한국 시간) ----
 
-    private static final LocalDateTime NOW = TODAY.atStartOfDay();
+    private static final LocalDateTime NOW = TODAY.atTime(12, 0);
     private static final LocalTime END_OF_DAY = LocalTime.of(23, 59, 59);
 
     private Competition saveWithSite(String name, LocalDate openDate, LocalDate endDate, RegistrationSite site,
@@ -480,6 +481,18 @@ class CompetitionQueryServiceTest {
                         TODAY.atStartOfDay(), TODAY.atTime(END_OF_DAY)));
         assertThat(detail.registrationSite()).isEqualTo(RegistrationSite.FLOWCOMP);
         assertThat(detail.clubRegistrationOnly()).isFalse();
+    }
+
+    @Test
+    @DisplayName("상세 링크: 지금 시각으로 거른다 — 오늘 승인한 참가자 현황 · 대진표는 승인 시각부터 (지금 12:00 → 11:00 승인은 보이고 13:00 승인은 아직 없음)")
+    void detail_links_filteredByCurrentTime() {
+        Competition competition = saveWithSite("다음 주 대회", TODAY.plusDays(7), null, RegistrationSite.FLOWCOMP, null, null);
+        approvedLink(competition, CompetitionLinkType.ENTRY_LIST, TODAY.atTime(11, 0));
+        approvedLink(competition, CompetitionLinkType.BRACKET, TODAY.atTime(13, 0));   // 테스트용 미래 승인 시각 — 승인 시각부터 보이는 종류의 시작 경계
+
+        assertThat(detailOf(competition).links())
+                .extracting(CompetitionLinkResponse::type, CompetitionLinkResponse::visibleFrom)
+                .containsExactly(tuple(CompetitionLinkType.ENTRY_LIST, TODAY.atTime(11, 0)));
     }
 
     @Test
@@ -585,7 +598,7 @@ class CompetitionQueryServiceTest {
     }
 
     @Test
-    @DisplayName("대회 고르기: 공개 대회만, 다가오는 대회(오늘 포함, 가까운 순) 다음에 끝난 대회(최근 순)")
+    @DisplayName("대회 고르기: 공개 대회만, 끝나지 않은 대회(오늘 포함, 대회일 순) 다음에 끝난 대회(대회일 최근 순)")
     void picker_order() {
         seedTimeline();
 
@@ -623,7 +636,7 @@ class CompetitionQueryServiceTest {
     }
 
     @Test
-    @DisplayName("대회 고르기: 최대 20개 — 다가오는 대회가 20개를 채우면 끝난 대회는 안 나오고, 모자라면 끝난 대회로 채운다")
+    @DisplayName("대회 고르기: 최대 20개 — 끝나지 않은 대회가 20개를 채우면 끝난 대회는 안 나오고, 모자라면 끝난 대회로 채운다")
     void picker_limit() {
         for (int i = 1; i <= 18; i++) {
             save("미래" + i, TODAY.plusDays(i));

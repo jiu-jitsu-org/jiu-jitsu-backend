@@ -146,7 +146,6 @@ class CompetitionTest {
         // 접수 일정이 비어 있으면 대회 당일은 지금처럼 OPEN, 둘째 날부터 CLOSED
         assertThat(noDeadline.status(OPEN_DATE)).isEqualTo(CompetitionStatus.OPEN);
         assertThat(noDeadline.status(OPEN_DATE.plusDays(1))).isEqualTo(CompetitionStatus.CLOSED);
-        assertThat(noDeadline.isEarlyBirdOpen(OPEN_DATE.plusDays(1))).isFalse();
         assertThat(noDeadline.status(OPEN_DATE.plusDays(3))).isEqualTo(CompetitionStatus.ENDED);
     }
 

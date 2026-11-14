@@ -109,14 +109,14 @@ public final class CompetitionSpecifications {
         Path<LocalDate> deadline = root.get("registrationDeadline");
         Expression<LocalDate> lastDay = lastDay(root, cb);
         Predicate lastDayNotPassed = cb.greaterThanOrEqualTo(lastDay, today);
-        // 대회일 전·당일 — 여러 날 대회의 둘째 날부터는 접수 일정과 상관없이 CLOSED
-        Predicate notStarted = cb.greaterThanOrEqualTo(openDate, today);
+        // 첫날(대회일)이 지나지 않음 = 대회일 전·당일. 여러 날 대회의 둘째 날부터는 접수 일정과 상관없이 CLOSED
+        Predicate firstDayNotPassed = cb.greaterThanOrEqualTo(openDate, today);
         Predicate notClosed = cb.or(cb.isNull(deadline), cb.greaterThanOrEqualTo(deadline, today));
         return switch (status) {
             case ENDED -> cb.lessThan(lastDay, today);
             case CLOSED -> cb.and(lastDayNotPassed, cb.or(cb.lessThan(openDate, today), cb.lessThan(deadline, today)));
-            case UPCOMING -> cb.and(notStarted, notClosed, cb.greaterThan(start, today));
-            case OPEN -> cb.and(notStarted, notClosed, cb.or(cb.isNull(start), cb.lessThanOrEqualTo(start, today)));
+            case UPCOMING -> cb.and(firstDayNotPassed, notClosed, cb.greaterThan(start, today));
+            case OPEN -> cb.and(firstDayNotPassed, notClosed, cb.or(cb.isNull(start), cb.lessThanOrEqualTo(start, today)));
         };
     }
 
