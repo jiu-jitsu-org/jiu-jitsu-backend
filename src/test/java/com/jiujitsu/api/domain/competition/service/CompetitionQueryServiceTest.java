@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.competition.service;
 
 import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionFeeResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionLinkResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
@@ -11,9 +12,12 @@ import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionAudience;
 import com.jiujitsu.api.domain.competition.entity.CompetitionFee;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLink;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLinkType;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.entity.CompetitionStatus;
 import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
+import com.jiujitsu.api.domain.competition.entity.RegistrationSite;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -36,6 +40,7 @@ import org.springframework.context.annotation.Import;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -405,6 +410,10 @@ class CompetitionQueryServiceTest {
                 new CompetitionFeeResponse("기본 참가비", 70000, null));
         assertThat(detail.feeNote()).isEqualTo("성인 1종목 기준");
         assertThat(detail.lastVerifiedDate()).isEqualTo(TODAY.minusDays(1));
+        // 상태 링크 없음 · 접수 사이트 모름 (#223)
+        assertThat(detail.links()).isEmpty();
+        assertThat(detail.registrationSite()).isNull();
+        assertThat(detail.clubRegistrationOnly()).isFalse();
     }
 
     @Test
@@ -417,6 +426,97 @@ class CompetitionQueryServiceTest {
 
         assertThat(detail.endDate()).isEqualTo(TODAY.plusDays(1));
         assertThat(detail.status()).isEqualTo(CompetitionStatus.CLOSED);
+    }
+
+    // ---- 상태 링크 · 접수 사이트 (#223). 테스트 시계 = TODAY 00:00 (한국 시간) ----
+
+    private static final LocalDateTime NOW = TODAY.atStartOfDay();
+    private static final LocalTime END_OF_DAY = LocalTime.of(23, 59, 59);
+
+    private Competition saveWithSite(String name, LocalDate openDate, LocalDate endDate, RegistrationSite site,
+                                     LocalDate registrationStart, LocalDate registrationDeadline) {
+        return em.persist(Competition.builder()
+                .name(name).searchName(Competition.normalize(name)).competitionYear(openDate.getYear()).published(true)
+                .openDate(openDate).endDate(endDate).registrationSite(site)
+                .registrationStartDate(registrationStart).registrationDeadline(registrationDeadline)
+                .build());
+    }
+
+    private CompetitionLink pendingLink(Competition competition, CompetitionLinkType type) {
+        return em.persist(new CompetitionLink(competition, type, "https://example.com/" + competition.getId() + "/" + type.name()));
+    }
+
+    private CompetitionLink approvedLink(Competition competition, CompetitionLinkType type, LocalDateTime approvedAt) {
+        CompetitionLink link = new CompetitionLink(competition, type, "https://example.com/" + competition.getId() + "/" + type.name());
+        link.approve(approvedAt);
+        return em.persist(link);
+    }
+
+    private CompetitionDetailResponse detailOf(Competition competition) {
+        em.flush();
+        em.clear();
+        return competitionQueryService.getDetail(competition.getId());
+    }
+
+    @Test
+    @DisplayName("상세 링크: 승인 + 보이는 기간 안만 — 대회 당일 참가자 현황 · 실시간 매트가 겹쳐 나오고, 기간 지난 신청 · 숨긴 대진표 · 아직 이른 결과는 없다. 종류 선언 순서, 기간 값")
+    void detail_links_onlyVisibleNow() {
+        // 대회 당일(TODAY), 접수는 5일 전에 마감
+        Competition competition = saveWithSite("당일 대회", TODAY, null, RegistrationSite.FLOWCOMP, TODAY.minusDays(30), TODAY.minusDays(5));
+        // 넣은 순서와 상관없이 종류 순서로 나오는지 보려고 뒤 종류부터 넣는다
+        approvedLink(competition, CompetitionLinkType.RESULT, NOW.minusDays(1));                 // 결과는 대회 다음 날부터
+        approvedLink(competition, CompetitionLinkType.LIVE_MAT, NOW.minusDays(1));               // 대회일 00:00 ~ 마지막 날 23:59:59
+        CompetitionLink bracket = approvedLink(competition, CompetitionLinkType.BRACKET, NOW.minusDays(2));
+        bracket.hide();                                                                          // 숨김
+        approvedLink(competition, CompetitionLinkType.ENTRY_LIST, NOW.minusDays(3).plusHours(10)); // 승인 시각 ~ 마지막 날
+        approvedLink(competition, CompetitionLinkType.REGISTRATION, NOW.minusDays(20));          // 접수 마감 지남
+
+        CompetitionDetailResponse detail = detailOf(competition);
+
+        assertThat(detail.links()).containsExactly(
+                new CompetitionLinkResponse(CompetitionLinkType.ENTRY_LIST, "https://example.com/" + competition.getId() + "/ENTRY_LIST",
+                        NOW.minusDays(3).plusHours(10), TODAY.atTime(END_OF_DAY)),
+                new CompetitionLinkResponse(CompetitionLinkType.LIVE_MAT, "https://example.com/" + competition.getId() + "/LIVE_MAT",
+                        TODAY.atStartOfDay(), TODAY.atTime(END_OF_DAY)));
+        assertThat(detail.registrationSite()).isEqualTo(RegistrationSite.FLOWCOMP);
+        assertThat(detail.clubRegistrationOnly()).isFalse();
+    }
+
+    @Test
+    @DisplayName("상세 링크: 승인 전 링크는 기간 안이어도 없다. 어제 끝난 대회의 결과는 오늘부터 — 결과 주소 고정 사이트는 끝 없음(null), 그 밖엔 마지막 날 + 14일 23:59:59")
+    void detail_links_pendingExcluded_resultUntil() {
+        Competition permanent = saveWithSite("플로우컴프 대회", TODAY.minusDays(2), TODAY.minusDays(1), RegistrationSite.FLOWCOMP, null, null);
+        Competition street = saveWithSite("스트릿 대회", TODAY.minusDays(1), null, RegistrationSite.STREET_JIUJITSU, null, null);
+        Competition unknownSite = saveWithSite("사이트 모름", TODAY.minusDays(1), null, null, null, null);
+        Competition pending = saveWithSite("승인 전", TODAY.minusDays(1), null, RegistrationSite.STREET_JIUJITSU, null, null);
+        approvedLink(permanent, CompetitionLinkType.RESULT, NOW.minusHours(1));
+        approvedLink(street, CompetitionLinkType.RESULT, NOW.minusHours(1));
+        approvedLink(unknownSite, CompetitionLinkType.RESULT, NOW.minusHours(1));
+        pendingLink(pending, CompetitionLinkType.RESULT);
+
+        assertThat(detailOf(permanent).links()).extracting(CompetitionLinkResponse::type, CompetitionLinkResponse::visibleFrom, CompetitionLinkResponse::visibleUntil)
+                .containsExactly(tuple(CompetitionLinkType.RESULT, TODAY.atStartOfDay(), null));
+        assertThat(detailOf(street).links()).extracting(CompetitionLinkResponse::visibleUntil)
+                .containsExactly(TODAY.minusDays(1).plusDays(14).atTime(END_OF_DAY));
+        assertThat(detailOf(unknownSite).links()).extracting(CompetitionLinkResponse::visibleUntil)
+                .containsExactly(TODAY.minusDays(1).plusDays(14).atTime(END_OF_DAY));
+        assertThat(detailOf(pending).links()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("상세: 대한체육회 대회는 도장 신청(clubRegistrationOnly) · 접수 사이트 KSOC, 승인된 신청 링크가 남아 있어도(동시 요청) 내보내지 않고 다른 링크는 그대로")
+    void detail_clubRegistrationOnly() {
+        // 접수 중 (접수 시작 5일 전, 마감 3일 뒤) — 신청 링크가 대한체육회가 아니었다면 보였을 기간
+        Competition competition = saveWithSite("전국 선수권", TODAY.plusDays(10), TODAY.plusDays(11), RegistrationSite.KSOC,
+                TODAY.minusDays(5), TODAY.plusDays(3));
+        approvedLink(competition, CompetitionLinkType.REGISTRATION, NOW.minusDays(1));
+        approvedLink(competition, CompetitionLinkType.ENTRY_LIST, NOW.minusDays(1));
+
+        CompetitionDetailResponse detail = detailOf(competition);
+
+        assertThat(detail.registrationSite()).isEqualTo(RegistrationSite.KSOC);
+        assertThat(detail.clubRegistrationOnly()).isTrue();
+        assertThat(detail.links()).extracting(CompetitionLinkResponse::type).containsExactly(CompetitionLinkType.ENTRY_LIST);
     }
 
     @Test

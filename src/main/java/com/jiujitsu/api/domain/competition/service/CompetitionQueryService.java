@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.competition.service;
 
 import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionLinkResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
@@ -8,9 +9,12 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionRegionsResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLink;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLinkWindow;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
 import com.jiujitsu.api.domain.competition.repository.CompetitionInterestRepository;
+import com.jiujitsu.api.domain.competition.repository.CompetitionLinkRepository;
 import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -25,10 +29,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,7 +48,7 @@ import java.util.stream.Collectors;
 import static com.jiujitsu.api.domain.competition.repository.CompetitionSpecifications.*;
 
 /**
- * 대회 탭 읽기 모델 (목록, 상세, 글쓰기 대회 고르기, 게시글 대회 카드). 대회 정보에 관심 수·내 관심 여부를 붙여 응답 하나로 화면을 채운다
+ * 대회 탭 읽기 모델 (목록, 상세, 글쓰기 대회 고르기, 게시글 대회 카드). 대회 정보에 관심 수·내 관심 여부(상세는 지금 보이는 상태 링크도)를 붙여 응답 하나로 화면을 채운다
  * 카탈로그·자동완성(CompetitionService), 관심 쓰기(CompetitionInterestService)와 분리
  * 커뮤니티(게시글)는 getPublished·getCards 로만 대회를 본다 — 대회 도메인은 커뮤니티를 모른다
  */
@@ -60,6 +66,7 @@ public class CompetitionQueryService {
     private final AuthenticationFacade authenticationFacade;
     private final CompetitionMapper competitionMapper;
     private final CompetitionInterestRepository competitionInterestRepository;
+    private final CompetitionLinkRepository competitionLinkRepository;
     private final PopularCompetitionProperties popularProperties;
     private final Clock clock;
 
@@ -111,18 +118,26 @@ public class CompetitionQueryService {
     /**
      * 대회 상세 (비로그인 가능). 조회수는 올리지 않는다 — 공유 미리보기·웹 서버 렌더링도 이 조회를 불러서,
      * 여기서 올리면 사람이 보지 않아도 숫자가 오른다. 조회수는 CompetitionViewService(POST)
+     * 상태 링크는 지금 보이는 것만 (#223) — 승인 + 보이는 기간 안 (CompetitionLinkWindow#isVisible), 종류 선언 순서
      * 없거나 미공개면 COMPETITION_NOT_FOUND
      */
     public CompetitionDetailResponse getDetail(Long competitionId) {
         Competition competition = getPublished(competitionId);
-        LocalDate today = LocalDate.now(clock);
+        // 한 시각에서 오늘과 지금을 같이 — 자정 경계에서 상태(오늘)와 링크(지금)가 다른 날로 판단되지 않게
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDate today = now.toLocalDate();
         Long userId = authenticationFacade.getCurrentUserOptional().map(User::getId).orElse(null);
 
         List<Long> ids = List.of(competitionId);
         long interestCount = competitionInterestService.getInterestCounts(ids).getOrDefault(competitionId, 0L);
         Optional<CompetitionInterest> mine = userId == null ? Optional.empty() : competitionInterestService.findInterest(userId, competitionId);
+        List<CompetitionLinkResponse> links = competitionLinkRepository.findAllByCompetitionId(competitionId).stream()
+                .filter(link -> CompetitionLinkWindow.isVisible(link, competition, now))
+                .sorted(Comparator.comparing(CompetitionLink::getType))
+                .map(link -> competitionMapper.toLink(link, competition))
+                .toList();
         return competitionMapper.toDetail(competition, today, interestCount,
-                mine.isPresent(), mine.map(CompetitionInterest::isNoticeEnabled).orElse(false));
+                mine.isPresent(), mine.map(CompetitionInterest::isNoticeEnabled).orElse(false), links);
     }
 
     /**

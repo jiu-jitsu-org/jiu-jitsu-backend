@@ -49,7 +49,9 @@ public class CompetitionController {
                     + "- cursor 를 쓸 때 필터는 같은 값으로 다시 보내고 date 는 보내지 않습니다 (함께 보내면 WRONG_PARAMETER)\n"
                     + "- 응답 목록은 방향과 상관없이 항상 오름차순입니다 (이전 페이지는 화면 위에 붙이면 됨)\n"
                     + "- 필터는 모두 AND. region·status 는 여러 개를 보내면 그중 하나. interested=true 는 로그인 필요\n"
-                    + "- status·earlyBirdOpen 은 응답 today(서버 기준일) 기준입니다. 남은 날은 마감일 − today"
+                    + "- status·earlyBirdOpen 은 응답 today(서버 기준일) 기준입니다. 남은 날은 마감일 − today\n"
+                    + "- 여러 날 대회는 endDate(마지막 날)가 있습니다. 끝남(ENDED, status=ENDED 필터)은 마지막 날 다음 날부터, 둘째 날부터 마지막 날까지는 CLOSED. "
+                    + "목록 순서·기준일·커서는 대회일(첫날) 기준이라 진행 중인 여러 날 대회는 기준일 오늘의 앞쪽(previousCursor)에 있습니다"
     )
     @ApiErrorCodeExamples({ErrorCode.WRONG_PARAMETER, ErrorCode.LOGIN_NOT_ACCESS})
     @GetMapping
@@ -63,7 +65,9 @@ public class CompetitionController {
             description = "공개 대회의 상세 정보를 반환합니다. 비로그인도 조회할 수 있습니다.\n\n"
                     + "- 이 조회로는 조회수가 오르지 않습니다. 앱은 상세 화면을 열 때 POST /competitions/{competitionId}/views 를 한 번 부릅니다\n"
                     + "- status·earlyBirdOpen 은 응답 today(서버 기준일) 기준. 어느 마감을 보여 주고 강조할지는 앱 화면 규칙(날짜 원본과 today 로 계산)\n"
-                    + "- fees 는 입력 순서대로, until 이 null 인 단계가 기본 참가비. 참가비가 확인되지 않았으면 빈 배열"
+                    + "- fees 는 입력 순서대로, until 이 null 인 단계가 기본 참가비. 참가비가 확인되지 않았으면 빈 배열\n"
+                    + "- links 는 지금 보이는 상태 링크만 (운영자가 승인했고 보이는 기간 안). 기간 밖·승인 전·숨긴 링크는 없고, 없으면 빈 배열. 여러 개가 겹칠 수 있음\n"
+                    + "- clubRegistrationOnly=true 면 도장(감독·코치)을 통해 신청하는 대회 — 신청 링크가 나오지 않습니다 (대한체육회)"
     )
     @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND})
     @GetMapping("/{competitionId}")
@@ -89,7 +93,7 @@ public class CompetitionController {
             summary = "글쓰기 대회 고르기",
             description = "게시글에 연결할 공개 대회를 대회명 일부로 찾습니다. 비로그인도 조회할 수 있습니다.\n\n"
                     + "- 공백·대소문자를 무시한 부분 일치. 검색어가 비면 이름 조건 없이 같은 순서\n"
-                    + "- 다가오는 대회(오늘 포함, 대회일 가까운 순) 다음에 끝난 대회(최근 순), 최대 20개\n"
+                    + "- 끝나지 않은 대회(마지막 날이 오늘 이후 — 진행 중인 여러 날 대회 포함, 대회일 가까운 순) 다음에 끝난 대회(최근 순), 최대 20개\n"
                     + "- 항목은 대회 목록과 같은 카드. status·earlyBirdOpen 은 응답 today 기준\n"
                     + "- 대회 기록용 자동완성(/competitions/autocomplete)과 다릅니다 — 그쪽은 미공개 카탈로그를 포함하고 지난 대회만 줍니다"
     )

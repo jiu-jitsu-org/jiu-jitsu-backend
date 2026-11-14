@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.competition.dto.AdminCompetitionLinkResponse;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionFeeResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionLinkResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
@@ -46,8 +47,9 @@ public class CompetitionMapper {
         );
     }
 
-    // 공개 대회만 (toListItem 과 같음)
-    public CompetitionDetailResponse toDetail(Competition competition, LocalDate today, long interestCount, boolean interested, boolean noticeEnabled) {
+    // 공개 대회만 (toListItem 과 같음). links 는 지금 보이는 것만 거른 목록 (CompetitionQueryService#getDetail)
+    public CompetitionDetailResponse toDetail(Competition competition, LocalDate today, long interestCount, boolean interested, boolean noticeEnabled,
+                                              List<CompetitionLinkResponse> links) {
         return new CompetitionDetailResponse(
                 today,
                 competition.getId(),
@@ -62,6 +64,9 @@ public class CompetitionMapper {
                 competition.getAudience(),
                 competition.getHost(),
                 competition.getNoticeUrl(),
+                competition.getRegistrationSite(),
+                competition.isClubRegistrationOnly(),
+                links,
                 competition.status(today),
                 competition.isEarlyBirdOpen(today),
                 competition.getRegistrationStartDate(),
@@ -130,6 +135,12 @@ public class CompetitionMapper {
         return competition.getFees().stream()
                 .map(fee -> new CompetitionFeeResponse(fee.getLabel(), fee.getAmount(), fee.getUntil()))
                 .toList();
+    }
+
+    // 사용자 링크 — 보이는 기간만 (승인 상태 · 승인 시각 같은 관리용 값은 내보내지 않는다). 지금 보이는지는 호출부가 거른다
+    public CompetitionLinkResponse toLink(CompetitionLink link, Competition competition) {
+        CompetitionLinkWindow window = CompetitionLinkWindow.of(link, competition);
+        return new CompetitionLinkResponse(link.getType(), link.getUrl(), window.from(), window.until());
     }
 
     // 관리자 링크 — 보이는 기간과 지금 보임 여부를 같이 (운영자가 "승인했는데 왜 안 보이지"를 화면에서 알 수 있게)
