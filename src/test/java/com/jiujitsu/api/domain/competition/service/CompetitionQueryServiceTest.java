@@ -761,6 +761,24 @@ class CompetitionQueryServiceTest {
     }
 
     @Test
+    @DisplayName("관심 많은 대회: 지난달에 시작해 오늘 끝나는 여러 날 대회도 그 달(대회일 기준) 순위에 든다 — 그 달에 끝나지 않은 대회가 그것뿐이어도 (#223)")
+    void popular_multiDayStartedLastMonth() {
+        // 10/31 ~ 11/9(오늘) — 대회일은 10월, 아직 끝나지 않음. 10월의 다른 대회는 끝났음
+        Competition spansMonths = saveMultiDay("10월 말 시작 여러 날 대회", LocalDate.of(2026, 10, 31), TODAY);
+        Competition octoberEnded = save("10월 끝난 대회", LocalDate.of(2026, 10, 20));
+        interests(spansMonths, 2);
+        interests(octoberEnded, 9);
+
+        CompetitionListResponse list = competitionQueryService.getList(request(LocalDate.of(2026, 10, 1), null, null));
+
+        assertThat(list.competitions())
+                .extracting(CompetitionListItem::name, CompetitionListItem::popular)
+                .containsExactly(
+                        tuple("10월 끝난 대회", false),
+                        tuple("10월 말 시작 여러 날 대회", true));
+    }
+
+    @Test
     @DisplayName("관심 많은 대회: 한 응답이 두 달에 걸치면 달마다 따로 상위 N개, 글쓰기 대회 고르기도 같은 값")
     void popular_perMonth_listAndPicker() {
         Competition novTop = save("11월 1등", TODAY.plusDays(5));       // 11/14

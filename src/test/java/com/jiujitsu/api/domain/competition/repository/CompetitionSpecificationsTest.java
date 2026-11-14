@@ -117,6 +117,11 @@ class CompetitionSpecificationsTest {
         // 네 상태가 공개 대회를 빠짐없이 나눈다
         assertThat(CompetitionStatus.values()).allSatisfy(s -> assertThat(competitionRepository.findAll(statusIn(Set.of(s), TODAY))).isNotEmpty());
         assertThat(competitionRepository.findAll(statusIn(EnumSet.allOf(CompetitionStatus.class), TODAY))).hasSameSizeAs(all);
+        // 끝남 조건(고르기용)도 엔티티 isEnded 와 같은 조합 전부에서 같다
+        assertThat(competitionRepository.findAll(ended(TODAY)).stream().map(Competition::getId).sorted().toList())
+                .isEqualTo(all.stream().filter(c -> c.isEnded(TODAY)).map(Competition::getId).sorted().toList());
+        assertThat(competitionRepository.findAll(notEnded(TODAY)).stream().map(Competition::getId).sorted().toList())
+                .isEqualTo(all.stream().filter(c -> !c.isEnded(TODAY)).map(Competition::getId).sorted().toList());
     }
 
     @Test
