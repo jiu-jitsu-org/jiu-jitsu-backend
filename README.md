@@ -142,11 +142,11 @@ src/main/java/com/jiujitsu/api/
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/competitions` | 대회 탭 목록 (공개 대회, 대회일순). 기준일 `date` + 양방향 커서(`nextCursor`·`previousCursor`), 필터 `region`·`status`·`interested`·`keyword`. 항목의 `popular` = 관심 많은 대회(같은 달 끝나지 않은 대회 중 관심 상위 `competition.popular.top`개, 관심 `min-interests`개 이상). 비로그인 가능 |
-| GET | `/competitions/{competitionId}` | 대회 상세 (공개 대회, 일정·참가비 단계·관심 수·조회수). 비로그인 가능, 조회수는 오르지 않음 |
+| GET | `/competitions` | 대회 탭 목록 (공개 대회, 대회일순). 기준일 `date` + 양방향 커서(`nextCursor`·`previousCursor`), 필터 `region`·`status`·`interested`·`keyword`. 항목의 `popular` = 관심 많은 대회(같은 달 끝나지 않은 대회 중 관심 상위 `competition.popular.top`개, 관심 `min-interests`개 이상). 여러 날 대회는 `endDate`, 끝남(`ENDED`)은 마지막 날 다음 날부터. 비로그인 가능 |
+| GET | `/competitions/{competitionId}` | 대회 상세 (공개 대회, 일정·참가비 단계·관심 수·조회수, 지금 보이는 상태 링크·접수 사이트·도장 신청 대회 여부). 비로그인 가능, 조회수는 오르지 않음 |
 | POST | `/competitions/{competitionId}/views` | 대회 조회수 +1 (앱이 상세를 열 때, 중복 방지 없음) |
 | GET | `/competitions/regions` | 대회가 있는 지역 (대회 탭 지역 필터, 지난 대회 포함 공개 대회 전체, 지역 enum 순서). 비로그인 가능 |
-| GET | `/competitions/picker?keyword=` | 글쓰기 대회 고르기 (공개 대회, 다가오는 대회 → 끝난 대회, 최대 20개). 비로그인 가능 |
+| GET | `/competitions/picker?keyword=` | 글쓰기 대회 고르기 (공개 대회, 끝나지 않은 대회(진행 중 포함) → 끝난 대회, 최대 20개). 비로그인 가능 |
 | GET | `/competitions/{competitionId}/stories` | 대회 이야기 (이 대회를 고른 글 최대 5개: 반응 많은 2개 + 최신). 비로그인 가능 |
 | GET | `/competitions/autocomplete?keyword=` | 등록 대회 검색 (프로필 대회 기록용 대회명 자동완성, 지난 대회까지) |
 | PUT | `/competitions/{competitionId}/interest` | 대회 관심 등록 (멱등, 처리 후 관심 상태·관심 수) |
