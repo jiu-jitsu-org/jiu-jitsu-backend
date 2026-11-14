@@ -19,8 +19,10 @@ public record CompetitionDetailResponse(
             Long competitionId,
         @Schema(description = "대회명", example = "2026 서울 오픈 주짓수 챔피언십")
             String name,
-        @Schema(description = "대회일", example = "2026-11-22")
+        @Schema(description = "대회일 (여러 날 대회면 첫날)", example = "2026-11-22")
             LocalDate openDate,
+        @Schema(description = "여러 날 대회의 마지막 날. 하루짜리면 null (목록과 같음)", example = "2026-11-23", nullable = true)
+            LocalDate endDate,
         @JsonFormat(pattern = "HH:mm")   // 초는 쓰지 않음
         @Schema(description = "시작 시각 HH:mm (모르면 null)", type = "string", example = "09:00", nullable = true)
             LocalTime startTime,
@@ -38,7 +40,7 @@ public record CompetitionDetailResponse(
             String host,
         @Schema(description = "대회 공지 링크", nullable = true)
             String noticeUrl,
-        @Schema(description = "오늘 기준 접수/진행 상태")
+        @Schema(description = "오늘 기준 접수/진행 상태. 마지막 날 다음 날부터 ENDED, 여러 날 대회의 둘째 날부터 마지막 날까지는 CLOSED")
             CompetitionStatus status,
         @Schema(description = "오늘 기준 얼리버드 접수 중인지. 어느 마감을 보여 주고 강조할지(예: D-7부터)는 앱 화면 규칙 — 날짜 원본과 today 로 계산")
             boolean earlyBirdOpen,

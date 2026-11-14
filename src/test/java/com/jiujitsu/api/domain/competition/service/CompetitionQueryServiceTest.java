@@ -118,6 +118,18 @@ class CompetitionQueryServiceTest {
                 .build());
     }
 
+    // 여러 날 대회 (#223)
+    private Competition saveMultiDay(String name, LocalDate openDate, LocalDate endDate) {
+        return em.persist(Competition.builder()
+                .name(name)
+                .searchName(Competition.normalize(name))
+                .competitionYear(openDate.getYear())
+                .published(true)
+                .openDate(openDate)
+                .endDate(endDate)
+                .build());
+    }
+
     private CompetitionListRequest request(LocalDate date, String cursor, Integer size) {
         return new CompetitionListRequest(date, cursor, size, null, null, null, null);
     }
@@ -317,6 +329,31 @@ class CompetitionQueryServiceTest {
         });
     }
 
+    @Test
+    @DisplayName("여러 날 대회: 진행 중이면 status=CLOSED 필터에 나오고 ENDED 에는 안 나옴, 종료일 다음 날부터 ENDED. 목록 항목에 endDate (하루짜리는 null) (#223)")
+    void multiDay_statusFilterAndEndDate() {
+        saveMultiDay("진행 중 사흘", TODAY.minusDays(1), TODAY.plusDays(1));
+        saveMultiDay("어제 끝난 이틀", TODAY.minusDays(3), TODAY.minusDays(1));
+        save("어제 하루", TODAY.minusDays(1));
+        em.flush();
+        LocalDate from = TODAY.minusDays(10);
+
+        CompetitionListResponse closed = competitionQueryService.getList(
+                new CompetitionListRequest(from, null, null, null, List.of(CompetitionStatus.CLOSED), null, null));
+        CompetitionListResponse ended = competitionQueryService.getList(
+                new CompetitionListRequest(from, null, null, null, List.of(CompetitionStatus.ENDED), null, null));
+        CompetitionListResponse all = competitionQueryService.getList(request(from, null, null));
+
+        assertThat(names(closed)).containsExactly("진행 중 사흘");
+        assertThat(names(ended)).containsExactly("어제 끝난 이틀", "어제 하루");
+        assertThat(all.competitions())
+                .extracting(CompetitionListItem::name, CompetitionListItem::endDate, CompetitionListItem::status)
+                .containsExactly(
+                        tuple("어제 끝난 이틀", TODAY.minusDays(1), CompetitionStatus.ENDED),
+                        tuple("진행 중 사흘", TODAY.plusDays(1), CompetitionStatus.CLOSED),
+                        tuple("어제 하루", null, CompetitionStatus.ENDED));
+    }
+
     // --- 상세 ---
 
     private Competition saveDetailed() {
@@ -349,6 +386,7 @@ class CompetitionQueryServiceTest {
         assertThat(detail.name()).isEqualTo("서울 오픈");
         assertThat(detail.region()).isEqualTo(CompetitionRegion.SEOUL);
         assertThat(detail.openDate()).isEqualTo(TODAY.plusDays(20));
+        assertThat(detail.endDate()).isNull();   // 하루짜리
         assertThat(detail.registrationStartDate()).isEqualTo(TODAY.minusDays(5));
         assertThat(detail.registrationDeadline()).isEqualTo(TODAY.plusDays(10));
         assertThat(detail.noticeUrl()).isEqualTo("https://example.com/notice");
@@ -367,6 +405,18 @@ class CompetitionQueryServiceTest {
                 new CompetitionFeeResponse("기본 참가비", 70000, null));
         assertThat(detail.feeNote()).isEqualTo("성인 1종목 기준");
         assertThat(detail.lastVerifiedDate()).isEqualTo(TODAY.minusDays(1));
+    }
+
+    @Test
+    @DisplayName("상세: 여러 날 대회는 endDate, 진행 중(둘째 날)이면 CLOSED (#223)")
+    void detail_multiDay() {
+        Long id = saveMultiDay("진행 중 사흘", TODAY.minusDays(1), TODAY.plusDays(1)).getId();
+        em.flush();
+
+        CompetitionDetailResponse detail = competitionQueryService.getDetail(id);
+
+        assertThat(detail.endDate()).isEqualTo(TODAY.plusDays(1));
+        assertThat(detail.status()).isEqualTo(CompetitionStatus.CLOSED);
     }
 
     @Test
@@ -443,6 +493,18 @@ class CompetitionQueryServiceTest {
 
         assertThat(response.today()).isEqualTo(TODAY);
         assertThat(names(response)).containsExactly("오늘1", "오늘2", "미래1", "미래2", "미래3", "과거2", "과거1");
+    }
+
+    @Test
+    @DisplayName("대회 고르기: 진행 중인 여러 날 대회는 끝나지 않은 쪽(대회일 순 맨 앞), 끝난 여러 날 대회는 끝난 쪽 (#223)")
+    void picker_multiDayByLastDay() {
+        seedTimeline();
+        saveMultiDay("진행 중 사흘", TODAY.minusDays(1), TODAY.plusDays(1));
+        saveMultiDay("끝난 이틀", TODAY.minusDays(3), TODAY.minusDays(2));
+        em.flush();
+
+        assertThat(names(competitionQueryService.getPicker(null)))
+                .containsExactly("진행 중 사흘", "오늘1", "오늘2", "미래1", "미래2", "미래3", "과거2", "끝난 이틀", "과거1");
     }
 
     @Test
@@ -573,6 +635,29 @@ class CompetitionQueryServiceTest {
                         tuple("서울 1등", true),
                         tuple("서울 3등", false));   // 같은 달 3등 (부산 2등이 위)
         assertThat(competitionQueryService.getCards(List.of(busanSecond.getId())).get(busanSecond.getId()).popular()).isTrue();
+    }
+
+    @Test
+    @DisplayName("관심 많은 대회: 진행 중인 여러 날 대회는 끝나지 않은 대회로 순위에 들고, 종료일이 지난 여러 날 대회는 false (#223)")
+    void popular_multiDayByLastDay() {
+        Competition inProgress = saveMultiDay("진행 중 사흘", TODAY.minusDays(1), TODAY.plusDays(1));
+        Competition endedMultiDay = saveMultiDay("끝난 이틀", TODAY.minusDays(3), TODAY.minusDays(1));
+        Competition upcoming = save("다가오는 대회", TODAY.plusDays(3));
+        Competition upcomingLow = save("다가오는 3등", TODAY.plusDays(4));
+        interests(inProgress, 4);
+        interests(endedMultiDay, 9);
+        interests(upcoming, 3);
+        interests(upcomingLow, 2);
+
+        CompetitionListResponse list = competitionQueryService.getList(request(TODAY.withDayOfMonth(1), null, null));
+
+        assertThat(list.competitions())
+                .extracting(CompetitionListItem::name, CompetitionListItem::popular)
+                .containsExactly(
+                        tuple("끝난 이틀", false),
+                        tuple("진행 중 사흘", true),
+                        tuple("다가오는 대회", true),
+                        tuple("다가오는 3등", false));   // 끝난 이틀(관심 9)은 순위에서 빠지고 진행 중 · 다가오는 대회가 상위 2개
     }
 
     @Test

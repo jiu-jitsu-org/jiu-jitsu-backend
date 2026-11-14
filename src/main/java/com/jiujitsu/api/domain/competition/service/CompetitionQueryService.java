@@ -126,7 +126,8 @@ public class CompetitionQueryService {
     }
 
     /**
-     * 글쓰기 대회 고르기 (비로그인 가능). 공개 대회를 이름으로 찾아 다가오는 대회(오늘 포함, 가까운 순) → 끝난 대회(최근 순)로 최대 20개
+     * 글쓰기 대회 고르기 (비로그인 가능). 공개 대회를 이름으로 찾아 끝나지 않은 대회(진행 중 포함, 대회일 가까운 순) → 끝난 대회(최근 순)로 최대 20개
+     * 끝남 = 마지막 날(종료일, 하루짜리면 대회일)이 지남 (#223) — 여러 날 대회는 진행 중에도 앞쪽
      * 대회 전 질문과 대회 뒤 후기를 모두 고를 수 있어야 해서, 기준일 앞뒤로 나뉘는 목록(getList) 대신 오늘에 가까운 대회부터 준다
      * 검색어가 비면 이름 조건 없이 같은 순서
      */
@@ -140,12 +141,10 @@ public class CompetitionQueryService {
             filter = filter.and(searchNameLike("%" + CompetitionService.escapeLike(normalized) + "%"));
         }
 
-        // 기준 (today, 0) 뒤 = 오늘 포함 이후, 앞 = 어제까지 (id 는 1부터)
-        CompetitionCursor todayStart = CompetitionCursor.startOf(today);
-        List<Competition> picked = new ArrayList<>(competitionRepository.findBy(filter.and(boundary(todayStart)),
+        List<Competition> picked = new ArrayList<>(competitionRepository.findBy(filter.and(notEnded(today)),
                 q -> q.sortBy(ASCENDING).limit(PICKER_LIMIT).all()));
         if (picked.size() < PICKER_LIMIT) {
-            picked.addAll(competitionRepository.findBy(filter.and(boundary(todayStart.opposite())),
+            picked.addAll(competitionRepository.findBy(filter.and(ended(today)),
                     q -> q.sortBy(DESCENDING).limit(PICKER_LIMIT - picked.size()).all()));
         }
         return new CompetitionPickerResponse(today, toItems(picked, today, userId));
@@ -235,14 +234,14 @@ public class CompetitionQueryService {
     }
 
     /**
-     * 관심 많은 대회 (#210): 이 대회들이 속한 달마다, 그 달 끝나지 않은 공개 대회 중 관심 수 상위 N개 (관심 M개 이상)
+     * 관심 많은 대회 (#210): 이 대회들이 속한 달(대회일 기준)마다, 그 달 끝나지 않은 공개 대회 중 관심 수 상위 N개 (관심 M개 이상)
      * 필터와 무관하게 달 전체에서 순위를 매긴다 — 지역·관심 필터를 바꿔도 같은 대회에 같은 표시
-     * 끝난 대회만 있는 달은 보지 않는다 (끝난 대회는 표시 대상이 아님). 여러 달이어도 한 번에 조회하고 달마다 자른다
+     * 끝난 대회(마지막 날이 지남 — 진행 중인 여러 날 대회는 끝나지 않음, #223)만 있는 달은 보지 않는다. 여러 달이어도 한 번에 조회하고 달마다 자른다
      */
     private Set<Long> popularIds(List<Competition> page, LocalDate today) {
         TreeSet<YearMonth> months = page.stream()
+                .filter(competition -> !competition.isEnded(today))
                 .map(Competition::getOpenDate)
-                .filter(openDate -> !openDate.isBefore(today))
                 .map(YearMonth::from)
                 .collect(Collectors.toCollection(TreeSet::new));
         if (months.isEmpty()) {
