@@ -9,6 +9,6 @@ import java.util.List;
 public record CompetitionPickerResponse(
         @Schema(description = "서버 기준 오늘. status·earlyBirdOpen 판단 기준", example = "2026-11-11")
             LocalDate today,
-        @Schema(description = "다가오는 대회(오늘 포함, 가까운 순) 다음에 끝난 대회(최근 순). 최대 20개")
+        @Schema(description = "끝나지 않은 대회(마지막 날이 오늘 이후 — 진행 중인 여러 날 대회 포함, 대회일 순) 다음에 끝난 대회(대회일 최근 순). 최대 20개")
             List<CompetitionListItem> competitions
 ) { }

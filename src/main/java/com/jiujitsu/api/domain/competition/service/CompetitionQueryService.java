@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.competition.service;
 
 import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionLinkResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
@@ -8,9 +9,12 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionRegionsResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLink;
+import com.jiujitsu.api.domain.competition.entity.CompetitionLinkWindow;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
 import com.jiujitsu.api.domain.competition.repository.CompetitionInterestRepository;
+import com.jiujitsu.api.domain.competition.repository.CompetitionLinkRepository;
 import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -25,10 +29,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,7 +48,7 @@ import java.util.stream.Collectors;
 import static com.jiujitsu.api.domain.competition.repository.CompetitionSpecifications.*;
 
 /**
- * 대회 탭 읽기 모델 (목록, 상세, 글쓰기 대회 고르기, 게시글 대회 카드). 대회 정보에 관심 수·내 관심 여부를 붙여 응답 하나로 화면을 채운다
+ * 대회 탭 읽기 모델 (목록, 상세, 글쓰기 대회 고르기, 게시글 대회 카드). 대회 정보에 관심 수·내 관심 여부(상세는 지금 보이는 상태 링크도)를 붙여 응답 하나로 화면을 채운다
  * 카탈로그·자동완성(CompetitionService), 관심 쓰기(CompetitionInterestService)와 분리
  * 커뮤니티(게시글)는 getPublished·getCards 로만 대회를 본다 — 대회 도메인은 커뮤니티를 모른다
  */
@@ -60,6 +66,7 @@ public class CompetitionQueryService {
     private final AuthenticationFacade authenticationFacade;
     private final CompetitionMapper competitionMapper;
     private final CompetitionInterestRepository competitionInterestRepository;
+    private final CompetitionLinkRepository competitionLinkRepository;
     private final PopularCompetitionProperties popularProperties;
     private final Clock clock;
 
@@ -111,22 +118,31 @@ public class CompetitionQueryService {
     /**
      * 대회 상세 (비로그인 가능). 조회수는 올리지 않는다 — 공유 미리보기·웹 서버 렌더링도 이 조회를 불러서,
      * 여기서 올리면 사람이 보지 않아도 숫자가 오른다. 조회수는 CompetitionViewService(POST)
+     * 상태 링크는 지금 보이는 것만 (#223) — 승인 + 보이는 기간 안 (CompetitionLinkWindow#isVisible), 종류 선언 순서
      * 없거나 미공개면 COMPETITION_NOT_FOUND
      */
     public CompetitionDetailResponse getDetail(Long competitionId) {
         Competition competition = getPublished(competitionId);
-        LocalDate today = LocalDate.now(clock);
+        // 한 시각에서 오늘과 지금을 같이 — 자정 경계에서 상태(오늘)와 링크(지금)가 다른 날로 판단되지 않게
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDate today = now.toLocalDate();
         Long userId = authenticationFacade.getCurrentUserOptional().map(User::getId).orElse(null);
 
         List<Long> ids = List.of(competitionId);
         long interestCount = competitionInterestService.getInterestCounts(ids).getOrDefault(competitionId, 0L);
         Optional<CompetitionInterest> mine = userId == null ? Optional.empty() : competitionInterestService.findInterest(userId, competitionId);
+        List<CompetitionLinkResponse> links = competitionLinkRepository.findAllByCompetitionId(competitionId).stream()
+                .filter(link -> CompetitionLinkWindow.isVisible(link, competition, now))
+                .sorted(Comparator.comparing(CompetitionLink::getType))
+                .map(link -> competitionMapper.toLink(link, competition))
+                .toList();
         return competitionMapper.toDetail(competition, today, interestCount,
-                mine.isPresent(), mine.map(CompetitionInterest::isNoticeEnabled).orElse(false));
+                mine.isPresent(), mine.map(CompetitionInterest::isNoticeEnabled).orElse(false), links);
     }
 
     /**
-     * 글쓰기 대회 고르기 (비로그인 가능). 공개 대회를 이름으로 찾아 다가오는 대회(오늘 포함, 가까운 순) → 끝난 대회(최근 순)로 최대 20개
+     * 글쓰기 대회 고르기 (비로그인 가능). 공개 대회를 이름으로 찾아 끝나지 않은 대회(진행 중 포함, 대회일 순) → 끝난 대회(대회일 최근 순)로 최대 20개
+     * 끝남 = 마지막 날(종료일, 하루짜리면 대회일)이 지남 (#223) — 여러 날 대회는 진행 중에도 앞쪽
      * 대회 전 질문과 대회 뒤 후기를 모두 고를 수 있어야 해서, 기준일 앞뒤로 나뉘는 목록(getList) 대신 오늘에 가까운 대회부터 준다
      * 검색어가 비면 이름 조건 없이 같은 순서
      */
@@ -140,12 +156,10 @@ public class CompetitionQueryService {
             filter = filter.and(searchNameLike("%" + CompetitionService.escapeLike(normalized) + "%"));
         }
 
-        // 기준 (today, 0) 뒤 = 오늘 포함 이후, 앞 = 어제까지 (id 는 1부터)
-        CompetitionCursor todayStart = CompetitionCursor.startOf(today);
-        List<Competition> picked = new ArrayList<>(competitionRepository.findBy(filter.and(boundary(todayStart)),
+        List<Competition> picked = new ArrayList<>(competitionRepository.findBy(filter.and(notEnded(today)),
                 q -> q.sortBy(ASCENDING).limit(PICKER_LIMIT).all()));
         if (picked.size() < PICKER_LIMIT) {
-            picked.addAll(competitionRepository.findBy(filter.and(boundary(todayStart.opposite())),
+            picked.addAll(competitionRepository.findBy(filter.and(ended(today)),
                     q -> q.sortBy(DESCENDING).limit(PICKER_LIMIT - picked.size()).all()));
         }
         return new CompetitionPickerResponse(today, toItems(picked, today, userId));
@@ -235,14 +249,14 @@ public class CompetitionQueryService {
     }
 
     /**
-     * 관심 많은 대회 (#210): 이 대회들이 속한 달마다, 그 달 끝나지 않은 공개 대회 중 관심 수 상위 N개 (관심 M개 이상)
+     * 관심 많은 대회 (#210): 이 대회들이 속한 달(대회일 기준)마다, 그 달 끝나지 않은 공개 대회 중 관심 수 상위 N개 (관심 M개 이상)
      * 필터와 무관하게 달 전체에서 순위를 매긴다 — 지역·관심 필터를 바꿔도 같은 대회에 같은 표시
-     * 끝난 대회만 있는 달은 보지 않는다 (끝난 대회는 표시 대상이 아님). 여러 달이어도 한 번에 조회하고 달마다 자른다
+     * 끝난 대회(마지막 날이 지남 — 진행 중인 여러 날 대회는 끝나지 않음, #223)만 있는 달은 보지 않는다. 여러 달이어도 한 번에 조회하고 달마다 자른다
      */
     private Set<Long> popularIds(List<Competition> page, LocalDate today) {
         TreeSet<YearMonth> months = page.stream()
+                .filter(competition -> !competition.isEnded(today))
                 .map(Competition::getOpenDate)
-                .filter(openDate -> !openDate.isBefore(today))
                 .map(YearMonth::from)
                 .collect(Collectors.toCollection(TreeSet::new));
         if (months.isEmpty()) {

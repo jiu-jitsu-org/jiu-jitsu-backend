@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.competition.entity.CompetitionAudience;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.entity.CompetitionStatus;
 import com.jiujitsu.api.domain.competition.entity.CompetitionUniform;
+import com.jiujitsu.api.domain.competition.entity.RegistrationSite;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -13,14 +14,16 @@ import java.util.List;
 
 @Schema(description = "대회 상세")
 public record CompetitionDetailResponse(
-        @Schema(description = "서버 기준 오늘. status·earlyBirdOpen 판단 기준이자 남은 날 계산 기준", example = "2026-11-09")
+        @Schema(description = "서버 기준 오늘. status·earlyBirdOpen 판단 기준이자 남은 날 계산 기준 (links 도 같은 시각 기준으로 거름)", example = "2026-11-09")
             LocalDate today,
         @Schema(description = "대회 ID (결과 남기기에서 프로필 대회 기록 pre-fill 에 사용)", example = "1")
             Long competitionId,
         @Schema(description = "대회명", example = "2026 서울 오픈 주짓수 챔피언십")
             String name,
-        @Schema(description = "대회일", example = "2026-11-22")
+        @Schema(description = "대회일 (여러 날 대회면 첫날)", example = "2026-11-22")
             LocalDate openDate,
+        @Schema(description = "여러 날 대회의 마지막 날. 하루짜리면 null (목록과 같음)", example = "2026-11-23", nullable = true)
+            LocalDate endDate,
         @JsonFormat(pattern = "HH:mm")   // 초는 쓰지 않음
         @Schema(description = "시작 시각 HH:mm (모르면 null)", type = "string", example = "09:00", nullable = true)
             LocalTime startTime,
@@ -36,9 +39,16 @@ public record CompetitionDetailResponse(
             CompetitionAudience audience,
         @Schema(description = "주최 단체", nullable = true)
             String host,
-        @Schema(description = "대회 공지 링크", nullable = true)
+        @Schema(description = "대회 공지 링크 (상태 링크가 없을 때 \"대회사 사이트에서 확인하기\" 자리에도 씀)", nullable = true)
             String noticeUrl,
-        @Schema(description = "오늘 기준 접수/진행 상태")
+        @Schema(description = "접수 사이트. FLOWCOMP · STREET_JIUJITSU 스트릿 주짓수 · JIUDAEPL 주대플 · KSOC 대한체육회 · OTHER 기타. 모르면 null (기타와 같게)", nullable = true)
+            RegistrationSite registrationSite,
+        @Schema(description = "도장(감독 · 코치)을 통해 신청하는 대회 — 개인이 직접 신청할 수 없어 신청 링크가 없다 (지금은 접수 사이트가 대한체육회인 대회)")
+            boolean clubRegistrationOnly,
+        @Schema(description = "지금 보이는 상태 링크 전부 (운영자가 승인했고 보이는 기간 안 — 서버 기준 지금). 종류 선언 순서(신청 → 참가자 현황 → 대진표·시간표 → 실시간 매트 → 결과), 없으면 빈 배열. "
+                + "대회 당일 대진표 + 실시간 매트처럼 여러 개가 겹칠 수 있고, 몇 개를 어떻게 보여 줄지는 앱이 정한다")
+            List<CompetitionLinkResponse> links,
+        @Schema(description = "오늘 기준 접수/진행 상태. 마지막 날 다음 날부터 ENDED, 여러 날 대회의 둘째 날부터 마지막 날까지는 CLOSED")
             CompetitionStatus status,
         @Schema(description = "오늘 기준 얼리버드 접수 중인지. 어느 마감을 보여 주고 강조할지(예: D-7부터)는 앱 화면 규칙 — 날짜 원본과 today 로 계산")
             boolean earlyBirdOpen,

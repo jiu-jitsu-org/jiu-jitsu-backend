@@ -156,12 +156,17 @@ class CompetitionInterestRepositoryTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 12, 10);
 
     private Competition saveOn(String name, LocalDate openDate, boolean published) {
+        return saveOn(name, openDate, null, published);
+    }
+
+    private Competition saveOn(String name, LocalDate openDate, LocalDate endDate, boolean published) {
         return em.persist(Competition.builder()
                 .name(name)
                 .searchName(Competition.normalize(name))
                 .competitionYear(openDate.getYear())
                 .published(published)
                 .openDate(openDate)
+                .endDate(endDate)
                 .build());
     }
 
@@ -195,14 +200,16 @@ class CompetitionInterestRepositoryTest {
     }
 
     @Test
-    @DisplayName("관심 많은 대회: 끝난 대회(대회일 < 오늘)·다른 달·미공개 대회는 순위에 없다, 오늘 대회는 들어간다")
+    @DisplayName("관심 많은 대회: 끝난 대회(마지막 날 < 오늘 — 여러 날 대회는 종료일)·다른 달·미공개 대회는 순위에 없다, 오늘 대회와 진행 중인 여러 날 대회는 들어간다")
     void findPopularIds_excludesEndedOtherMonthUnpublished() {
         withInterests(saveOn("끝남", LocalDate.of(2026, 12, 6), true), 9);
+        withInterests(saveOn("어제 끝난 여러 날", LocalDate.of(2026, 12, 7), LocalDate.of(2026, 12, 9), true), 9);
         withInterests(saveOn("다음 달", LocalDate.of(2027, 1, 3), true), 9);
         withInterests(saveOn("미공개", LocalDate.of(2026, 12, 20), false), 9);
+        Competition inProgress = withInterests(saveOn("진행 중 여러 날", LocalDate.of(2026, 12, 8), LocalDate.of(2026, 12, 11), true), 6);
         Competition today = withInterests(saveOn("오늘", LocalDate.of(2026, 12, 10), true), 5);
 
-        assertThat(popular(3, 5)).containsExactly(today.getId());
+        assertThat(popular(3, 5)).containsExactly(inProgress.getId(), today.getId());
     }
 
     @Test

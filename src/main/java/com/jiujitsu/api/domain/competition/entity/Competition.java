@@ -189,9 +189,13 @@ public class Competition extends BaseEntity {
 
     /**
      * 오늘 기준 접수/진행 상태 파생 (저장하지 않음). 공개 대회만 상태가 있다.
-     * 대회일이 지나면 ENDED, 접수 마감이 지났으면 CLOSED, 접수 시작 전이면 UPCOMING, 그 외 OPEN.
-     * 비어 있는 일정은 제약으로 보지 않는다(채워진 정보로만 판단). 대회 당일은 접수 마감 뒤라면 CLOSED.
+     * 마지막 날(lastDay — 종료일, 하루짜리면 대회일)이 지나면 ENDED (#223).
+     * 여러 날 대회의 둘째 날부터 마지막 날까지는 CLOSED — 첫날이 지났으면 접수는 끝난 것 (접수 마감일이 비어 있어도).
+     * 대회일까지(당일 포함)는 접수 일정으로: 접수 마감이 지났으면 CLOSED, 접수 시작 전이면 UPCOMING, 그 외 OPEN.
+     * 비어 있는 일정은 제약으로 보지 않는다(채워진 정보로만 판단) — 접수 마감일이 없는 대회는 대회 당일까지 OPEN.
+     * (상태 링크의 신청 링크는 접수 마감일이 없으면 대회 전날까지만 보인다 — CompetitionLinkWindow. 공개 때 접수 마감일이 필수라 드문 경우)
      * 오늘 날짜는 호출부가 Clock 으로 구해 넘긴다(테스트에서 날짜 고정).
+     * 목록 상태 필터(CompetitionSpecifications#statusIn)가 같은 규칙을 날짜 조건으로 옮겨 쓴다 — 바꾸면 함께 바꿀 것
      *
      * @throws IllegalStateException 미공개 대회 — 대회 탭에 없는 대회라 상태를 판단하지 않는다.
      *                               조회 쪽에서 published 필터를 빠뜨린 프로그래밍 오류를 바로 드러낸다
@@ -200,8 +204,11 @@ public class Competition extends BaseEntity {
         if (!published) {
             throw new IllegalStateException("미공개 대회는 접수 상태가 없습니다. competitionId=" + id);
         }
-        if (openDate != null && today.isAfter(openDate)) {
+        if (isEnded(today)) {
             return CompetitionStatus.ENDED;
+        }
+        if (openDate != null && today.isAfter(openDate)) {
+            return CompetitionStatus.CLOSED;
         }
         if (registrationDeadline != null && today.isAfter(registrationDeadline)) {
             return CompetitionStatus.CLOSED;
@@ -290,6 +297,17 @@ public class Competition extends BaseEntity {
      */
     public LocalDate lastDay() {
         return endDate != null ? endDate : openDate;
+    }
+
+    /**
+     * 끝난 대회인가 — 마지막 날 다음 날부터 (#223). 대회일 없는 자동완성용 대회는 false
+     * 상태(status)와 달리 공개 여부를 보지 않는다 (관심 많은 대회처럼 공개 대회만 읽은 뒤 거를 때 쓴다)
+     * 같은 규칙을 쿼리로 옮긴 곳 — 바꾸면 함께 바꿀 것: CompetitionSpecifications#notEnded·ended·statusIn,
+     * CompetitionInterestRepository#findPopularCandidates (COALESCE(endDate, openDate))
+     */
+    public boolean isEnded(LocalDate today) {
+        LocalDate lastDay = lastDay();
+        return lastDay != null && today.isAfter(lastDay);
     }
 
     /**

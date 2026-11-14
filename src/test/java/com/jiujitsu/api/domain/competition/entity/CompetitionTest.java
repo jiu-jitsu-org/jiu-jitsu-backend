@@ -131,6 +131,38 @@ class CompetitionTest {
     }
 
     @Test
+    @DisplayName("여러 날 대회는 마지막 날(종료일)까지 끝나지 않고, 둘째 날부터는 접수 마감일이 없어도 CLOSED, 종료일 다음 날부터 ENDED (#223)")
+    void status_multiDayEndsAfterEndDate() {
+        Competition competition = event().endDate(OPEN_DATE.plusDays(2)).build();
+        Competition noDeadline = Competition.builder()
+                .name("서울 오픈").searchName("서울오픈").competitionYear(2026)
+                .published(true).openDate(OPEN_DATE).endDate(OPEN_DATE.plusDays(2))
+                .build();
+
+        assertThat(competition.status(OPEN_DATE)).isEqualTo(CompetitionStatus.CLOSED);
+        assertThat(competition.status(OPEN_DATE.plusDays(1))).isEqualTo(CompetitionStatus.CLOSED);
+        assertThat(competition.status(OPEN_DATE.plusDays(2))).isEqualTo(CompetitionStatus.CLOSED);
+        assertThat(competition.status(OPEN_DATE.plusDays(3))).isEqualTo(CompetitionStatus.ENDED);
+        // 접수 일정이 비어 있으면 대회 당일은 지금처럼 OPEN, 둘째 날부터 CLOSED
+        assertThat(noDeadline.status(OPEN_DATE)).isEqualTo(CompetitionStatus.OPEN);
+        assertThat(noDeadline.status(OPEN_DATE.plusDays(1))).isEqualTo(CompetitionStatus.CLOSED);
+        assertThat(noDeadline.status(OPEN_DATE.plusDays(3))).isEqualTo(CompetitionStatus.ENDED);
+    }
+
+    @Test
+    @DisplayName("끝남은 마지막 날 다음 날부터 — 하루짜리는 대회일, 여러 날은 종료일 기준. 대회일 없는 자동완성용 대회는 끝나지 않음")
+    void isEnded_byLastDay() {
+        Competition oneDay = event().build();
+        Competition multiDay = event().endDate(OPEN_DATE.plusDays(1)).build();
+
+        assertThat(oneDay.isEnded(OPEN_DATE)).isFalse();
+        assertThat(oneDay.isEnded(OPEN_DATE.plusDays(1))).isTrue();
+        assertThat(multiDay.isEnded(OPEN_DATE.plusDays(1))).isFalse();
+        assertThat(multiDay.isEnded(OPEN_DATE.plusDays(2))).isTrue();
+        assertThat(Competition.of("서울 오픈", 2026).isEnded(OPEN_DATE)).isFalse();
+    }
+
+    @Test
     @DisplayName("미공개(카탈로그) 엔트리는 상태를 물으면 IllegalStateException")
     void status_unpublishedThrows() {
         Competition catalog = Competition.of("서울 오픈", 2026);

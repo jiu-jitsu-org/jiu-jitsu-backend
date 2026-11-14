@@ -44,8 +44,8 @@ public interface CompetitionInterestRepository extends JpaRepository<Competition
     """)
     Set<Long> findInterestedCompetitionIds(@Param("userId") Long userId, @Param("competitionIds") Collection<Long> competitionIds);
 
-    // 관심 많은 대회 후보 (#210): from~to 공개 대회 중 대회일이 오늘 이후(당일 포함)이고 관심이 minInterests 개 이상인 대회의
-    // [id, 대회일]을 관심 수 내림차순 → 대회일 빠른 순 → id 순으로. 달마다 몇 개까지 자를지는 호출하는 쪽이 정한다
+    // 관심 많은 대회 후보 (#210): 대회일이 from~to 인 공개 대회 중 끝나지 않았고(마지막 날 = 종료일, 하루짜리면 대회일이 오늘 이후 — Competition#isEnded 와 같은 규칙, #223)
+    // 관심이 minInterests 개 이상인 대회의 [id, 대회일]을 관심 수 내림차순 → 대회일 빠른 순 → id 순으로. 달마다 몇 개까지 자를지는 호출하는 쪽이 정한다
     // (관심 minInterests 개 이상인 대회만이라 행 수가 작다 — 여러 달을 한 번에 조회)
     @Query("""
     SELECT c.id, c.openDate
@@ -53,7 +53,7 @@ public interface CompetitionInterestRepository extends JpaRepository<Competition
     JOIN i.competition c
     WHERE c.published = true
       AND c.openDate BETWEEN :from AND :to
-      AND c.openDate >= :today
+      AND COALESCE(c.endDate, c.openDate) >= :today
     GROUP BY c.id, c.openDate
     HAVING COUNT(i) >= :minInterests
     ORDER BY COUNT(i) DESC, c.openDate ASC, c.id ASC

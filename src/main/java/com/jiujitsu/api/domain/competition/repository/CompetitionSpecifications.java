@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.competition.entity.CompetitionInterest;
 import com.jiujitsu.api.domain.competition.entity.CompetitionRegion;
 import com.jiujitsu.api.domain.competition.entity.CompetitionStatus;
 import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -62,6 +63,16 @@ public final class CompetitionSpecifications {
                 cb.and(cb.equal(openDate(root), openDate), cb.lessThan(root.get("id"), id)));
     }
 
+    // 끝나지 않은 대회 — 마지막 날(종료일, 하루짜리면 대회일)이 오늘 이후 (당일 포함, 진행 중인 여러 날 대회 포함). Competition#isEnded 의 반대
+    public static Specification<Competition> notEnded(LocalDate today) {
+        return (root, query, cb) -> cb.greaterThanOrEqualTo(lastDay(root, cb), today);
+    }
+
+    // 끝난 대회 — 마지막 날이 오늘 전. Competition#isEnded
+    public static Specification<Competition> ended(LocalDate today) {
+        return (root, query, cb) -> cb.lessThan(lastDay(root, cb), today);
+    }
+
     public static Specification<Competition> regionIn(Collection<CompetitionRegion> regions) {
         return (root, query, cb) -> root.get("region").in(regions);
     }
@@ -96,17 +107,25 @@ public final class CompetitionSpecifications {
         Path<LocalDate> openDate = openDate(root);
         Path<LocalDate> start = root.get("registrationStartDate");
         Path<LocalDate> deadline = root.get("registrationDeadline");
-        Predicate notEnded = cb.greaterThanOrEqualTo(openDate, today);
+        Expression<LocalDate> lastDay = lastDay(root, cb);
+        Predicate lastDayNotPassed = cb.greaterThanOrEqualTo(lastDay, today);
+        // 첫날(대회일)이 지나지 않음 = 대회일 전·당일. 여러 날 대회의 둘째 날부터는 접수 일정과 상관없이 CLOSED
+        Predicate firstDayNotPassed = cb.greaterThanOrEqualTo(openDate, today);
         Predicate notClosed = cb.or(cb.isNull(deadline), cb.greaterThanOrEqualTo(deadline, today));
         return switch (status) {
-            case ENDED -> cb.lessThan(openDate, today);
-            case CLOSED -> cb.and(notEnded, cb.lessThan(deadline, today));
-            case UPCOMING -> cb.and(notEnded, notClosed, cb.greaterThan(start, today));
-            case OPEN -> cb.and(notEnded, notClosed, cb.or(cb.isNull(start), cb.lessThanOrEqualTo(start, today)));
+            case ENDED -> cb.lessThan(lastDay, today);
+            case CLOSED -> cb.and(lastDayNotPassed, cb.or(cb.lessThan(openDate, today), cb.lessThan(deadline, today)));
+            case UPCOMING -> cb.and(firstDayNotPassed, notClosed, cb.greaterThan(start, today));
+            case OPEN -> cb.and(firstDayNotPassed, notClosed, cb.or(cb.isNull(start), cb.lessThanOrEqualTo(start, today)));
         };
     }
 
     private static Path<LocalDate> openDate(Root<Competition> root) {
         return root.get("openDate");
+    }
+
+    // 마지막 날 = 종료일, 하루짜리(null)면 대회일 — Competition#lastDay (COALESCE: H2·PostgreSQL 같은 동작)
+    private static Expression<LocalDate> lastDay(Root<Competition> root, CriteriaBuilder cb) {
+        return cb.coalesce(root.<LocalDate>get("endDate"), openDate(root));
     }
 }
