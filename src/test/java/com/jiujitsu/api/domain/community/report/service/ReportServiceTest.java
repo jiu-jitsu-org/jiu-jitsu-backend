@@ -129,6 +129,7 @@ class ReportServiceTest {
         @Test
         @DisplayName("같은 회원을 다시 신고하면 U0008")
         void create_duplicate_rejected() {
+            given(userRepository.findById(TARGET)).willReturn(Optional.of(user(TARGET, "상대", UserStatus.ACTIVE)));
             given(reportRepository.existsByCreatedByAndReportTypeAndTargetId(me, ReportType.USER, TARGET)).willReturn(true);
 
             assertThatThrownBy(() -> reportService.createReport(request(TARGET)))
@@ -183,6 +184,18 @@ class ReportServiceTest {
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
             verify(reportRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("이미 신고한 회원이 그 뒤 탈퇴했으면 U0008 이 아니라 MEMBER_NOT_FOUND (차단과 같음)")
+        void create_reportedThenDeleted_notFound() {
+            lenient().when(reportRepository.existsByCreatedByAndReportTypeAndTargetId(me, ReportType.USER, TARGET)).thenReturn(true);
+            given(userRepository.findById(TARGET)).willReturn(Optional.of(user(TARGET, "상대", UserStatus.DELETED)));
+
+            assertThatThrownBy(() -> reportService.createReport(request(TARGET)))
+                    .isInstanceOf(ErrorException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
         }
 
         @Test

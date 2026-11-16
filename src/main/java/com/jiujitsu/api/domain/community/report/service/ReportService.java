@@ -76,12 +76,13 @@ public class ReportService {
     private void saveReport(ReportCreateRequest request) {
         User reporter = authenticationFacade.getCurrentUser();
 
+        // 대상 검증 + 자기 신고 방지 (조회한 엔티티 재사용). 회원 신고는 숨길 대상이 없어 null
+        // 중복 확인보다 먼저: 이미 신고한 회원이 그 뒤 탈퇴했으면 차단과 같이 없는 회원(404)으로 응답한다
+        Hideable target = validateTargetAndNotSelfReport(request, reporter);
+
         if (reportRepository.existsByCreatedByAndReportTypeAndTargetId(reporter, request.reportType(), request.targetId())) {
             throw new ErrorException(ErrorCode.ALREADY_REPORTED);
         }
-
-        // 대상 검증 + 자기 신고 방지 (조회한 엔티티 재사용). 회원 신고는 숨길 대상이 없어 null
-        Hideable target = validateTargetAndNotSelfReport(request, reporter);
 
         reportRepository.save(Report.builder()
                 .reportType(request.reportType())
