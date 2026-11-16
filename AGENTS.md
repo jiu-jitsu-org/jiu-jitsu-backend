@@ -266,14 +266,14 @@ domain/community/board/
 
 | 도메인 | 주요 기능 |
 |--------|-----------|
-| user | SNS 로그인(Google/Apple), JWT 발급, 프로필, 탈퇴, 차단, 관장/사범 인증 신청·승인(관리자) |
+| user | SNS 로그인(Google/Apple), JWT 발급, 프로필, 탈퇴, 차단(멱등 — 다시 눌러도 풀리지 않음, 해제는 별도 API)·차단 목록, 관장/사범 인증 신청·승인(관리자) |
 | admin | 관리자 회원가입/로그인, 신고 처리 |
 | boot_strap | OS별 앱 버전 정보 조회 |
 | community/board | 게시글 CRUD, 카테고리, 좋아요, 저장, 숨김, 대회 연결·대회 이야기(`/competitions/{id}/stories`) |
 | community/comment | 댓글 CRUD, 좋아요 |
 | community/content | 좋아요/저장 공통 처리 |
-| community/profile | 커뮤니티 프로필(벨트, 경기 이력 등). 관리자가 대회명·연도를 바꾸면 연결된 대회 기록을 맞춤(`CompetitionRenamedEventListener`) |
-| community/report | 게시글/댓글 신고, 자동 숨김 |
+| community/profile | 커뮤니티 프로필(벨트, 경기 이력 등), 공개 프로필(로그인 시 내 차단 여부 `isBlocked`). 관리자가 대회명·연도를 바꾸면 연결된 대회 기록을 맞춤(`CompetitionRenamedEventListener`) |
+| community/report | 게시글/댓글/회원 신고, 게시글·댓글은 3건째 자동 숨김(회원 신고는 자동 처리 없음), 관리자 신고 목록 |
 | competition | 대회 정보·상태 파생(끝남 = 마지막 날 기준 `Competition#lastDay`), 대회 탭 목록(기준일 + 양방향 커서, 필터, 관심 많은 대회 표시 — 기준 `competition.popular`)·대회가 있는 지역, 상세(지금 보이는 상태 링크·도장 신청 안내)·조회수, 관심 등록/해제·관심 수·이 대회 알림 켜기/끄기, 정보 제보(정보가 달라요)·관리자 제보 목록·처리 표시, 글쓰기 대회 고르기·게시글 대회 카드, 등록 대회 검색(대회명 자동완성), 자동완성용 대회 일괄 등록·관리자 대회 목록·상세(공개 여부 무관, 비어 있는 공개 필수 칸)·만들기·고치기(대회명·연도 변경 시 `CompetitionRenamedEvent`로 프로필 대회 기록 갱신)·확인 완료·공개(필수 칸 검사)·비공개·접수 사이트·상태 링크(운영자 승인, 보이는 기간 `CompetitionLinkWindow`) |
 | file | CDN 이미지 파일 등록/삭제 |
 | notice | 알림 설정, FCM 푸시 전송, 관심 대회 마감 전날 알림(스케줄, 발송 기록으로 한 번만), 좋아요 알림(글·댓글마다 카드 한 장, `notice.like-push` 기준 개수에 닿을 때만 푸시) |

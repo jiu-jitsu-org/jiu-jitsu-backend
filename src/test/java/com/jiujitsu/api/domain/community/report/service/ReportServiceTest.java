@@ -199,6 +199,19 @@ class ReportServiceTest {
         }
 
         @Test
+        @DisplayName("이미 신고한 게시물이 그 뒤 삭제됐으면 U0008 이 아니라 BOARD_NOT_FOUND (대상 확인이 중복 확인보다 먼저, 모든 타입 공통)")
+        void create_boardReportedThenDeleted_notFound() {
+            lenient().when(reportRepository.existsByCreatedByAndReportTypeAndTargetId(me, ReportType.BOARD, 10L)).thenReturn(true);
+            given(boardRepository.findByContent_Id(10L)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> reportService.createReport(new ReportCreateRequest(ReportType.BOARD, 10L, ReportReason.SPAM, null)))
+                    .isInstanceOf(ErrorException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.BOARD_NOT_FOUND);
+            verify(reportRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("게시물 신고는 그대로 3건째에 자동 숨김")
         void create_board_stillAutoHides() {
             Board board = mock(Board.class);

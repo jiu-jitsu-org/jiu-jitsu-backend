@@ -27,7 +27,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -54,10 +53,10 @@ class UserBlockServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(authenticationFacade.getCurrentUser()).thenReturn(me);
-        willAnswer(invocation -> {
+        lenient().doAnswer(invocation -> {
             invocation.<Consumer<Object>>getArgument(0).accept(null);
             return null;
-        }).given(transactionTemplate).executeWithoutResult(any());
+        }).when(transactionTemplate).executeWithoutResult(any());
     }
 
     @Test
@@ -108,6 +107,15 @@ class UserBlockServiceTest {
         given(userBlockRepository.save(any())).willThrow(failure);
 
         assertThatThrownBy(() -> userBlockService.block(TARGET)).isSameAs(failure);
+    }
+
+    @Test
+    @DisplayName("hasBlocked 는 차단한 사람 → 차단된 사람 한 방향만 본다")
+    void hasBlocked_oneDirection() {
+        given(userBlockRepository.existsByBlockerIdAndBlockedId(ME, TARGET)).willReturn(true);
+
+        assertThat(userBlockService.hasBlocked(ME, TARGET)).isTrue();
+        assertThat(userBlockService.hasBlocked(TARGET, ME)).isFalse();
     }
 
     @Test

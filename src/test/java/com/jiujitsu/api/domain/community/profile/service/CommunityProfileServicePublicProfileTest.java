@@ -9,7 +9,7 @@ import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepo
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
-import com.jiujitsu.api.domain.user.repository.UserBlockRepository;
+import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -44,7 +44,7 @@ class CommunityProfileServicePublicProfileTest {
     @Mock private CommunityProfileRepository communityProfileRepository;
     @Mock private UserRepository userRepository;
     @Mock private AuthenticationFacade authenticationFacade;
-    @Mock private UserBlockRepository userBlockRepository;
+    @Mock private UserBlockService userBlockService;
     @Spy private CommunityProfileMapper communityProfileMapper;
 
     private static final Long USER_ID = 7L;
@@ -240,7 +240,7 @@ class CommunityProfileServicePublicProfileTest {
         CommunityPublicProfileResponse response = communityProfileService.getPublicProfile(USER_ID);
 
         assertThat(response.isBlocked()).isNull();
-        verifyNoInteractions(userBlockRepository);
+        verifyNoInteractions(userBlockService);
     }
 
     @Test
@@ -251,10 +251,10 @@ class CommunityProfileServicePublicProfileTest {
         User viewer = User.builder().id(VIEWER_ID).nickname("보는사람").role(UserRole.USER).status(UserStatus.ACTIVE).build();
         given(authenticationFacade.getCurrentUserOptional()).willReturn(Optional.of(viewer));
 
-        given(userBlockRepository.existsByBlockerIdAndBlockedId(VIEWER_ID, USER_ID)).willReturn(true);
+        given(userBlockService.hasBlocked(VIEWER_ID, USER_ID)).willReturn(true);
         assertThat(communityProfileService.getPublicProfile(USER_ID).isBlocked()).isTrue();
 
-        given(userBlockRepository.existsByBlockerIdAndBlockedId(VIEWER_ID, USER_ID)).willReturn(false);
+        given(userBlockService.hasBlocked(VIEWER_ID, USER_ID)).willReturn(false);
         assertThat(communityProfileService.getPublicProfile(USER_ID).isBlocked()).isFalse();
     }
 
@@ -265,10 +265,11 @@ class CommunityProfileServicePublicProfileTest {
         given(communityProfileRepository.findByUser(user)).willReturn(Optional.empty());
         User viewer = User.builder().id(VIEWER_ID).nickname("보는사람").role(UserRole.USER).status(UserStatus.ACTIVE).build();
         given(authenticationFacade.getCurrentUserOptional()).willReturn(Optional.of(viewer));
-        given(userBlockRepository.existsByBlockerIdAndBlockedId(VIEWER_ID, USER_ID)).willReturn(false);
+        given(userBlockService.hasBlocked(VIEWER_ID, USER_ID)).willReturn(false);
 
         assertThat(communityProfileService.getPublicProfile(USER_ID).isBlocked()).isFalse();
-        verify(userBlockRepository, never()).existsByBlockerIdAndBlockedId(USER_ID, VIEWER_ID);
+        verify(userBlockService, never()).isBlockedBetween(VIEWER_ID, USER_ID);
+        verify(userBlockService, never()).hasBlocked(USER_ID, VIEWER_ID);
     }
 
     @Test

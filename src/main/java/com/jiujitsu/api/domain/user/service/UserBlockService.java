@@ -76,6 +76,14 @@ public class UserBlockService {
     }
 
     /**
+     * blocker 가 blocked 를 차단했는지 (한 방향만 — 공개 프로필 isBlocked, #232)
+     */
+    @Transactional(readOnly = true)
+    public boolean hasBlocked(Long blockerId, Long blockedId) {
+        return userBlockRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId);
+    }
+
+    /**
      * 두 사용자 사이에 어느 방향이든 차단 관계가 있는지 확인
      */
     @Transactional(readOnly = true)
