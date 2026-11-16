@@ -12,6 +12,7 @@ import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepo
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
+import com.jiujitsu.api.domain.user.repository.UserBlockRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -36,6 +37,7 @@ public class CommunityProfileService {
     private final AuthenticationFacade authenticationFacade;
     private final CommunityProfileMapper communityProfileMapper;
     private final CompetitionService competitionService;
+    private final UserBlockRepository userBlockRepository;
 
     private static final int MAX_PINNED_COMPETITIONS = 3;
 
@@ -54,7 +56,8 @@ public class CommunityProfileService {
     }
 
     /**
-     * 다른 회원 공개 프로필 조회 (비로그인 허용, 차단 관계 무관)
+     * 다른 회원 공개 프로필 조회 (비로그인 허용, 차단 관계와 무관하게 조회됨)
+     * isBlocked: 로그인했으면 내가 이 회원을 차단했는지, 비로그인이면 null (#232)
      */
     @Transactional(readOnly = true)
     public CommunityPublicProfileResponse getPublicProfile(Long userId) {
@@ -64,7 +67,10 @@ public class CommunityProfileService {
 
         // 프로필 없으면 user 정보만 return
         CommunityProfile communityProfile = communityProfileRepository.findByUser(user).orElse(null);
-        return communityProfileMapper.getCommunityPublicProfileResponse(user, communityProfile);
+        Boolean isBlocked = authenticationFacade.getCurrentUserOptional()
+                .map(viewer -> userBlockRepository.existsByBlockerIdAndBlockedId(viewer.getId(), user.getId()))
+                .orElse(null);
+        return communityProfileMapper.getCommunityPublicProfileResponse(user, communityProfile, isBlocked);
     }
 
     /**

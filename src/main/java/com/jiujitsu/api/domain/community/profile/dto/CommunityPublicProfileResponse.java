@@ -19,6 +19,7 @@ public record CommunityPublicProfileResponse(
         @Schema(description = "최애 기술", example = "GUARD_PASSES") TechniqueType favoriteTechnique,
         @Schema(description = "최애 서브미션", example = "ARM_LOCKS") SubmissionType favoriteSubmission,
         @Schema(description = "대회 정보 (대회명이 있는 기록만. 고정한 대회 먼저 → 회원이 정한 순서 → 연도 최신순 → 최고 메달 → 대회명)") List<CompetitionDto> competitions,
-        @Schema(description = "메달 개수 합계 (부문 기준, 참가·대회명 없는 기록 제외)") MedalCountDto medalCount
+        @Schema(description = "메달 개수 합계 (부문 기준, 참가·대회명 없는 기록 제외)") MedalCountDto medalCount,
+        @Schema(description = "내가 이 회원을 차단했는지 (로그인했을 때만, 비로그인 null)", example = "false") Boolean isBlocked
 ) {
 }
