@@ -1,9 +1,11 @@
 package com.jiujitsu.api.global.exception;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -47,6 +49,39 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ErrorCode.WRONG_PARAMETER));
+    }
+
+    /**
+     * 요청 본문(JSON)을 읽지 못함 (#213) → 500 대신 400
+     * - enum 에 없는 값, 날짜 · 숫자 형식이 다른 값, 깨진 JSON, 본문이 없음
+     * - 클라이언트가 고칠 수 있는 오류라 error 가 아니라 warn 으로 남긴다. 어느 칸이 틀렸는지는 로그에만
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Object>> handleNotReadableException(HttpMessageNotReadableException e, HttpServletRequest request) {
+        String field = e.getCause() instanceof JsonMappingException jme ? fieldPath(jme) : null;
+        String detail = field == null ? "Unreadable request body" : "Unreadable request body: " + field;
+
+        log.warn("Request body not readable - {} {}: {}", request.getMethod(), request.getRequestURI(), detail);
+        request.setAttribute("api.error.type", e.getClass().getSimpleName());
+        request.setAttribute("api.error.message", detail);
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ErrorCode.WRONG_PARAMETER));
+    }
+
+    // Jackson 오류 위치를 칸 이름으로 (예: fees[0].label). 위치가 없으면(깨진 JSON 등) null
+    private static String fieldPath(JsonMappingException e) {
+        StringBuilder path = new StringBuilder();
+        for (JsonMappingException.Reference ref : e.getPath()) {
+            if (ref.getFieldName() != null) {
+                if (!path.isEmpty()) path.append('.');
+                path.append(ref.getFieldName());
+            } else if (ref.getIndex() >= 0) {
+                path.append('[').append(ref.getIndex()).append(']');
+            }
+        }
+        return path.isEmpty() ? null : path.toString();
     }
 
     @ExceptionHandler(RuntimeException.class)
