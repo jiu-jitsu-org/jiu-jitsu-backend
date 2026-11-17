@@ -46,7 +46,7 @@ class CommentNoticeEventListenerTest {
     void publishesPreviewAsPushBody() {
         CommentNoticeEvent event = new CommentNoticeEvent(2L, 10L, FcmPushType.NEW_COMMENTS, data, 1L, 100L);
         given(noticeService.isContentNoticeEnabled(2L, 10L)).willReturn(true);
-        given(noticePreview.of(FcmPushType.NEW_COMMENTS, 10L, 100L)).willReturn("오늘 오픈매트 후기");
+        given(noticePreview.pushBody(FcmPushType.NEW_COMMENTS, 10L, 100L)).willReturn("오늘 오픈매트 후기");
 
         listener.handle(event);
 

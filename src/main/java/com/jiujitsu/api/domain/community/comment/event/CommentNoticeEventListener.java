@@ -52,9 +52,9 @@ public class CommentNoticeEventListener {
                 event.recipientUserId(), ReportType.BOARD, event.contentId())) {
             return;
         }
-        // 본문은 알림함 미리보기와 같은 값 (NoticePreview, #196). 위에서 거른 뒤에만 조회한다
+        // 본문은 알림함 미리보기와 같은 규칙 (NoticePreview, #196) — 대댓글만 새 대댓글 내용 (#238). 위에서 거른 뒤에만 조회한다
         fcmPushEventPublisher.publish(event.recipientUserId(), event.pushType(), event.pushData(),
-                event.pushType().getTitle(), noticePreview.of(event.pushType(), event.contentId(), event.refId()));
+                event.pushType().getTitle(), noticePreview.pushBody(event.pushType(), event.contentId(), event.refId()));
         noticeService.saveNotice(event.recipientUserId(), event.pushType(), event.pushData(),
                 event.senderUserId(), event.refId());
     }

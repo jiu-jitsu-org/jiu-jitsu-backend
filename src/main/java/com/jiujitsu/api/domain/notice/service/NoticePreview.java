@@ -20,6 +20,9 @@ import java.util.function.Function;
  * 규칙은 {@link #body} 하나다. 어디서 값을 읽을지만 호출 쪽이 넘긴다
  * - 알림함 목록(NoticeService): 화면 단위로 일괄 조회한 Map 을 넘긴다 (N+1 없음)
  * - 푸시(CommentNoticeEventListener, LikeNoticeService): 이 빈의 {@link #of} 가 리포지토리 단건 조회를 넘긴다
+ *
+ * 예외 하나 — 내 댓글에 대댓글 푸시 본문은 새 대댓글이다({@link #pushBody}, #238).
+ * 잠금화면에서 누가 뭐라고 답했는지 보여야 열지 정할 수 있어서다. 알림함 카드는 그대로 내 댓글.
  */
 @Component
 @RequiredArgsConstructor
@@ -51,6 +54,18 @@ public class NoticePreview {
             case COMMENTS_LIKE -> refId == null ? null : commentPreview(commentOf.apply(refId));
             default -> null;
         };
+    }
+
+    /**
+     * 푸시 본문 — 내 댓글에 대댓글이면 새 대댓글(refId) 내용, 나머지는 알림함과 같은 {@link #of} (#238).
+     * 대댓글이 삭제·숨김이면 null (지운 글이 잠금화면에 뜨지 않게).
+     */
+    public String pushBody(FcmPushType pushType, Long contentId, Long refId) {
+        if (pushType == FcmPushType.NEW_CHILD_COMMENTS) {
+            return refId == null ? null
+                    : commentPreview(communityCommentsRepository.findById(refId).orElse(null));
+        }
+        return of(pushType, contentId, refId);
     }
 
     /** 알림 하나의 미리보기 — 푸시를 보낼 때 (리포지토리 단건 조회로 {@link #body}) */

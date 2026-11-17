@@ -62,6 +62,33 @@ class NoticePreviewTest {
         assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isEqualTo("저도 그 기술 배워보고 싶어요");
     }
 
+    @Test
+    @DisplayName("대댓글 푸시 본문 = 새 대댓글 (알림함은 그대로 내 댓글, #238)")
+    void replyPush_newReply() {
+        comment(1L, 0L, "저도 그 기술 배워보고 싶어요", "정상");
+        comment(101L, 1L, "저도 동의해요", "정상");
+
+        assertThat(preview.pushBody(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isEqualTo("저도 동의해요");
+        assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isEqualTo("저도 그 기술 배워보고 싶어요");
+    }
+
+    @ParameterizedTest(name = "대댓글 {0}")
+    @ValueSource(strings = {"삭제", "숨김"})
+    @DisplayName("대댓글 푸시: 새 대댓글이 삭제·숨김이면 null")
+    void replyPush_deletedOrHiddenReply_null(String state) {
+        comment(101L, 1L, "지운 대댓글", state);
+
+        assertThat(preview.pushBody(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isNull();
+    }
+
+    @Test
+    @DisplayName("대댓글 말고는 푸시 본문 = 알림함 미리보기")
+    void pushBody_othersSameAsPreview() {
+        comment(1L, 0L, "저도 그 기술 배워보고 싶어요", "정상");
+
+        assertThat(preview.pushBody(FcmPushType.COMMENTS_LIKE, CONTENT, 1L)).isEqualTo("저도 그 기술 배워보고 싶어요");
+    }
+
     @ParameterizedTest(name = "부모 댓글 {0}")
     @ValueSource(strings = {"삭제", "숨김"})
     @DisplayName("대댓글: 부모 댓글이 삭제·숨김(신고 포함)이면 null — 지운 글이 잠금화면·알림함에 다시 뜨지 않게")
