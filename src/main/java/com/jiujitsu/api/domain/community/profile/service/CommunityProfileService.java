@@ -149,6 +149,13 @@ public class CommunityProfileService {
                 validateCompetitions(competitions);
                 profile.upsertCompetitions(competitions, registered);
             }
+            case BACKGROUND_PATTERN -> {
+                // 무늬만 저장하는 유형이라 빈 값으로 무늬가 지워지지 않게 막는다
+                if (request.backgroundPattern() == null) {
+                    throw new ErrorException(ErrorCode.REQUIRED_PARAMETER);
+                }
+                profile.upsertBackgroundPattern(request.backgroundPattern());
+            }
             case OWNER_INFO -> {
                 if (!Objects.equals(user.getRole(), UserRole.OWNER)) {
                     throw new ErrorException(ErrorCode.PERMISSION_DENIED);

@@ -52,6 +52,7 @@ class CommunityProfileServicePublicProfileTest {
         User user = stubUser(UserRole.USER, UserStatus.ACTIVE);
         CommunityProfile profile = profileBuilder(user)
                 .competitions(new ArrayList<>(List.of(competition(2026, "서울 오픈", CompetitionRank.SILVER))))
+                .backgroundPattern(ProfileBackgroundPattern.BELT_TIP)
                 .build();
         given(communityProfileRepository.findByUser(user)).willReturn(Optional.of(profile));
 
@@ -64,6 +65,7 @@ class CommunityProfileServicePublicProfileTest {
         assertThat(response.academyName()).isEqualTo("OSS 주짓수");
         assertThat(response.beltRank()).isEqualTo(BeltRank.BLACK);
         assertThat(response.beltStripe()).isEqualTo(BeltStripe.STRIPE_2);
+        assertThat(response.backgroundPattern()).isEqualTo(ProfileBackgroundPattern.BELT_TIP);   // #234 남의 프로필에도 같은 무늬
         assertThat(response.isOwner()).isFalse();
         assertThat(response.favoritePosition()).isEqualTo(PositionType.GUARD);
         assertThat(response.favoriteTechnique()).isEqualTo(TechniqueType.SWEEPS);
@@ -179,6 +181,7 @@ class CommunityProfileServicePublicProfileTest {
         assertThat(response.academyName()).isNull();
         assertThat(response.beltRank()).isNull();
         assertThat(response.beltStripe()).isNull();
+        assertThat(response.backgroundPattern()).isNull();
         assertThat(response.favoritePosition()).isNull();
         assertThat(response.competitions()).isEmpty();
         assertThat(response.medalCount()).isEqualTo(new MedalCountDto(0, 0, 0));

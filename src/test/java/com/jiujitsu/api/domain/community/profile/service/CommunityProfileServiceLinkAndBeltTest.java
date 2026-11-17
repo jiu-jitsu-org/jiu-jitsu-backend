@@ -39,7 +39,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.ArgumentMatchers.any;
 
 /**
- * 대회 기록의 등록 대회 연결(competitionId)과 띠만 저장(BELT).
+ * 대회 기록의 등록 대회 연결(competitionId)과 띠만 저장(BELT), 바탕 무늬만 저장(BACKGROUND_PATTERN, #234).
  */
 @ExtendWith(MockitoExtension.class)
 class CommunityProfileServiceLinkAndBeltTest {
@@ -82,7 +82,7 @@ class CommunityProfileServiceLinkAndBeltTest {
     private CommunityProfileRequest competitionRequest(List<CompetitionDto> competitions) {
         return new CommunityProfileRequest(ProfileRequestType.COMPETITION,
                 null, null, null, null, null, competitions,
-                null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null);
     }
 
     @Test
@@ -169,7 +169,7 @@ class CommunityProfileServiceLinkAndBeltTest {
     void belt_keepsWeightAndGender() {
         CommunityProfileRequest request = new CommunityProfileRequest(ProfileRequestType.BELT,
                 BeltRank.PURPLE, BeltStripe.STRIPE_0, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null);
 
         CommunityProfileResponse response = communityProfileService.upsertMyProfile(request);
 
@@ -185,11 +185,40 @@ class CommunityProfileServiceLinkAndBeltTest {
     void belt_requiresRankAndStripe() {
         CommunityProfileRequest request = new CommunityProfileRequest(ProfileRequestType.BELT,
                 null, BeltStripe.STRIPE_2, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> communityProfileService.upsertMyProfile(request))
                 .isInstanceOf(ErrorException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.REQUIRED_PARAMETER);
         assertThat(profile.getBeltRank()).isEqualTo(BeltRank.BLUE);
+    }
+
+    private static CommunityProfileRequest patternRequest(ProfileBackgroundPattern pattern) {
+        return new CommunityProfileRequest(ProfileRequestType.BACKGROUND_PATTERN,
+                null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, pattern);
+    }
+
+    @Test
+    @DisplayName("BACKGROUND_PATTERN 은 무늬만 바꾸고 띠·체급은 그대로, 내 프로필 응답에 무늬가 내려간다")
+    void backgroundPattern_savesOnlyPattern() {
+        assertThat(profile.getBackgroundPattern()).isNull();   // 고른 적 없으면 null (앱 기본 무늬)
+
+        CommunityProfileResponse response = communityProfileService.upsertMyProfile(patternRequest(ProfileBackgroundPattern.WRAP));
+
+        assertThat(response.backgroundPattern()).isEqualTo(ProfileBackgroundPattern.WRAP);
+        assertThat(response.beltRank()).isEqualTo(BeltRank.BLUE);
+        assertThat(response.weightKg()).isEqualTo(76.5);
+    }
+
+    @Test
+    @DisplayName("BACKGROUND_PATTERN 에 무늬가 없으면 400(REQUIRED_PARAMETER)이고 기존 무늬는 그대로다")
+    void backgroundPattern_required() {
+        communityProfileService.upsertMyProfile(patternRequest(ProfileBackgroundPattern.OSS_HAND));
+
+        assertThatThrownBy(() -> communityProfileService.upsertMyProfile(patternRequest(null)))
+                .isInstanceOf(ErrorException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.REQUIRED_PARAMETER);
+        assertThat(profile.getBackgroundPattern()).isEqualTo(ProfileBackgroundPattern.OSS_HAND);
     }
 }

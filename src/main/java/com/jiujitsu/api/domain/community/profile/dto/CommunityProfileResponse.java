@@ -14,6 +14,7 @@ public record CommunityProfileResponse(
         @Schema(description = "프로필 이미지") ImageInfo profileImage,
         @Schema(description = "벨트 등급", example = "BLUE") BeltRank beltRank,
         @Schema(description = "그랄(1~4)", example = "STRIPE_2") BeltStripe beltStripe,
+        @Schema(description = "MY 상단 바탕 무늬. 고른 적 없으면 null (앱 기본 무늬)", example = "BIG_BELT") ProfileBackgroundPattern backgroundPattern,
         @Schema(description = "성별", example = "MALE") Gender gender,
         @Schema(description = "체급(kg, 소수점 1자리)", example = "76.5") Double weightKg,
         @Schema(description = "소속 도장명", example = "Gracie Barra Seoul") String academyName,
@@ -35,7 +36,7 @@ public record CommunityProfileResponse(
         return new CommunityProfileResponse(
                 user.getNickname(),
                 ImageInfo.from(user.getProfileImageFile()),
-                null, null, null, null, null,
+                null, null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null, null, null, null,
                 List.of(), new MedalCountDto(0, 0, 0)   // 대회는 프로필이 있고 기록이 없을 때와 같은 모양으로

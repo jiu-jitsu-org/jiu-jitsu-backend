@@ -48,7 +48,9 @@ public record CommunityProfileRequest(
         @Schema(description = "(관장/사범) 경력 시작일")
                 LocalDate teachingStartDate,
         @Schema(description = "(관장/사범) 경력 상세")
-                String teachingDetail
+                String teachingDetail,
+        @Schema(description = "MY 상단 바탕 무늬 (BACKGROUND_PATTERN 필수)", example = "BIG_BELT")
+                ProfileBackgroundPattern backgroundPattern
 ) {
 }
 

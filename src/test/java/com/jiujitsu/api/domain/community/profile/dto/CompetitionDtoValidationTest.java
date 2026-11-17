@@ -127,7 +127,7 @@ class CompetitionDtoValidationTest {
         CommunityProfileRequest request = new CommunityProfileRequest(ProfileRequestType.COMPETITION,
                 null, null, null, null, null,
                 List.of(competition(2025, "서울 오픈", List.of(division(76.0, null, false)))),
-                null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null);
 
         assertThat(isValid(request)).isFalse();
     }
