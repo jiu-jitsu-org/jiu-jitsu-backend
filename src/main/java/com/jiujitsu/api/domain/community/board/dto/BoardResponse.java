@@ -21,7 +21,7 @@ public record BoardResponse(
         @Schema(description = "댓글 수 (댓글 + 대댓글 합계)", example = "5") Long commentCount,
         @Schema(description = "좋아요 수", example = "17") Long likeCount,
         @Schema(description = "저장 수", example = "5") Long saveCount,
-        @Schema(description = "조회 수", example = "100") Long viewCount,
+        @Schema(description = "조회 수 (상세 조회로는 오르지 않음. POST /board/{id}/views)", example = "100") Long viewCount,
         @Schema(description = "댓글 작성 여부", example = "true") Boolean isCommented,
         @Schema(description = "좋아요 여부", example = "true") Boolean isLiked,
         @Schema(description = "저장 여부", example = "true") Boolean isSaved,

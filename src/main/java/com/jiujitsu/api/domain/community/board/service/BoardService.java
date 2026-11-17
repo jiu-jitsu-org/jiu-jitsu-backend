@@ -9,6 +9,7 @@ import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
+import com.jiujitsu.api.domain.community.content.dto.ContentViewResponse;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.community.profile.entity.CommunityProfile;
@@ -83,6 +84,37 @@ public class BoardService {
     }
 
     /**
+     * 게시글 조회수 올리기 ('봤음', #249) — 상세를 열 때 한 번. 작성자는 첫 1회만, 그 밖에는 부를 때마다 +1
+     * 상세 조회와 같은 기준으로 볼 수 없는 글(없음 · 숨김 · 내가 신고)은 BOARD_NOT_FOUND
+     */
+    public ContentViewResponse increaseView(Long contentId) {
+        Optional<User> currentUser = authenticationFacade.getCurrentUserOptional();
+        Board board = findViewableBoard(contentId, currentUser);
+
+        boolean isAuthor = Objects.equals(board.getCreatedBy(), currentUser.orElse(null));
+        return contentService.increaseViewCount(contentId, isAuthor);
+    }
+
+    // 상세 · 조회수가 같은 기준으로 여는 글 — 없거나 전체 숨김이거나 내가 신고한 글은 BOARD_NOT_FOUND
+    private Board findViewableBoard(Long contentId, Optional<User> currentUser) {
+        Board board = boardRepository.findByContent_Id(contentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
+
+        // 전체 숨김 처리된 게시물
+        if (board.isHidden()) {
+            throw new ErrorException(ErrorCode.BOARD_NOT_FOUND);
+        }
+
+        // 신고한 게시물은 신고자에게 숨김
+        currentUser.ifPresent(user -> {
+            if (reportService.hasReported(user, ReportType.BOARD, contentId)) {
+                throw new ErrorException(ErrorCode.BOARD_NOT_FOUND);
+            }
+        });
+        return board;
+    }
+
+    /**
      * 대회 이야기 (대회 상세, 비로그인 가능) — 이 대회를 고른 글 최대 5개
      * 반응(댓글 + 좋아요)이 있는 글 중 많은 순 2개를 먼저, 나머지는 최신순으로 채운다 (겹치지 않게). 반응이 없으면 최신순
      * 피드와 같은 글이 빠진다 (숨김·차단 작성자·내가 신고·내가 숨김). 없거나 미공개 대회면 COMPETITION_NOT_FOUND
@@ -108,32 +140,13 @@ public class BoardService {
 
     /**
      * 게시물 상세 조회
+     * 조회수는 여기서 올리지 않는다 (#249) — 웹이 화면을 맞추려고 같은 방문 안에서 여러 번 부르고, 링크 미리보기 수집기도 읽는다.
+     * 조회수는 상세를 열 때 한 번 부르는 increaseView(POST /board/{id}/views)
      */
     public BoardResponse getById(Long contentId) {
-        // 게시글 조회
-        Board board = boardRepository.findByContent_Id(contentId)
-                .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
-
-        // 전체 숨김 처리된 게시물
-        if (board.isHidden()) {
-            throw new ErrorException(ErrorCode.BOARD_NOT_FOUND);
-        }
-
-        // 신고한 게시물은 신고자에게 숨김
-        authenticationFacade.getCurrentUserOptional().ifPresent(user -> {
-            if (reportService.hasReported(user, ReportType.BOARD, contentId)) {
-                throw new ErrorException(ErrorCode.BOARD_NOT_FOUND);
-            }
-        });
-
-        // 조회수 증가 (작성자는 최초 1회만 카운트)
         Optional<User> currentUser = authenticationFacade.getCurrentUserOptional();
+        Board board = findViewableBoard(contentId, currentUser);
         boolean isAuthor = Objects.equals(board.getCreatedBy(), currentUser.orElse(null));
-        if (isAuthor) {
-            board.getContent().incrementViewCountForAuthor();
-        } else {
-            board.getContent().incrementViewCount();
-        }
 
         // 댓글 수 조회
         long commentCount = communityCommentsService.getCountComments(contentId);

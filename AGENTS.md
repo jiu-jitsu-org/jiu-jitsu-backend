@@ -269,7 +269,7 @@ domain/community/board/
 | user | SNS 로그인(Google/Apple), JWT 발급, 프로필, 탈퇴, 차단, 관장/사범 인증 신청·승인(관리자) |
 | admin | 관리자 회원가입/로그인, 신고 처리 |
 | boot_strap | OS별 앱 버전 정보 조회 |
-| community/board | 게시글 CRUD, 카테고리, 좋아요, 저장, 숨김, 대회 연결·대회 이야기(`/competitions/{id}/stories`) |
+| community/board | 게시글 CRUD, 카테고리, 좋아요, 저장, 숨김, 대회 연결·대회 이야기(`/competitions/{id}/stories`), 조회수 — 상세 조회로는 안 오르고 상세를 열 때 한 번 부르는 `POST /board/{id}/views`로만 (밸런스 게임도 같음, `ContentService#increaseViewCount`) |
 | community/comment | 댓글 CRUD, 좋아요 |
 | community/content | 좋아요/저장 공통 처리 |
 | community/profile | 커뮤니티 프로필(벨트, 경기 이력 등). 관리자가 대회명·연도를 바꾸면 연결된 대회 기록을 맞춤(`CompetitionRenamedEventListener`) |

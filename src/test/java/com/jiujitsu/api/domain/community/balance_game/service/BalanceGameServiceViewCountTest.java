@@ -79,8 +79,8 @@ class BalanceGameServiceViewCountTest {
     }
 
     @Test
-    @DisplayName("상세 조회 시 조회수가 1 증가한다")
-    void getDetail_incrementsViewCount() {
+    @DisplayName("상세 조회는 조회수를 올리지 않는다 (#249) — 같은 방문 안에서 다시 읽어도 그대로")
+    void getDetail_doesNotIncrementViewCount() {
         // given
         BalanceGame game = game();
         given(balanceGameRepository.findByContentId(CONTENT_ID)).willReturn(Optional.of(game));
@@ -88,9 +88,33 @@ class BalanceGameServiceViewCountTest {
 
         // when
         balanceGameService.getDetail(CONTENT_ID);
+        balanceGameService.getDetail(CONTENT_ID);
 
         // then
-        assertThat(game.getContent().getViewCount()).isEqualTo(1);
+        assertThat(game.getContent().getViewCount()).isZero();
+        verify(contentService, never()).increaseViewCount(anyLong(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("'봤음' 요청은 부를 때마다 +1 (작성자 예외 없음, 재진입도 셈)")
+    void increaseView_counts() {
+        given(balanceGameRepository.findByContentId(CONTENT_ID)).willReturn(Optional.of(game()));
+
+        balanceGameService.increaseView(CONTENT_ID);
+
+        verify(contentService).increaseViewCount(CONTENT_ID, false);
+    }
+
+    @Test
+    @DisplayName("없는 밸런스 게임 '봤음'은 BALANCE_GAME_NOT_FOUND, 세지 않음")
+    void increaseView_notFound() {
+        given(balanceGameRepository.findByContentId(CONTENT_ID)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> balanceGameService.increaseView(CONTENT_ID))
+                .isInstanceOf(ErrorException.class)
+                .extracting(e -> ((ErrorException) e).getErrorCode())
+                .isEqualTo(ErrorCode.BALANCE_GAME_NOT_FOUND);
+        verify(contentService, never()).increaseViewCount(anyLong(), anyBoolean());
     }
 
     @Test
