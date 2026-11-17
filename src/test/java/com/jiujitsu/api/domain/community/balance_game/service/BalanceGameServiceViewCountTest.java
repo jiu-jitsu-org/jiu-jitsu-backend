@@ -10,6 +10,8 @@ import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -26,6 +28,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -87,6 +91,21 @@ class BalanceGameServiceViewCountTest {
 
         // then
         assertThat(game.getContent().getViewCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("로그인한 사람이 상세를 열면 이 게임에 대한 내 알림을 읽음 처리 (#246), 비로그인은 하지 않음")
+    void getDetail_readsNotices() {
+        given(balanceGameRepository.findByContentId(CONTENT_ID)).willReturn(Optional.of(game()));
+        stubAggregations();
+
+        balanceGameService.getDetail(CONTENT_ID);
+        verify(noticeService, never()).readContentNotices(anyLong(), anyLong());
+
+        given(authenticationFacade.getCurrentUserOptional())
+                .willReturn(Optional.of(User.builder().id(7L).role(UserRole.USER).build()));
+        balanceGameService.getDetail(CONTENT_ID);
+        verify(noticeService).readContentNotices(7L, CONTENT_ID);
     }
 
     @Test

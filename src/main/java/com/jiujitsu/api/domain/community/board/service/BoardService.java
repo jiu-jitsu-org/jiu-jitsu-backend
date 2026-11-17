@@ -157,6 +157,8 @@ public class BoardService {
             likedContentIds = contentService.getUserLikedContentIds(currentUser.get().getId(), List.of(contentId));
             savedContentIds = contentService.getUserSavedContentIds(currentUser.get().getId(), List.of(contentId));
             noticeEnabled = noticeService.isContentNoticeEnabled(currentUser.get().getId(), contentId);
+            // 글을 열었으면 그 글에 대한 내 알림은 읽음 (#246)
+            noticeService.readContentNotices(currentUser.get().getId(), contentId);
         }
 
         // 작성자 프로필 조회

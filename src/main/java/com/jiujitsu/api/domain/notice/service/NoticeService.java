@@ -190,6 +190,16 @@ public class NoticeService {
     }
 
     /**
+     * 글 · 밸런스 게임 상세를 열었을 때 그 콘텐츠에 대한 내 안 읽은 알림 읽음 처리 (#246)
+     * - 어떤 길로 열었는지(푸시 · 피드 · 링크 · 알림함) 가리지 않음 — 봤으면 읽음
+     * - 대회 마감 알림은 대상 아님 (대회 상세로 감)
+     */
+    public void readContentNotices(Long userId, Long contentId) {
+        noticeRepository.markReadByUserIdAndContent(userId, String.valueOf(contentId),
+                List.of(PushActionType.BOARD_DETAIL, PushActionType.BALANCE_DETAIL));
+    }
+
+    /**
      * 알림 개별 읽음 처리
      */
     public Boolean readNotice(Long id) {

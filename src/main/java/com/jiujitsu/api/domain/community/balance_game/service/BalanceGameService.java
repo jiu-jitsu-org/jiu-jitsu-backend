@@ -101,6 +101,10 @@ public class BalanceGameService {
 
         game.getContent().incrementViewCount();
 
+        // 상세를 열었으면 이 게임에 대한 내 알림(댓글 · 답글 · 좋아요)은 읽음 (#246, 글 상세와 같은 기준)
+        authenticationFacade.getCurrentUserOptional()
+                .ifPresent(user -> noticeService.readContentNotices(user.getId(), contentId));
+
         return toResponseWithVotes(game);
     }
 
