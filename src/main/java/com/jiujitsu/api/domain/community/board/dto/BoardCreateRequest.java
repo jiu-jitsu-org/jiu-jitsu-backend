@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.community.board.dto;
 
+import com.jiujitsu.api.domain.community.board.entity.Board;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,10 +14,12 @@ public record BoardCreateRequest(
         @Schema(description = "카테고리 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
             Long categoryId,
         @NotBlank(message = "제목은 필수입니다.")
-        @Schema(description = "제목", example = "게시글 제목", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Size(max = Board.TITLE_MAX_LENGTH, message = "제목은 45자 이하여야 합니다.")
+        @Schema(description = "제목 (최대 45자)", example = "게시글 제목", maxLength = Board.TITLE_MAX_LENGTH, requiredMode = Schema.RequiredMode.REQUIRED)
             String title,
         @NotBlank(message = "내용은 필수입니다.")
-        @Schema(description = "내용", example = "게시글 내용", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Size(max = Board.BODY_MAX_LENGTH, message = "내용은 3,000자 이하여야 합니다.")
+        @Schema(description = "내용 (최대 3,000자)", example = "게시글 내용", maxLength = Board.BODY_MAX_LENGTH, requiredMode = Schema.RequiredMode.REQUIRED)
             String body,
         @Size(max = 3, message = "이미지는 최대 3장까지 첨부할 수 있습니다.")
         @Schema(description = "이미지 파일 ID 리스트")

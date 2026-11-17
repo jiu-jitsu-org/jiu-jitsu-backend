@@ -51,7 +51,11 @@ public class Board extends BaseEntity implements Hideable {
     @OnDelete(action = OnDeleteAction.SET_NULL)
     private Competition competition;
 
-    @Column(nullable = false, length = 45)
+    // 글자 수 = Java String.length() (UTF-16), 웹 글쓰기 maxLength 와 같은 단위·값
+    public static final int TITLE_MAX_LENGTH = 45;
+    public static final int BODY_MAX_LENGTH = 3_000;
+
+    @Column(nullable = false, length = TITLE_MAX_LENGTH)
     private String title;   // 제목
 
     @Column(nullable = false, columnDefinition = "TEXT")
