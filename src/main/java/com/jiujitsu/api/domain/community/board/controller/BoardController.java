@@ -69,18 +69,6 @@ public class BoardController {
         return boardService.getById(id);
     }
 
-    @Operation(summary = "게시글 조회수 올리기", description = "상세 화면을 열 때 한 번 부릅니다. 조회수를 1 올리고 올린 뒤 값을 반환합니다.\n\n"
-            + "- 비로그인도 부를 수 있고, 부를 때마다 올라갑니다 (중복 방지 없음)\n"
-            + "- 작성자 본인은 첫 1회만 셉니다 (그 뒤로는 올리지 않고 지금 값을 반환)\n"
-            + "- 상세 조회와 같은 기준으로 볼 수 없는 글(없음 · 숨김 · 내가 신고)은 BOARD_NOT_FOUND")
-    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND})
-    @PostMapping("/{id}/views")
-    public ContentViewResponse increaseView(
-            @Parameter(name = "id", description = "컨텐츠 ID (게시글의 contentId)", required = true) @PathVariable Long id
-    ) {
-        return boardService.increaseView(id);
-    }
-
     @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다. competitionId 로 공개 대회를 연결할 수 있습니다(선택, 카테고리와 무관).")
     @LoginErrorExamples
     @ApiErrorCodeExamples({ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER, ErrorCode.COMPETITION_NOT_FOUND})
@@ -111,6 +99,18 @@ public class BoardController {
             @Parameter(name = "id", description = "컨텐츠 ID (게시글의 contentId)", required = true) @PathVariable(name = "id") Long id
     ) {
         boardService.delete(id);
+    }
+
+    @Operation(summary = "게시글 조회수 올리기", description = "상세 화면을 열 때 한 번 부릅니다. 조회수를 1 올리고 올린 뒤 값을 반환합니다.\n\n"
+            + "- 비로그인도 부를 수 있고, 부를 때마다 올라갑니다 (중복 방지 없음)\n"
+            + "- 작성자 본인은 첫 1회만 셉니다 (그 뒤로는 올리지 않고 지금 값을 반환)\n"
+            + "- 상세 조회와 같은 기준으로 볼 수 없는 글(없음 · 숨김 · 내가 신고)은 BOARD_NOT_FOUND")
+    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND})
+    @PostMapping("/{id}/views")
+    public ContentViewResponse increaseView(
+            @Parameter(name = "id", description = "컨텐츠 ID (게시글의 contentId)", required = true) @PathVariable Long id
+    ) {
+        return boardService.increaseView(id);
     }
 
     @Operation(summary = "게시물 좋아요 등록/취소", description = "게시물 좋아요를 등록/취소합니다. 컨텐츠 단위 기능이라 밸런스 게임의 contentId 로도 호출할 수 있습니다.")
