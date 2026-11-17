@@ -49,10 +49,11 @@ public class BoardController {
     /**
      * 게시물
      */
-    @Operation(summary = "게시글 목록 조회", description = "카테고리별 페이징 게시글 목록을 조회합니다.")
+    @Operation(summary = "게시글 목록 조회", description = "카테고리별 페이징 게시글 목록을 조회합니다. boardListType 은 필수 (없으면 400 R0001)")
+    @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER})
     @GetMapping
     public Page<BoardListResponse> getList(
-            @ModelAttribute BoardListRequest boardListRequest,
+            @Valid @ModelAttribute BoardListRequest boardListRequest,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return boardService.getList(boardListRequest, pageable);

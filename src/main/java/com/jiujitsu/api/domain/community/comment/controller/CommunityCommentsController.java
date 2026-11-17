@@ -11,6 +11,7 @@ import com.jiujitsu.api.global.exception.annotation.LoginErrorExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,10 +35,10 @@ public class CommunityCommentsController {
                     "대댓글은 sortType 기준 3개만 포함하며, 나머지는 대댓글 추가 조회로 가져옵니다. " +
                     "차단한 작성자의 댓글/대댓글은 제외하지 않고 isBlocked=true로 내려가며, 본문과 작성자 정보는 마스킹됩니다."
     )
-    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER})
     @GetMapping
     public Slice<CommunityCommentsResponse> getComments(
-            @ModelAttribute CommentsListRequest request,
+            @Valid @ModelAttribute CommentsListRequest request,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         return communityCommentsService.getComments(request, pageable);
