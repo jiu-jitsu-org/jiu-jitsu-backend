@@ -186,6 +186,15 @@ public class UserService {
         return false;
     }
 
+    /**
+     * 관리자 - 계정 구분 변경
+     */
+    public void updateAccountType(Long userId, AccountType accountType) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
+        user.updateAccountType(accountType);
+    }
+
     private UserProfileResponse toUserProfileResponse(User user) {
         return userMapper.toUserProfileResponse(user, ownerVerificationService.findLatest(user));
     }
