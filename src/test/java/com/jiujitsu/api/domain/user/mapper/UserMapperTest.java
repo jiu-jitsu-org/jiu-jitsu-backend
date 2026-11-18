@@ -2,6 +2,8 @@ package com.jiujitsu.api.domain.user.mapper;
 
 import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.user.dto.OwnerVerificationInfo;
+import com.jiujitsu.api.domain.user.dto.UserProfileResponse;
+import com.jiujitsu.api.domain.user.entity.AccountType;
 import com.jiujitsu.api.domain.user.entity.OwnerVerificationRequest;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
@@ -52,5 +54,16 @@ class UserMapperTest {
 
         assertThat(info.status()).isEqualTo("REJECTED");
         assertThat(info.rejectReason()).isEqualTo("서류 불명확");
+    }
+
+    @Test
+    @DisplayName("내 프로필 응답에 분석용 ID와 계정 구분을 담는다")
+    void analyticsValues() {
+        user.updateAccountType(AccountType.OPERATOR);
+
+        UserProfileResponse response = userMapper.toUserProfileResponse(user, null);
+
+        assertThat(response.analyticsId()).isEqualTo(user.getAnalyticsId()).isNotBlank();
+        assertThat(response.accountType()).isEqualTo(AccountType.OPERATOR);
     }
 }

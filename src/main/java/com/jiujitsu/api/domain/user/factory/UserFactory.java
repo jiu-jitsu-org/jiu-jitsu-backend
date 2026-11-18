@@ -29,7 +29,9 @@ public class UserFactory {
                 user.getNickname(),
                 ImageInfo.from(user.getProfileImageFile()),
                 user.getSnsProvider(),
-                deactivatedWithinGrace
+                deactivatedWithinGrace,
+                user.getAnalyticsId(),
+                user.getAccountType()
         );
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users")
@@ -53,6 +54,16 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserStatus status;
+
+    // GA 회원 ID. 회원 번호는 프로필을 여는 값이라 쓰지 않고, 바뀌지 않는 무작위 값을 둔다
+    @Column(nullable = false, unique = true, updatable = false)
+    @Builder.Default
+    private String analyticsId = UUID.randomUUID().toString();
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private AccountType accountType = AccountType.MEMBER;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -100,6 +111,10 @@ public class User {
 
     public void updateRole(UserRole userRole) {
         this.role = userRole;
+    }
+
+    public void updateAccountType(AccountType accountType) {
+        this.accountType = accountType;
     }
 
     public boolean isWithinGracePeriod() {

@@ -1,6 +1,7 @@
 package com.jiujitsu.api.global.fcm.service;
 
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.Message;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserAppInfo;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
@@ -13,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,5 +50,22 @@ class FcmPushServiceTest {
         assertThat(log.getValue().getBody()).isEqualTo("서울 오픈 접수가 내일 끝나요. 신청과 결제는 대회 공지에서");
         assertThat(log.getValue().getPushActionType()).isEqualTo(PushActionType.COMPETITION_DETAIL);
         assertThat(log.getValue().getData()).isEqualTo("7");
+    }
+
+    @Test
+    @DisplayName("푸시 data에 이동 화면 · 대상과 함께 푸시 종류(pushType)를 싣는다")
+    @SuppressWarnings("unchecked")
+    void send_includesPushType() throws Exception {
+        fcmPushService.send(userWithDevice(), FcmPushType.NEW_COMMENTS,
+                Map.of("type", PushActionType.BOARD_DETAIL.name(), "data", "12"),
+                "제목", "본문");
+
+        ArgumentCaptor<Message> message = ArgumentCaptor.forClass(Message.class);
+        verify(firebaseMessaging).send(message.capture());
+        Map<String, String> data = (Map<String, String>) ReflectionTestUtils.getField(message.getValue(), "data");
+        assertThat(data)
+                .containsEntry("type", PushActionType.BOARD_DETAIL.name())
+                .containsEntry("data", "12")
+                .containsEntry("pushType", "NEW_COMMENTS");
     }
 }
