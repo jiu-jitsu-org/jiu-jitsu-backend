@@ -11,7 +11,9 @@ import com.jiujitsu.api.domain.community.report.mapper.ReportMapper;
 import com.jiujitsu.api.domain.community.report.repository.ReportRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
+import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,8 +21,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,6 +48,18 @@ class ReportServiceReasonTest {
     @Mock private CommunityCommentsRepository communityCommentsRepository;
     @Mock private AuthenticationFacade authenticationFacade;
     @Mock private ReportMapper reportMapper;
+    // 회원 신고(#233)가 ReportService 에 더하는 의존성. 지금 생성자에는 없어 무시되고, #233 머지 뒤에도 이 테스트가 그대로 돌게 미리 둔다
+    @Mock private UserRepository userRepository;
+    @Mock private TransactionTemplate transactionTemplate;
+
+    @BeforeEach
+    void runTransactionCallbackInline() {
+        lenient().doAnswer(invocation -> {
+            Consumer<TransactionStatus> callback = invocation.getArgument(0);
+            callback.accept(null);
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
+    }
 
     @Test
     @DisplayName("불법촬영물 신고 1건으로는 글을 숨기지 않고, 사유는 그대로 저장한다")
