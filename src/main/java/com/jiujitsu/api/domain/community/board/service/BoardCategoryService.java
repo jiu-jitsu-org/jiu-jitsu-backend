@@ -29,7 +29,7 @@ public class BoardCategoryService {
     }
 
     /**
-     * 카테고리 생성 임시(하드코딩) — 이미 있는 이름은 건너뜀
+     * 카테고리 생성 임시(하드코딩) — 빈 DB용. 이미 있는 이름은 건너뛰고 설명 · 순서는 고치지 않음 (기존 DB는 #263 PR의 SQL로 맞춤)
      */
     public void createCategory() {
         List<BoardCategory> categories = List.of(

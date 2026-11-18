@@ -16,7 +16,7 @@ public class BoardCategoryResponse {
     @Schema(description = "카테고리 ID", example = "1")
     private Long id;
 
-    @Schema(description = "카테고리명", example = "자유게시판")
+    @Schema(description = "카테고리명", example = "도장 · 오픈매트")
     private String categoryName;
 
     @Schema(description = "설명 한 줄 (글쓰기 · 피드 카테고리 탭)", example = "도장 고르기, 오픈매트, 승급 · 도장 생활")
