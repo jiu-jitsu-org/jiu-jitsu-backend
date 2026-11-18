@@ -198,7 +198,7 @@ public class BoardService {
         Content content = boardFactory.createContent(request.imageFileIdListOrEmpty());
 
         // Board 생성
-        Board board = boardFactory.createBoard(category, content, competition, request.title(), request.body(), request.tagsOrEmpty());
+        Board board = boardFactory.createBoard(category, content, competition, request.title(), request.bodyOrEmpty(), request.tagsOrEmpty());
         board = boardRepository.save(board);
 
         // dto 생성
@@ -222,8 +222,9 @@ public class BoardService {
         if (request.getTitle() != null && !request.getTitle().isBlank()) {
             board.changeTitle(request.getTitle());
         }
-        if (request.getBody() != null && !request.getBody().isBlank()) {
-            board.changeBody(request.getBody());
+        // 내용은 선택이라 빈 값 · 공백만은 내용을 지운다 (null 은 그대로) (#264)
+        if (request.getBody() != null) {
+            board.changeBody(request.getBody().isBlank() ? "" : request.getBody());
         }
 
         // 기존 이미지 모두 제거 후 재생성

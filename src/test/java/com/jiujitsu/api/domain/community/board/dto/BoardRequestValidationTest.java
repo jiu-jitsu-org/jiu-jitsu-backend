@@ -51,9 +51,13 @@ class BoardRequestValidationTest {
     }
 
     @Test
-    @DisplayName("등록: 제목 · 본문 필수는 그대로")
+    @DisplayName("등록: 제목은 필수, 내용은 선택 — 생략 · 빈 값 · 공백만 통과 (#264)")
     void createRequired() {
-        assertThat(violatedAnnotations(create(" ", " "))).containsExactly("NotBlank");
+        assertThat(invalidFields(create(" ", "본문"))).containsExactly("title");
+        assertThat(violatedAnnotations(create(" ", "본문"))).containsExactly("NotBlank");
+        assertThat(validator.validate(create("제목", null))).isEmpty();
+        assertThat(validator.validate(create("제목", ""))).isEmpty();
+        assertThat(validator.validate(create("제목", "  "))).isEmpty();
     }
 
     @Test
