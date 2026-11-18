@@ -23,7 +23,7 @@ public class BoardUpdateRequest {
     private String title;
 
     @Size(max = Board.BODY_MAX_LENGTH, message = "내용은 3,000자 이하여야 합니다.")
-    @Schema(description = "내용 (최대 3,000자)", example = "수정된 내용", maxLength = Board.BODY_MAX_LENGTH)
+    @Schema(description = "내용 (선택, 최대 3,000자). null 이면 그대로, 빈 값 · 공백만이면 내용을 지움(\"\" 저장)", example = "수정된 내용", maxLength = Board.BODY_MAX_LENGTH)
     private String body;
 
     @Size(max = 3, message = "이미지는 최대 3장까지 첨부할 수 있습니다.")

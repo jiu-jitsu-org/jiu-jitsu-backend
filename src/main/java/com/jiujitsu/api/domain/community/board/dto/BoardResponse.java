@@ -14,7 +14,7 @@ public record BoardResponse(
         @Schema(description = "카테고리 ID", example = "1") Long categoryId,
         @Schema(description = "카테고리명", example = "자유게시판") String categoryName,
         @Schema(description = "제목", example = "타이틀입니다.") String title,
-        @Schema(description = "내용", example = "내용입니다.") String body,
+        @Schema(description = "내용. 내용 없이 쓴 글은 \"\" (null 아님)", example = "내용입니다.") String body,
         @Schema(description = "생성 일시") LocalDateTime createdAt,
         @Schema(description = "수정 일시") LocalDateTime updatedAt,
         @Schema(description = "수정 여부") Boolean isUpdated,
