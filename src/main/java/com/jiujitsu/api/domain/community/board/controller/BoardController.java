@@ -39,7 +39,7 @@ public class BoardController {
     /**
      * 카테고리
      */
-    @Operation(summary = "카테고리 목록 조회", description = "카테고리 목록 조회(임시)")
+    @Operation(summary = "카테고리 목록 조회", description = "사용 중인 카테고리를 보이는 순서대로, 설명 한 줄과 함께 반환합니다.")
     @GetMapping("/category")
     public List<BoardCategoryResponse> getCategory() {
         return boardCategoryService.getCategory();

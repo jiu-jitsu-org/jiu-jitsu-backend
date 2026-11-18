@@ -27,6 +27,13 @@ public class BoardCategory extends BaseEntity {
     @Column(nullable = false, length = 64)
     private String name;    // 카테고리명
 
+    @Builder.Default
+    @Column(nullable = false, length = 100)
+    private String description = "";   // 설명 한 줄 (글쓰기 · 피드 카테고리 탭)
+
+    @Column(nullable = false)
+    private int displayOrder;   // 보이는 순서 (작을수록 앞)
+
     @Column(nullable = false)
     private boolean isActive;   // 사용여부
 }
