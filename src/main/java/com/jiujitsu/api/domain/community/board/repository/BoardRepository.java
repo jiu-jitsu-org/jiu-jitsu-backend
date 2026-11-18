@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface BoardRepository extends JpaRepository<Board, Long> {
+public interface BoardRepository extends JpaRepository<Board, Long>, JpaSpecificationExecutor<Board> {
 
     Optional<Board> findByContent_Id(Long contentId);
 
@@ -33,18 +34,6 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
             @Param("excludedBoardContentIds") List<Long> excludedBoardContentIds,
             Pageable pageable);
 
-    @Query("""
-    SELECT b FROM Board b
-    WHERE (b.title LIKE CONCAT('%', :keyword, '%') OR b.body LIKE CONCAT('%', :keyword, '%'))
-      AND b.hiddenAt IS NULL
-      AND b.createdBy.id NOT IN :excludedAuthorIds
-      AND b.content.id NOT IN :excludedBoardContentIds
-    """)
-    Page<Board> findByTitleBodyKeywordFiltered(
-            @Param("keyword") String keyword,
-            @Param("excludedAuthorIds") List<Long> excludedAuthorIds,
-            @Param("excludedBoardContentIds") List<Long> excludedBoardContentIds,
-            Pageable pageable);
 
     @Query("""
     SELECT b FROM Board b

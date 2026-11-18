@@ -8,6 +8,7 @@ import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
 import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
+import com.jiujitsu.api.domain.community.board.repository.BoardSpecifications;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
@@ -59,6 +60,7 @@ public class BoardService {
     private final CompetitionQueryService competitionQueryService;
 
     private static final int COMPETITION_STORY_LIMIT = 5;
+    private static final int SEARCH_WORD_LIMIT = 10;
     private static final int COMPETITION_STORY_REACTION_LIMIT = 2;
 
     /**
@@ -73,8 +75,14 @@ public class BoardService {
             case CATEGORY -> boardRepository.findAllByCategoryFiltered(
                     boardListRequest.categoryId(), excluded.authorIds(), excluded.contentIds(), pageable);
             case SEARCH -> {
-                String keyword = StringUtils.trimToEmpty(boardListRequest.searchKeyword()).toUpperCase(Locale.ROOT);
-                yield boardRepository.findByTitleBodyKeywordFiltered(keyword, excluded.authorIds(), excluded.contentIds(), pageable);
+                List<String> words = searchWords(boardListRequest.searchKeyword());
+                if (words.isEmpty()) {
+                    yield Page.empty(pageable);
+                }
+                yield boardRepository.findAll(
+                        BoardSpecifications.visibleInFeed(excluded.authorIds(), excluded.contentIds())
+                                .and(BoardSpecifications.containsAllWords(words)),
+                        pageable);
             }
             default -> boardRepository.findAllFiltered(excluded.authorIds(), excluded.contentIds(), pageable);
         };
@@ -412,6 +420,20 @@ public class BoardService {
      * 피드에서 빼는 글: 내가 차단한 작성자, 내가 신고한 글, 내가 숨긴 글 (비로그인은 없음)
      * 빈 리스트일 때 IN 절 오류 방지용 sentinel(-1)
      */
+    /**
+     * 검색어 → 검색 단어: 띄어쓰기로 나누고 소문자로, 같은 단어는 하나로, 최대 SEARCH_WORD_LIMIT 개 (#265)
+     */
+    static List<String> searchWords(String keyword) {
+        if (StringUtils.isBlank(keyword)) {
+            return List.of();
+        }
+        return Arrays.stream(keyword.strip().toLowerCase(Locale.ROOT).split("\\s+"))
+                .filter(word -> !word.isEmpty())
+                .distinct()
+                .limit(SEARCH_WORD_LIMIT)
+                .toList();
+    }
+
     private FeedExclusions getFeedExclusions() {
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
         List<Long> reportedContentIds = reportService.getReportedTargetIds(ReportType.BOARD);
