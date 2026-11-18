@@ -42,6 +42,8 @@ public class FcmPushService {
                         )
                         .putData("type", actionType)
                         .putData("data", pushData)
+                        // 앱이 푸시 종류별 열림을 세는 값 (GA notice_type)
+                        .putData("pushType", pushType.name())
                         .build();
 
                 // 의미있는 response 값이 오지는 않지만, 추후 관리 차원에서 일단 변수로 받아놓음

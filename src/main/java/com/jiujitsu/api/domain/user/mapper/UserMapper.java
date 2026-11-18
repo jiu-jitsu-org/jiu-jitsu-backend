@@ -21,7 +21,9 @@ public class UserMapper {
                 user.getSnsProvider(),
                 OwnerVerificationInfo.from(latestOwnerRequest),
                 user.getRole(),
-                user.getStatus()
+                user.getStatus(),
+                user.getAnalyticsId(),
+                user.getAccountType()
         );
     }
 }

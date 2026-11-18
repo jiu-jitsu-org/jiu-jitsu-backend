@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.user.dto;
 
 import com.jiujitsu.api.domain.file.dto.ImageInfo;
+import com.jiujitsu.api.domain.user.entity.AccountType;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -11,6 +12,8 @@ public record UserInfo(
         @Schema(description = "닉네임", example = "홍길동") String nickname,
         @Schema(description = "프로필 이미지") ImageInfo profileImage,
         @Schema(description = "SNS 제공자", example = "KAKAO") SnsProvider snsProvider,
-        @Schema(description = "탈퇴 회원 여부 (30일 이내 재로그인으로 복구된 경우 true)", example = "true") boolean deactivatedWithinGrace
+        @Schema(description = "탈퇴 회원 여부 (30일 이내 재로그인으로 복구된 경우 true)", example = "true") boolean deactivatedWithinGrace,
+        @Schema(description = "분석용 회원 ID (GA 회원 ID, 바뀌지 않음)", example = "3f2b8c1e-6a4d-4e2b-9c1a-7d5e0f8b2a91") String analyticsId,
+        @Schema(description = "계정 구분 (MEMBER · OPERATOR · INTERNAL)", example = "MEMBER") AccountType accountType
 ) {
 }

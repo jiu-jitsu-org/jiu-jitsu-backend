@@ -266,7 +266,7 @@ domain/community/board/
 
 | 도메인 | 주요 기능 |
 |--------|-----------|
-| user | SNS 로그인(Google/Apple), JWT 발급, 프로필, 탈퇴, 차단, 관장/사범 인증 신청·승인(관리자) |
+| user | SNS 로그인(Google/Apple), JWT 발급, 프로필, 탈퇴, 차단, 관장/사범 인증 신청·승인(관리자), GA용 분석 ID(`analyticsId`, 가입 때 무작위 UUID)·계정 구분(`accountType`, 관리자 `/admin/users/{id}/account-type`) |
 | admin | 관리자 회원가입/로그인, 신고 처리 |
 | boot_strap | OS별 앱 버전 정보 조회 |
 | community/board | 게시글 CRUD, 카테고리(관리자 써 볼 주제 `/admin/board/categories`), 검색(결과 0건 검색어는 회원 정보 없이 `board_search_miss`, 관리자 `/admin/board/search-misses`), 좋아요, 저장, 숨김, 대회 연결·대회 이야기(`/competitions/{id}/stories`), 조회수 — 상세 조회로는 안 오르고 상세를 열 때 한 번 부르는 `POST /board/{id}/views`로만 (밸런스 게임도 같음, `ContentService#increaseViewCount`) |
@@ -276,7 +276,7 @@ domain/community/board/
 | community/report | 게시글/댓글 신고, 자동 숨김 |
 | competition | 대회 정보·상태 파생(끝남 = 마지막 날 기준 `Competition#lastDay`), 대회 탭 목록(기준일 + 양방향 커서, 필터, 관심 많은 대회 표시 — 기준 `competition.popular`)·대회가 있는 지역, 상세(지금 보이는 상태 링크·도장 신청 안내)·조회수, 관심 등록/해제·관심 수·이 대회 알림 켜기/끄기, 정보 제보(정보가 달라요)·관리자 제보 목록·처리 표시, 글쓰기 대회 고르기·게시글 대회 카드, 등록 대회 검색(대회명 자동완성), 자동완성용 대회 일괄 등록·관리자 대회 목록·상세(공개 여부 무관, 비어 있는 공개 필수 칸)·만들기·고치기(대회명·연도 변경 시 `CompetitionRenamedEvent`로 프로필 대회 기록 갱신)·확인 완료·공개(필수 칸 검사)·비공개·접수 사이트·상태 링크(운영자 승인, 보이는 기간 `CompetitionLinkWindow`) |
 | file | CDN 이미지 파일 등록/삭제 |
-| notice | 알림 설정, FCM 푸시 전송, 관심 대회 마감 전날 알림(스케줄, 발송 기록으로 한 번만), 좋아요 알림(글·댓글마다 카드 한 장, `notice.like-push` 기준 개수에 닿을 때만 푸시) |
+| notice | 알림 설정, FCM 푸시 전송(data: `type`·`data`·`pushType`), 관심 대회 마감 전날 알림(스케줄, 발송 기록으로 한 번만), 좋아요 알림(글·댓글마다 카드 한 장, `notice.like-push` 기준 개수에 닿을 때만 푸시) |
 
 ## 협업 시 리뷰 기준
 
