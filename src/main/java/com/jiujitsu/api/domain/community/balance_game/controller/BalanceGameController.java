@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.balance_game.controller;
 import com.jiujitsu.api.domain.community.balance_game.dto.BalanceGameResponse;
 import com.jiujitsu.api.domain.community.balance_game.dto.BalanceGameVoteRequest;
 import com.jiujitsu.api.domain.community.balance_game.service.BalanceGameService;
+import com.jiujitsu.api.domain.community.content.dto.ContentViewResponse;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
@@ -54,7 +55,7 @@ public class BalanceGameController {
     @Operation(
             summary = "밸런스 게임 상세 조회",
             description = "밸런스 게임 상세 정보를 조회합니다. 마감된 게임도 조회 가능하며 결과만 노출됩니다. "
-                    + "호출할 때마다 조회수(viewCount)가 1 증가합니다. (메인의 '오늘의 게임' 조회는 미증가) "
+                    + "이 조회로는 조회수가 오르지 않습니다. 웹은 상세 화면을 열 때 POST /community/balance-game/{contentId}/views 를 한 번 부릅니다 (#249) "
                     + "댓글은 별도로 댓글 목록 API(/community/comments)를 contentId 로 호출합니다."
     )
     @ApiErrorCodeExamples({ErrorCode.BALANCE_GAME_NOT_FOUND})
@@ -64,6 +65,20 @@ public class BalanceGameController {
             @PathVariable(name = "contentId") Long contentId
     ) {
         return balanceGameService.getDetail(contentId);
+    }
+
+    @Operation(
+            summary = "밸런스 게임 조회수 올리기",
+            description = "상세 화면을 열 때 한 번 부릅니다. 조회수를 1 올리고 올린 뒤 값을 반환합니다. "
+                    + "비로그인도 부를 수 있고, 부를 때마다 올라갑니다 (같은 사람의 재진입도 셈, 중복 방지 없음)."
+    )
+    @ApiErrorCodeExamples({ErrorCode.BALANCE_GAME_NOT_FOUND})
+    @PostMapping("/{contentId}/views")
+    public ContentViewResponse increaseView(
+            @Parameter(name = "contentId", description = "컨텐츠 ID", required = true)
+            @PathVariable(name = "contentId") Long contentId
+    ) {
+        return balanceGameService.increaseView(contentId);
     }
 
     @Operation(

@@ -11,6 +11,7 @@ import com.jiujitsu.api.domain.community.balance_game.repository.BalanceGameRepo
 import com.jiujitsu.api.domain.community.balance_game.repository.BalanceGameVoteRepository;
 import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
+import com.jiujitsu.api.domain.community.content.dto.ContentViewResponse;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
@@ -89,19 +90,30 @@ public class BalanceGameService {
     /**
      * 밸런스 게임 상세 조회 (마감된 게임도 조회 가능 - 결과만 노출)
      *
-     * 조회수는 상세 진입 시에만 증가시킨다.
-     * 메인의 '오늘의 게임'(getCurrent)은 사용자가 의도해서 연 화면이 아니라
-     * 커뮤니티 진입 때마다 자동 호출되므로 카운트하면 노출 수가 되어버린다.
-     * 밸런스 게임은 운영자가 등록해 작성자 개념이 없으므로 게시글과 달리 작성자 예외 처리는 두지 않는다.
-     * 같은 사용자의 재진입도 그대로 누적한다. (사용자당 1회 집계 아님 - 의도된 동작, #124 에서 확정)
+     * 조회수는 여기서 올리지 않는다 (#249) — 웹이 화면을 맞추려고 같은 방문 안에서 여러 번 부른다. 조회수는 increaseView
      */
     public BalanceGameResponse getDetail(Long contentId) {
         BalanceGame game = balanceGameRepository.findByContentId(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND));
 
-        game.getContent().incrementViewCount();
+        // 상세를 열었으면 이 게임에 대한 내 알림(댓글 · 답글 · 좋아요)은 읽음 (#246, 글 상세와 같은 기준)
+        authenticationFacade.getCurrentUserOptional()
+                .ifPresent(user -> noticeService.readContentNotices(user.getId(), contentId));
 
         return toResponseWithVotes(game);
+    }
+
+    /**
+     * 밸런스 게임 조회수 올리기 ('봤음', #249) — 상세를 열 때 한 번
+     * - 메인의 '오늘의 게임'(getCurrent)은 커뮤니티 진입 때마다 자동으로 불려 세지 않는다 (노출 수가 되어버림)
+     * - 운영자가 등록해 작성자 개념이 없어 작성자 예외 없음
+     * - 같은 사용자의 재진입도 방문마다 센다 (사용자당 1회 집계 아님, #124). 같은 방문 안에서 다시 읽는 상세 조회는 세지 않는다
+     */
+    public ContentViewResponse increaseView(Long contentId) {
+        if (balanceGameRepository.findByContentId(contentId).isEmpty()) {
+            throw new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND);
+        }
+        return contentService.increaseViewCount(contentId, false);
     }
 
     /**

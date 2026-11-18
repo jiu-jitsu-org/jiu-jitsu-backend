@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.content.service;
 
 import com.jiujitsu.api.domain.community.content.dto.ContentLikeResponse;
 import com.jiujitsu.api.domain.community.content.dto.ContentSaveResponse;
+import com.jiujitsu.api.domain.community.content.dto.ContentViewResponse;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentLike;
 import com.jiujitsu.api.domain.community.content.entity.ContentSave;
@@ -43,6 +44,21 @@ public class ContentService {
     private final ContentSaveRepository contentSaveRepository;
     private final ContentSaveMapper contentSaveMapper;
     private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * 조회수 올리기 ('봤음', #249) — 글 · 밸런스 게임 공통. 대상이 볼 수 있는지는 부르는 쪽이 확인한다
+     * DB 에서 +1 이라 동시에 열어도 덜 세지 않고, 수정자 · 수정 시각은 바뀌지 않는다
+     *
+     * @param authorOnce 작성자 본인이면 true — 첫 1회만 센다
+     */
+    public ContentViewResponse increaseViewCount(Long contentId, boolean authorOnce) {
+        if (authorOnce) {
+            contentRepository.incrementViewCountForAuthor(contentId);
+        } else {
+            contentRepository.incrementViewCount(contentId);
+        }
+        return new ContentViewResponse(contentId, contentRepository.findViewCountById(contentId));
+    }
 
     /**
      * 게시물 좋아요 등록/삭제
