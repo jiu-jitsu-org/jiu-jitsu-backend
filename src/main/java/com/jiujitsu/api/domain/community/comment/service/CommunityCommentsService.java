@@ -4,6 +4,7 @@ import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.repository.BoardRepository;
 import com.jiujitsu.api.domain.community.comment.dto.BoardSummaryInGroup;
 import com.jiujitsu.api.domain.community.comment.dto.CommentSummaryInGroup;
+import com.jiujitsu.api.domain.community.comment.dto.CommentThreadResponse;
 import com.jiujitsu.api.domain.community.comment.dto.CommentsListRequest;
 import com.jiujitsu.api.domain.community.comment.dto.CommentsSortType;
 import com.jiujitsu.api.domain.community.comment.dto.CommunityCommentsResponse;
@@ -171,6 +172,49 @@ public class CommunityCommentsService {
     }
 
     /**
+     * 댓글 하나 (알림에서 연 댓글, #271). 대댓글이면 원 댓글과 함께
+     * - 원 댓글은 댓글 목록 항목과 같은 모양 (sortType 기준 대댓글 미리보기 3개 · 대댓글 수)
+     * - 보이는 기준은 목록과 같음: 관리자 숨김은 목록에 없으므로 COMMENT_NOT_FOUND, 삭제 · 신고 · 차단은 목록처럼 표시 · 마스킹
+     */
+    @Transactional(readOnly = true)
+    public CommentThreadResponse getCommentThread(Long commentId, CommentsSortType sortType) {
+        CommunityComments target = findListedComment(commentId);
+        boolean isReply = target.getParentId() != null && target.getParentId() != 0;
+        CommunityComments root = isReply ? findListedComment(target.getParentId()) : target;
+
+        Set<Long> blockedUserIds = new HashSet<>(userBlockService.getBlockedUserIds());
+        Set<Long> reportedCommentIdSet = new HashSet<>(reportService.getReportedTargetIds(ReportType.COMMENT));
+
+        List<CommunityComments> children = sortComments(
+                communityCommentsRepository.findRepliesByParentIds(List.of(root.getId())), sortType);
+        List<CommunityComments> all = new ArrayList<>(children);
+        all.add(root);
+        CommentViewContext viewContext = buildViewContext(all, blockedUserIds, reportedCommentIdSet);
+
+        List<CommunityCommentsResponse> preview = children.stream()
+                .limit(INITIAL_CHILD_LIMIT)
+                .map(child -> toResponse(child, new ArrayList<>(), 0L, viewContext))
+                .toList();
+        CommunityCommentsResponse rootResponse = toResponse(root, new ArrayList<>(preview), (long) children.size(), viewContext);
+        CommunityCommentsResponse replyResponse = isReply ? toResponse(target, new ArrayList<>(), 0L, viewContext) : null;
+
+        return new CommentThreadResponse(root.getContent().getId(), rootResponse, replyResponse);
+    }
+
+    // 댓글 목록에 나오는 댓글만 (findRootCommentsByContentIdFiltered 와 같은 기준: 숨김이 아니거나, 삭제 · 신고 표시로 남는 댓글)
+    private CommunityComments findListedComment(Long commentId) {
+        CommunityComments comment = communityCommentsRepository.findById(commentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
+        boolean listed = comment.getHiddenAt() == null
+                || comment.getDeletedAt() != null
+                || Boolean.TRUE.equals(comment.getIsReported());
+        if (!listed) {
+            throw new ErrorException(ErrorCode.COMMENT_NOT_FOUND);
+        }
+        return comment;
+    }
+
+    /**
      * 댓글 작성
      */
     public CommunityCommentsResponse createComment(CommunityCommentsWriteRequest request) {
@@ -220,7 +264,8 @@ public class CommunityCommentsService {
                     content.getId(),
                     FcmPushType.NEW_COMMENTS,
                     Map.of("type", actionType.name(),
-                           "data", content.getId().toString()),
+                           "data", content.getId().toString(),
+                           "commentId", communityComments.getId().toString()),
                     user.getId(),
                     communityComments.getId()
             ));
@@ -233,7 +278,8 @@ public class CommunityCommentsService {
                     content.getId(),
                     FcmPushType.NEW_CHILD_COMMENTS,
                     Map.of("type", actionType.name(),
-                           "data", content.getId().toString()),
+                           "data", content.getId().toString(),
+                           "commentId", communityComments.getId().toString()),
                     user.getId(),
                     communityComments.getId()
             ));
@@ -317,7 +363,7 @@ public class CommunityCommentsService {
 
             if (!Objects.equals(user.getId(), comment.getCreatedBy().getId())) {
                 Content content = comment.getContent();
-                // data 는 상세 화면을 여는 데 쓰이므로 commentId 가 아닌 contentId 를 보낸다.
+                // data 는 상세 화면을 여는 데 쓰이므로 commentId 가 아닌 contentId 를 보낸다. 댓글은 commentId 로 따로 (#271)
                 // 나머지 3개 푸시와 동일한 규약이며, 밸런스 상세(GET /community/balance-game/{contentId})
                 // 진입에도 contentId 가 필요하다. (#136)
                 // 알림은 커밋 뒤 댓글별 개수 기준으로 처리한다 (#196, LikeNoticeService)
@@ -327,7 +373,8 @@ public class CommunityCommentsService {
                         comment.getId(),
                         FcmPushType.COMMENTS_LIKE,
                         Map.of("type", content.getContentType().getPushActionType().name(),
-                               "data", content.getId().toString())
+                               "data", content.getId().toString(),
+                               "commentId", comment.getId().toString())
                 ));
             }
         }

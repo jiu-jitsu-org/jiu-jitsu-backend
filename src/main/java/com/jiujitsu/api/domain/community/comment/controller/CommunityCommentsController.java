@@ -45,6 +45,23 @@ public class CommunityCommentsController {
     }
 
     @Operation(
+            summary = "댓글 하나 (알림에서 연 댓글)",
+            description = "알림 · 푸시의 commentId 로 그 댓글을 바로 보여 줄 때 씁니다. 비로그인도 조회할 수 있습니다.\n\n"
+                    + "- 댓글이면 comment 에 그 댓글(댓글 목록 항목과 같은 형식, 대댓글 미리보기 3개 · 대댓글 수), reply 는 null\n"
+                    + "- 대댓글이면 comment 에 원 댓글, reply 에 그 대댓글\n"
+                    + "- sortType 은 대댓글 미리보기 정렬 (댓글 목록과 같음)\n"
+                    + "- 보이는 기준은 댓글 목록과 같음: 삭제 · 신고 · 차단은 목록처럼 표시 · 마스킹, 관리자가 숨긴 댓글(또는 원 댓글)은 COMMENT_NOT_FOUND"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMMENT_NOT_FOUND})
+    @GetMapping("/{id}")
+    public CommentThreadResponse getCommentThread(
+            @Parameter(name = "id", description = "댓글 ID (알림의 commentId)", required = true) @PathVariable Long id,
+            @Parameter(description = "대댓글 미리보기 정렬 (기본 댓글 목록과 같음)") @RequestParam(required = false) CommentsSortType sortType
+    ) {
+        return communityCommentsService.getCommentThread(id, sortType);
+    }
+
+    @Operation(
             summary = "대댓글 추가 조회",
             description = "댓글 ID 기준으로 목록 미리보기 3개 이후의 대댓글을 10개씩 페이징 조회합니다. sortType은 댓글 목록과 동일하게 적용하고, page는 0부터입니다."
     )

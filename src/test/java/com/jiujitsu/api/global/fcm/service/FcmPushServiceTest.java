@@ -66,6 +66,21 @@ class FcmPushServiceTest {
         assertThat(data)
                 .containsEntry("type", PushActionType.BOARD_DETAIL.name())
                 .containsEntry("data", "12")
-                .containsEntry("pushType", "NEW_COMMENTS");
+                .containsEntry("pushType", "NEW_COMMENTS")
+                .doesNotContainKey("commentId");
+    }
+
+    @Test
+    @DisplayName("댓글 알림이면 data 에 commentId 도 싣는다 (#271)")
+    @SuppressWarnings("unchecked")
+    void send_includesCommentId() throws Exception {
+        fcmPushService.send(userWithDevice(), FcmPushType.NEW_CHILD_COMMENTS,
+                Map.of("type", PushActionType.BOARD_DETAIL.name(), "data", "12", "commentId", "55"),
+                "제목", "본문");
+
+        ArgumentCaptor<Message> message = ArgumentCaptor.forClass(Message.class);
+        verify(firebaseMessaging).send(message.capture());
+        Map<String, String> data = (Map<String, String>) ReflectionTestUtils.getField(message.getValue(), "data");
+        assertThat(data).containsEntry("data", "12").containsEntry("commentId", "55");
     }
 }
