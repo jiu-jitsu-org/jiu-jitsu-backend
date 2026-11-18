@@ -39,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -139,18 +140,8 @@ public class NoticeService {
                 : boardRepository.findAllByContentIdIn(List.copyOf(contentIds)).stream()
                         .collect(Collectors.toMap(b -> b.getContent().getId(), Board::getTitle));
 
-        // body 계산용: NEW_CHILD_COMMENTS 알림이 보여 줄 댓글 일괄 조회 — 태그 답글이면 태그된 대댓글, 아니면 부모 댓글 (NoticePreview)
-        Set<Long> repliedIds = notices.stream()
-                .filter(n -> n.getPushType() == FcmPushType.NEW_CHILD_COMMENTS && n.getRefId() != null)
-                .map(n -> commentByRefId.get(n.getRefId()))
-                .filter(Objects::nonNull)
-                .map(CommunityComments::repliedCommentId)
-                .filter(id -> id != null && id != 0)
-                .collect(Collectors.toSet());
-        Map<Long, CommunityComments> repliedCommentById = repliedIds.isEmpty()
-                ? Map.of()
-                : communityCommentsRepository.findAllById(repliedIds).stream()
-                        .collect(Collectors.toMap(CommunityComments::getId, c -> c));
+        // body 계산용: 내가 신고한 댓글은 미리보기를 비운다 — 댓글 목록에서 가려 보이는 댓글이 알림함에 원문으로 뜨지 않게 (#230)
+        Set<Long> reportedCommentIds = new HashSet<>(reportService.getReportedTargetIds(ReportType.COMMENT));
 
         // 대회 알림: 지금 공개인 대회 id (없거나 미공개면 deletedStatus COMPETITION)
         Set<Long> competitionIds = notices.stream()
@@ -171,7 +162,7 @@ public class NoticeService {
                         isCompetitionNotice(n)
                                 ? computeCompetitionDeletedStatus(n, publishedCompetitionIds)
                                 : computeDeletedStatus(n, existingContentIds, commentByRefId),
-                        computeBody(n, boardTitleByContentId, commentByRefId, repliedCommentById)))
+                        computeBody(n, boardTitleByContentId, commentByRefId, reportedCommentIds)))
                 .toList();
     }
 
@@ -404,12 +395,13 @@ public class NoticeService {
     /**
      * 알림 body 동적 계산
      * - 커뮤니티 알림 : NoticePreview.body (푸시 본문과 같은 규칙 — 게시글 제목 / 댓글 내용, 삭제·숨김 댓글은 null, #196)
+     *                    + 내가 신고한 댓글은 null (푸시 때는 새 댓글이라 신고했을 수 없음)
      * - 대회 마감 알림 : 발송 때 저장한 본문
      */
     private String computeBody(Notice notice,
                                Map<Long, String> boardTitleByContentId,
                                Map<Long, CommunityComments> commentByRefId,
-                               Map<Long, CommunityComments> repliedCommentById) {
+                               Set<Long> reportedCommentIds) {
         return switch (notice.getPushType()) {
             // 대회 이름·마감 단계가 들어간 문구를 발송 때 저장해 둔다
             case COMPETITION_EARLY_BIRD_DEADLINE, COMPETITION_REGISTRATION_DEADLINE -> notice.getBody();
@@ -418,7 +410,7 @@ public class NoticeService {
                     notice.getData() == null ? null : Long.parseLong(notice.getData()),
                     notice.getRefId(),
                     boardTitleByContentId::get,
-                    id -> commentByRefId.containsKey(id) ? commentByRefId.get(id) : repliedCommentById.get(id));
+                    id -> reportedCommentIds.contains(id) ? null : commentByRefId.get(id));
         };
     }
 

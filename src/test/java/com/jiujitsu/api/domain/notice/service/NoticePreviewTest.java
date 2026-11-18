@@ -33,7 +33,6 @@ class NoticePreviewTest {
         CommunityComments c = mock(CommunityComments.class);
         lenient().when(c.getId()).thenReturn(id);
         lenient().when(c.getParentId()).thenReturn(parentId);
-        lenient().when(c.repliedCommentId()).thenReturn(parentId);
         lenient().when(c.getBody()).thenReturn(body);
         lenient().when(c.isDeleted()).thenReturn("삭제".equals(state));
         lenient().when(c.isHidden()).thenReturn("숨김".equals(state));
@@ -42,38 +41,56 @@ class NoticePreviewTest {
     }
 
     @Test
-    @DisplayName("내 게시글에 댓글 · 좋아요 = 게시글 제목, 게시글이 없으면(밸런스 게임) null")
-    void boardTitle() {
+    @DisplayName("내 게시글에 좋아요 = 게시글 제목, 게시글이 없으면(밸런스 게임) null")
+    void contentLike_boardTitle() {
         Board board = mock(Board.class);
         given(board.getTitle()).willReturn("오늘 오픈매트 후기");
         given(boardRepository.findByContent_Id(CONTENT)).willReturn(Optional.of(board));
 
-        assertThat(preview.of(FcmPushType.NEW_COMMENTS, CONTENT, 100L)).isEqualTo("오늘 오픈매트 후기");
         assertThat(preview.of(FcmPushType.CONTENTS_LIKE, CONTENT, null)).isEqualTo("오늘 오픈매트 후기");
         assertThat(preview.of(FcmPushType.CONTENTS_LIKE, 99L, null)).isNull();
     }
 
     @Test
-    @DisplayName("내 댓글에 대댓글 = 대댓글이 달린 내 댓글 (refId 는 새 대댓글)")
-    void reply_parentComment() {
-        comment(1L, 0L, "저도 그 기술 배워보고 싶어요", "정상");
-        comment(101L, 1L, "저도 동의해요", "정상");
+    @DisplayName("내 게시글에 댓글 = 새로 달린 댓글 (#230). 밸런스 게임 댓글도 같음 — 게시글 제목은 읽지 않음")
+    void newComment_newCommentBody() {
+        comment(100L, 0L, "저도 그 기술 배워보고 싶어요", "정상");
 
-        assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isEqualTo("저도 그 기술 배워보고 싶어요");
+        assertThat(preview.of(FcmPushType.NEW_COMMENTS, CONTENT, 100L)).isEqualTo("저도 그 기술 배워보고 싶어요");
+        verifyNoInteractions(boardRepository);
     }
 
-    @ParameterizedTest(name = "부모 댓글 {0}")
-    @ValueSource(strings = {"삭제", "숨김"})
-    @DisplayName("대댓글: 부모 댓글이 삭제·숨김(신고 포함)이면 null — 지운 글이 잠금화면·알림함에 다시 뜨지 않게")
-    void reply_deletedOrHiddenParent_null(String state) {
-        comment(1L, 0L, "지운 댓글 원문", state);
+    @Test
+    @DisplayName("내 댓글에 대댓글 = 새로 달린 대댓글 (#230 · #238). 대댓글이 달린 내 댓글이 아님")
+    void reply_newReplyBody() {
+        comment(1L, 0L, "내가 쓴 댓글", "정상");
         comment(101L, 1L, "저도 동의해요", "정상");
 
+        assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isEqualTo("저도 동의해요");
+        verify(commentsRepository, never()).findById(1L);
+    }
+
+    @Test
+    @DisplayName("태그 답글(#216)도 새로 달린 대댓글")
+    void mentionReply_newReplyBody() {
+        comment(101L, 1L, "@B 혹시 기 입고 하시나요?", "정상");
+
+        assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isEqualTo("@B 혹시 기 입고 하시나요?");
+    }
+
+    @ParameterizedTest(name = "새 댓글 {0}")
+    @ValueSource(strings = {"삭제", "숨김"})
+    @DisplayName("댓글 · 대댓글 알림: 새 댓글이 삭제·숨김(신고 포함)이면 null — 지운 글이 알림함에 다시 뜨지 않게")
+    void newComment_deletedOrHidden_null(String state) {
+        comment(100L, 0L, "지운 댓글 원문", state);
+        comment(101L, 1L, "지운 대댓글 원문", state);
+
+        assertThat(preview.of(FcmPushType.NEW_COMMENTS, CONTENT, 100L)).isNull();
         assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isNull();
     }
 
     @Test
-    @DisplayName("내 댓글에 좋아요 = 좋아요 받은 댓글")
+    @DisplayName("내 댓글에 좋아요 = 좋아요 받은 댓글 (그대로)")
     void commentLike_comment() {
         comment(1L, 0L, "저도 그 기술 배워보고 싶어요", "정상");
 
@@ -90,38 +107,12 @@ class NoticePreviewTest {
     }
 
     @Test
-    @DisplayName("대상 댓글이 없으면 null, 대회 알림은 미리보기 대상이 아님")
+    @DisplayName("대상 댓글이 없거나 refId 가 없으면 null, 대회 알림은 미리보기 대상이 아님")
     void missing_or_other_null() {
         assertThat(preview.of(FcmPushType.COMMENTS_LIKE, CONTENT, 999L)).isNull();
+        assertThat(preview.of(FcmPushType.NEW_COMMENTS, CONTENT, null)).isNull();
         assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, null)).isNull();
+        assertThat(preview.of(FcmPushType.CONTENTS_LIKE, null, null)).isNull();
         assertThat(preview.of(FcmPushType.COMPETITION_EARLY_BIRD_DEADLINE, 1L, null)).isNull();
     }
-
-    @Test
-    @DisplayName("대댓글 알림인데 refId 가 최상위 댓글(parentId 0)이면 null — id 0 을 부모로 조회하지 않음, contentId 가 없으면 게시글 제목도 null")
-    void rootComment_or_noContent_null() {
-        comment(1L, 0L, "최상위 댓글", "정상");
-
-        assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 1L)).isNull();
-        verify(commentsRepository, never()).findById(0L);
-        assertThat(preview.of(FcmPushType.NEW_COMMENTS, null, null)).isNull();
-        assertThat(preview.of(FcmPushType.CONTENTS_LIKE, null, null)).isNull();
-        verifyNoInteractions(boardRepository);
-    }
-
-    @Test
-    @DisplayName("태그 답글(#216) = 태그된 대댓글 (받는 사람이 쓴 댓글). 태그 대댓글이 지워졌으면 null")
-    void mentionReply_mentionedComment() {
-        comment(1L, 0L, "최상위 댓글", "정상");
-        comment(2L, 1L, "기 입고 해요", "정상");
-        CommunityComments reply = comment(101L, 1L, "@B 혹시 기 입고 하시나요?", "정상");
-        given(reply.repliedCommentId()).willReturn(2L);
-
-        assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isEqualTo("기 입고 해요");
-
-        comment(3L, 1L, "지운 대댓글", "삭제");
-        given(reply.repliedCommentId()).willReturn(3L);
-        assertThat(preview.of(FcmPushType.NEW_CHILD_COMMENTS, CONTENT, 101L)).isNull();
-    }
 }
-

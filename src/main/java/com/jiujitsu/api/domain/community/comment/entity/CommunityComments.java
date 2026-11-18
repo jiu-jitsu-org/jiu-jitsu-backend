@@ -59,16 +59,9 @@ public class CommunityComments extends BaseEntity implements Hideable {
     @Builder.Default
     private Boolean isReported = false;
 
-    // 대댓글의 답글 버튼으로 쓴 대댓글이면 그 대댓글 id (같은 스레드, #216). 답글 알림을 그 작성자에게 보내고 알림함 미리보기에 쓴다
+    // 대댓글의 답글 버튼으로 쓴 대댓글이면 그 대댓글 id (같은 스레드, #216). 답글 알림을 그 작성자에게 보낸다
     @Column(name = "mention_comment_id")
     private Long mentionCommentId;
-
-    /**
-     * 이 대댓글이 답한 댓글 = 답글 알림을 받는 사람이 쓴 댓글. 태그한 대댓글이 있으면 그 대댓글(#216), 없으면 부모(최상위) 댓글. 최상위 댓글이면 0
-     */
-    public Long repliedCommentId() {
-        return mentionCommentId != null && mentionCommentId != 0 ? mentionCommentId : parentId;
-    }
 
     /**
      * 최상위 댓글 parentId 스레드의 대댓글인가 (#216 태그 검증)

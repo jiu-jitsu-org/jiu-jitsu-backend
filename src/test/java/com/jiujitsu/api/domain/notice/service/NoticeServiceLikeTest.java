@@ -199,27 +199,46 @@ class NoticeServiceLikeTest {
         assertThat(noticeService.getUnreadCount()).isEqualTo(1);
     }
 
-    @Test
-    @DisplayName("대댓글 알림 본문(#216): 태그 답글이면 태그된 대댓글, 아니면 부모 댓글을 한 번에 불러 보여 준다")
-    void replyNotice_bodyIsRepliedComment() {
-        Notice mentionReply = Notice.builder().id(1L).userId(1L)
-                .pushType(FcmPushType.NEW_CHILD_COMMENTS).pushActionType(PushActionType.BOARD_DETAIL)
-                .title("내 댓글에 답글이 달렸어요").data("10").refId(300L).senderUserId(5L)
+    private static Notice commentNotice(long id, FcmPushType type, long refId) {
+        return Notice.builder().id(id).userId(1L)
+                .pushType(type).pushActionType(PushActionType.BOARD_DETAIL)
+                .title(type.getTitle()).data("10").refId(refId).senderUserId(5L)
                 .notifiedAt(PUSHED_AT).isRead(false).build();
-        given(noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(1L)).willReturn(List.of(mentionReply));
-        stubContentExists(10L, "글 제목");
-        CommunityComments reply = mock(CommunityComments.class);   // 새 대댓글 300: 스레드 100 안에서 대댓글 200 을 태그
-        given(reply.getId()).willReturn(300L);
-        given(reply.repliedCommentId()).willReturn(200L);
-        CommunityComments mentioned = mock(CommunityComments.class);
-        given(mentioned.getId()).willReturn(200L);
-        given(mentioned.getBody()).willReturn("기 입고 해요");
-        given(communityCommentsRepository.findAllById(anySet())).willAnswer(inv -> {
-            java.util.Set<Long> ids = inv.getArgument(0);
-            return ids.contains(300L) ? List.of(reply) : ids.contains(200L) ? List.of(mentioned) : List.of();
-        });
+    }
 
-        assertThat(noticeService.getNoticeList().get(0).body()).isEqualTo("기 입고 해요");
+    private static CommunityComments newComment(long id, String body) {
+        CommunityComments c = mock(CommunityComments.class);
+        given(c.getId()).willReturn(id);
+        lenient().when(c.getBody()).thenReturn(body);
+        return c;
+    }
+
+    @Test
+    @DisplayName("댓글 · 대댓글 알림 본문(#230): 새로 달린 댓글을 한 번에 불러 보여 준다")
+    void commentNotice_bodyIsNewComment() {
+        given(noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(1L)).willReturn(List.of(
+                commentNotice(1L, FcmPushType.NEW_CHILD_COMMENTS, 300L),
+                commentNotice(2L, FcmPushType.NEW_COMMENTS, 301L)));
+        stubContentExists(10L, "글 제목");
+        List<CommunityComments> comments = List.of(newComment(300L, "@B 기 입고 해요"), newComment(301L, "저도 그 기술 배워보고 싶어요"));
+        given(communityCommentsRepository.findAllById(anySet())).willReturn(comments);
+
+        assertThat(noticeService.getNoticeList()).extracting(NoticeListResponse::body)
+                .containsExactly("@B 기 입고 해요", "저도 그 기술 배워보고 싶어요");
+    }
+
+    @Test
+    @DisplayName("댓글 알림 본문: 내가 신고한 댓글은 비운다 — 댓글 목록에서 가려 보이는 댓글이 알림함에 원문으로 뜨지 않게")
+    void commentNotice_reportedByMe_null() {
+        given(noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(1L)).willReturn(List.of(
+                commentNotice(1L, FcmPushType.NEW_COMMENTS, 300L)));
+        stubContentExists(10L, "글 제목");
+        List<CommunityComments> comments = List.of(newComment(300L, "신고한 댓글 원문"));
+        given(communityCommentsRepository.findAllById(anySet())).willReturn(comments);
+        given(reportService.getReportedTargetIds(ReportType.COMMENT)).willReturn(List.of(300L));
+
+        NoticeListResponse response = noticeService.getNoticeList().get(0);
+        assertThat(response.body()).isNull();
+        assertThat(response.deletedStatus()).isNull();   // 이동은 그대로 (댓글 목록이 가려서 보여 줌)
     }
 }
-
