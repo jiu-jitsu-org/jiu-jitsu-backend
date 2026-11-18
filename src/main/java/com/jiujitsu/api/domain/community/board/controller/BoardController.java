@@ -3,8 +3,10 @@ package com.jiujitsu.api.domain.community.board.controller;
 import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.service.BoardCategoryService;
 import com.jiujitsu.api.domain.community.board.service.BoardHideService;
+import com.jiujitsu.api.domain.community.board.service.BoardSearchMissService;
 import com.jiujitsu.api.domain.community.board.service.BoardService;
 import com.jiujitsu.api.domain.community.content.dto.ContentLikeResponse;
+import com.jiujitsu.api.domain.community.content.dto.ContentViewResponse;
 import com.jiujitsu.api.domain.community.content.dto.ContentSaveResponse;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -34,12 +36,13 @@ public class BoardController {
     private final BoardService boardService;
     private final BoardCategoryService boardCategoryService;
     private final BoardHideService boardHideService;
+    private final BoardSearchMissService boardSearchMissService;
     private final ContentService contentService;
 
     /**
      * 카테고리
      */
-    @Operation(summary = "카테고리 목록 조회", description = "카테고리 목록 조회(임시)")
+    @Operation(summary = "카테고리 목록 조회", description = "사용 중인 카테고리를 보이는 순서대로, 설명 한 줄과 함께 반환합니다.")
     @GetMapping("/category")
     public List<BoardCategoryResponse> getCategory() {
         return boardCategoryService.getCategory();
@@ -49,16 +52,30 @@ public class BoardController {
     /**
      * 게시물
      */
-    @Operation(summary = "게시글 목록 조회", description = "카테고리별 페이징 게시글 목록을 조회합니다.")
+    @Operation(summary = "게시글 목록 조회", description = "피드(FEED) · 카테고리(CATEGORY) · 검색(SEARCH) 페이징 게시글 목록을 최신순으로 조회합니다. boardListType 은 필수 (없으면 400 R0001). 숨김 · 차단한 작성자 · 내가 신고 · 숨긴 글은 빠집니다.\n\n"
+            + "검색(SEARCH)\n"
+            + "- searchKeyword 를 띄어쓰기로 나눠 모든 단어가 제목 · 본문 · 태그 중 어딘가에 든 글 (단어마다 다른 곳이어도 됨)\n"
+            + "- 글 쪽 띄어쓰기 · 줄바꿈과 영문 대소문자는 무시 ('오픈 매트' = '오픈매트', 'nogi' = 'NoGi'), % _ 는 글자 그대로\n"
+            + "- 같은 단어는 하나로, 단어는 10개까지. 모든 카테고리에서 찾음 (categoryId 무시)\n"
+            + "- searchKeyword 가 없거나 빈 값 · 공백만이면 빈 페이지\n\n"
+            + "대회 조건(competitionId, 선택)\n"
+            + "- 주면 그 대회를 고른 글만. 목록 종류와 같이 씀\n"
+            + "- 대회 이야기 · 이야기 수는 카테고리와 상관없이 이 대회를 고른 글 전체라, 대회 상세의 '모두 보기'와 같은 범위는 FEED + competitionId\n"
+            + "- 공개 대회만, 없거나 비공개면 404 COMPETITION_NOT_FOUND")
+    @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER, ErrorCode.COMPETITION_NOT_FOUND})
     @GetMapping
     public Page<BoardListResponse> getList(
-            @ModelAttribute BoardListRequest boardListRequest,
+            @Valid @ModelAttribute BoardListRequest boardListRequest,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return boardService.getList(boardListRequest, pageable);
+        Page<BoardListResponse> result = boardService.getList(boardListRequest, pageable);
+        // 검색 0건 기록은 목록 조회 트랜잭션이 끝난 뒤에 (#266)
+        boardSearchMissService.recordIfNoPosts(boardListRequest, pageable, result.getTotalElements());
+        return result;
     }
 
-    @Operation(summary = "게시글 단건 조회", description = "ID로 게시글을 조회합니다.")
+    @Operation(summary = "게시글 단건 조회", description = "ID로 게시글을 조회합니다.\n\n"
+            + "- 이 조회로는 조회수가 오르지 않습니다. 웹은 상세 화면을 열 때 POST /board/{id}/views 를 한 번 부릅니다 (#249)")
     @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND})
     @GetMapping("/{id}")
     public BoardResponse getById(
@@ -67,9 +84,11 @@ public class BoardController {
         return boardService.getById(id);
     }
 
-    @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다. competitionId 로 공개 대회를 연결할 수 있습니다(선택, 카테고리와 무관).")
+    @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다. competitionId 로 공개 대회를 연결할 수 있습니다(선택, 카테고리와 무관).\n\n"
+            + "- 내용은 선택. 생략 · 빈 값 · 공백만이면 \"\" 로 저장하고 응답 body 도 \"\"\n"
+            + "- 제목 45자 · 본문 3,000자까지. 넘으면 400 R0002")
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER, ErrorCode.COMPETITION_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER, ErrorCode.WRONG_PARAMETER, ErrorCode.COMPETITION_NOT_FOUND})
     @PostMapping
     public BoardResponse create(@Valid @RequestBody BoardCreateRequest request) {
         return boardService.create(request);
@@ -77,10 +96,12 @@ public class BoardController {
 
     @Operation(summary = "게시글 수정", description = "게시글을 수정합니다.\n\n"
             + "- categoryId·title·body·tags 는 null 이면 그대로 둡니다\n"
+            + "- body 를 빈 값 · 공백만으로 보내면 내용을 지웁니다(\"\" 저장). 내용은 선택\n"
             + "- competitionId 는 다릅니다: 보낸 값으로 교체하고 null·생략이면 연결을 해제합니다. 수정 화면은 상세 응답의 competitionId 를 항상 다시 보냅니다\n"
-            + "- 지금 연결된 대회 id 를 그대로 보내면 대회가 비공개로 바뀌었어도 연결이 유지됩니다")
+            + "- 지금 연결된 대회 id 를 그대로 보내면 대회가 비공개로 바뀌었어도 연결이 유지됩니다\n"
+            + "- 제목 45자 · 본문 3,000자까지 (등록과 같음). 넘으면 400 R0002")
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND, ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.COMPETITION_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND, ErrorCode.BOARD_CATEGORY_NOT_FOUND, ErrorCode.WRONG_PARAMETER, ErrorCode.COMPETITION_NOT_FOUND})
     @PutMapping("/{id}")
     public BoardResponse update(
             @Parameter(name = "id", description = "컨텐츠 ID (게시글의 contentId)", required = true) @PathVariable Long id,
@@ -97,6 +118,18 @@ public class BoardController {
             @Parameter(name = "id", description = "컨텐츠 ID (게시글의 contentId)", required = true) @PathVariable(name = "id") Long id
     ) {
         boardService.delete(id);
+    }
+
+    @Operation(summary = "게시글 조회수 올리기", description = "상세 화면을 열 때 한 번 부릅니다. 조회수를 1 올리고 올린 뒤 값을 반환합니다.\n\n"
+            + "- 비로그인도 부를 수 있고, 부를 때마다 올라갑니다 (중복 방지 없음)\n"
+            + "- 작성자 본인은 첫 1회만 셉니다 (그 뒤로는 올리지 않고 지금 값을 반환)\n"
+            + "- 상세 조회와 같은 기준으로 볼 수 없는 글(없음 · 숨김 · 내가 신고)은 BOARD_NOT_FOUND")
+    @ApiErrorCodeExamples({ErrorCode.BOARD_NOT_FOUND})
+    @PostMapping("/{id}/views")
+    public ContentViewResponse increaseView(
+            @Parameter(name = "id", description = "컨텐츠 ID (게시글의 contentId)", required = true) @PathVariable Long id
+    ) {
+        return boardService.increaseView(id);
     }
 
     @Operation(summary = "게시물 좋아요 등록/취소", description = "게시물 좋아요를 등록/취소합니다. 컨텐츠 단위 기능이라 밸런스 게임의 contentId 로도 호출할 수 있습니다.")

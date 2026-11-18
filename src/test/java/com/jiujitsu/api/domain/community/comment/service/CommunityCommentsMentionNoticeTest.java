@@ -138,6 +138,23 @@ class CommunityCommentsMentionNoticeTest {
     }
 
     @Test
+    @DisplayName("댓글 · 답글 알림의 푸시 data 에 새 댓글 id(commentId) — 앱이 그 댓글을 바로 보여 줌 (#271)")
+    void notices_carryNewCommentId() {
+        givenThread(W, A, null);
+        givenCreated();
+        lenient().when(newComment.getId()).thenReturn(77L);
+
+        communityCommentsService.createComment(new CommunityCommentsWriteRequest(CONTENT_ID, TOP_ID, "답글", null));
+
+        ArgumentCaptor<CommentNoticeEvent> captor = ArgumentCaptor.forClass(CommentNoticeEvent.class);
+        verify(eventPublisher, times(2)).publishEvent(captor.capture());
+        assertThat(captor.getAllValues()).allSatisfy(event -> {
+            assertThat(event.pushData()).containsEntry("commentId", "77").containsEntry("data", CONTENT_ID.toString());
+            assertThat(event.refId()).isEqualTo(77L);
+        });
+    }
+
+    @Test
     @DisplayName("태그 답글: 답글 알림은 태그된 대댓글 작성자에게만, 최상위 댓글 작성자는 받지 않는다. 새 대댓글에 태그를 남긴다")
     void mention_notifiesMentionedOnly() {
         givenThread(W, A, comment(REPLY_ID, B, TOP_ID));

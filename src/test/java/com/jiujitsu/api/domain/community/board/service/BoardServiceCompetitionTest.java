@@ -2,6 +2,7 @@ package com.jiujitsu.api.domain.community.board.service;
 
 import com.jiujitsu.api.domain.community.board.dto.BoardCreateRequest;
 import com.jiujitsu.api.domain.community.board.dto.BoardUpdateRequest;
+import com.jiujitsu.api.domain.community.board.dto.CompetitionStoriesResponse;
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.factory.BoardFactory;
 import com.jiujitsu.api.domain.community.board.mapper.BoardMapper;
@@ -10,7 +11,6 @@ import com.jiujitsu.api.domain.community.comment.service.CommunityCommentsServic
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService;
-import com.jiujitsu.api.domain.community.report.entity.ReportType;
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.entity.Competition;
@@ -33,6 +33,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -201,50 +203,32 @@ class BoardServiceCompetitionTest {
     // ---------- 대회 이야기 ----------
 
     @Test
-    @DisplayName("대회 이야기: 반응 상위 2개 다음에 최신 글로 채워 5개, 상위 글은 최신 쪽에서 다시 나오지 않는다")
-    void stories_reactionThenLatest_noDuplicates() {
-        Board hot1 = board(me, null);
-        Board hot2 = board(me, null);
-        List<Board> latest = new ArrayList<>(List.of(board(me, null), hot1, board(me, null), board(me, null), board(me, null)));
-        givenStoryQueries(List.of(hot1, hot2), latest);
+    @DisplayName("대회 이야기: 최신순 5개(같으면 id 큰 것 먼저)와 전체 글 수 (#270)")
+    @SuppressWarnings("unchecked")
+    void stories_latestFiveAndTotal() {
+        List<Board> latest = List.of(board(me, null), board(me, null));
+        given(boardRepository.findAll(any(Specification.class), any(Pageable.class))).willReturn(new PageImpl<>(latest, PageRequest.of(0, 5), 12));
         given(competitionQueryService.getCards(any())).willReturn(Map.of());
 
-        assertThat(boardService.getCompetitionStories(7L)).hasSize(5);
+        CompetitionStoriesResponse result = boardService.getCompetitionStories(7L);
 
-        List<Board> mapped = mappedBoards();
-        assertThat(mapped).containsExactly(hot1, hot2, latest.get(0), latest.get(2), latest.get(3));
-        verify(boardRepository).findCompetitionStoriesByReaction(eq(7L), any(), any(), eq(PageRequest.of(0, 2)));
-        verify(boardRepository).findCompetitionStoriesLatest(eq(7L), any(), any(), eq(PageRequest.of(0, 5)));
+        assertThat(result.totalCount()).isEqualTo(12);
+        assertThat(result.stories()).hasSize(2);
+        assertThat(mappedBoards()).containsExactlyElementsOf(latest);
+        verify(boardRepository).findAll(any(Specification.class),
+                eq(PageRequest.of(0, 5, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")))));
     }
 
     @Test
-    @DisplayName("대회 이야기: 반응이 없으면 최신순, 글이 적으면 있는 만큼, 없으면 빈 목록")
-    void stories_latestOnly_andFewer() {
-        Board a = board(me, null);
-        Board b = board(me, null);
-        givenStoryQueries(List.of(), List.of(a, b));
-        given(competitionQueryService.getCards(any())).willReturn(Map.of());
+    @DisplayName("대회 이야기: 글이 없으면 빈 목록 · 0")
+    @SuppressWarnings("unchecked")
+    void stories_empty() {
+        given(boardRepository.findAll(any(Specification.class), any(Pageable.class))).willReturn(new PageImpl<>(List.of(), PageRequest.of(0, 5), 0));
 
-        assertThat(boardService.getCompetitionStories(7L)).hasSize(2);
-        assertThat(mappedBoards()).containsExactly(a, b);
+        CompetitionStoriesResponse result = boardService.getCompetitionStories(7L);
 
-        givenStoryQueries(List.of(), List.of());
-        assertThat(boardService.getCompetitionStories(7L)).isEmpty();
-    }
-
-    @Test
-    @DisplayName("대회 이야기: 피드와 같은 제외 목록(차단 작성자, 신고·숨긴 글)을 두 쿼리에 넘긴다")
-    void stories_feedExclusions() {
-        given(userBlockService.getBlockedUserIds()).willReturn(List.of(5L));
-        given(reportService.getReportedTargetIds(ReportType.BOARD)).willReturn(List.of(300L));
-        given(boardHideService.getHiddenContentIds()).willReturn(List.of(301L, 300L));
-        given(boardRepository.findCompetitionStoriesByReaction(any(), any(), any(), any())).willReturn(List.of());
-        given(boardRepository.findCompetitionStoriesLatest(any(), any(), any(), any())).willReturn(List.of());
-
-        boardService.getCompetitionStories(7L);
-
-        verify(boardRepository).findCompetitionStoriesByReaction(7L, List.of(5L), List.of(300L, 301L), PageRequest.of(0, 2));
-        verify(boardRepository).findCompetitionStoriesLatest(7L, List.of(5L), List.of(300L, 301L), PageRequest.of(0, 5));
+        assertThat(result.totalCount()).isZero();
+        assertThat(result.stories()).isEmpty();
     }
 
     @Test
@@ -259,11 +243,6 @@ class BoardServiceCompetitionTest {
     }
 
     // ---------- helpers ----------
-
-    private void givenStoryQueries(List<Board> byReaction, List<Board> latest) {
-        given(boardRepository.findCompetitionStoriesByReaction(any(), any(), any(), any())).willReturn(byReaction);
-        given(boardRepository.findCompetitionStoriesLatest(any(), any(), any(), any())).willReturn(latest);
-    }
 
     // 응답으로 매핑된 글 (마지막 호출 묶음 기준, 순서 유지)
     private List<Board> mappedBoards() {

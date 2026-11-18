@@ -32,16 +32,17 @@ public class UserBlockController {
     }
 
     @Operation(
-            summary = "유저 차단/차단 해제 (토글)",
-            description = "특정 유저를 차단하거나 차단 해제합니다. 이미 차단된 유저를 다시 요청하면 차단이 해제됩니다. (true = 차단, false = 차단 해제)"
+            summary = "유저 차단",
+            description = "특정 유저를 차단합니다. 이미 차단한 유저를 다시 요청해도 차단 상태로 남습니다 (연타·다른 기기 안전). "
+                    + "응답은 항상 true (요청 뒤 차단 상태). 해제는 DELETE /user/block/{id}. 없는·탈퇴한 회원은 U0011."
     )
     @LoginErrorExamples
-    @ApiErrorCodeExamples({ErrorCode.SELF_BLOCK_NOT_ALLOWED, ErrorCode.AUTHENTICATION_FAILED})
+    @ApiErrorCodeExamples({ErrorCode.SELF_BLOCK_NOT_ALLOWED, ErrorCode.MEMBER_NOT_FOUND})
     @PostMapping("/block/{id}")
-    public Boolean toggleBlock(
+    public Boolean block(
             @Parameter(name = "id", description = "차단할 유저 ID", required = true) @PathVariable(value = "id") Long id
     ) {
-        return userBlockService.toggleBlock(id);
+        return userBlockService.block(id);
     }
 
     @Operation(summary = "차단 해제 전용",

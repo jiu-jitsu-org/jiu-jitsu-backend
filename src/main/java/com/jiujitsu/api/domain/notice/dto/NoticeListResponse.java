@@ -14,6 +14,7 @@ public record NoticeListResponse(
         @Schema(description = "알림 타입", example = "NEW_COMMENTS") FcmPushType pushType,
         @Schema(description = "알림 동작 타입 (대상 타입이 결정: 게시글=BOARD_DETAIL, 밸런스 게임=BALANCE_DETAIL, 대회=COMPETITION_DETAIL)", example = "BOARD_DETAIL") PushActionType actionType,
         @Schema(description = "데이터값. 게시글·밸런스 게임 = contentId, 대회 = 대회 id (\"이 대회 알림 받지 않기\" = DELETE /competitions/{data}/notice, 이미 꺼져 있어도 같은 결과)", example = "1") String data,
+        @Schema(description = "댓글 ID. 내 글에 댓글(NEW_COMMENTS) = 새로 달린 댓글(대댓글일 수도 있음), 내 댓글에 답글(NEW_CHILD_COMMENTS) = 새 대댓글, 댓글 좋아요(COMMENTS_LIKE) = 좋아요 받은 댓글. 그 밖의 알림은 null — GET /community/comments/{commentId} 로 그 댓글을 바로 보여 줌", example = "55", nullable = true) Long commentId,
         @Schema(description = "읽음여부", example = "true") Boolean isRead,
         @Schema(description = "알림 시각 (정렬 기준). 좋아요 알림은 마지막으로 푸시가 간 시각") LocalDateTime createdAt,
         @Schema(description = "대상 삭제 상태. null=정상, BOARD=게시글 삭제, COMMENT=댓글 삭제, REPLY=대댓글 삭제, COMPETITION=대회가 없거나 비공개",

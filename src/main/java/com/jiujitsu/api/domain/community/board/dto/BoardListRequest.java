@@ -11,7 +11,10 @@ public record BoardListRequest(
         BoardListType boardListType,
         @Schema(description = "카테고리 ID", example = "1")
         Long categoryId,
-        @Schema(description = "검색 키워드", example = "검색어")
-        String searchKeyword
+        @Schema(description = "검색어 (SEARCH). 띄어쓰기로 나눈 모든 단어가 든 글, 비었거나 공백만이면 빈 페이지", example = "오픈매트 강남")
+        String searchKeyword,
+        @Schema(description = "대회 ID (선택). 주면 이 대회를 고른 글만 — 목록 종류와 같이 씀. 대회 이야기와 같은 범위는 FEED + competitionId. 공개 대회만, 아니면 404 COMPETITION_NOT_FOUND")
+        Long competitionId
 ) {
+
 }

@@ -11,6 +11,7 @@ import com.jiujitsu.api.global.exception.annotation.LoginErrorExamples;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,13 +35,30 @@ public class CommunityCommentsController {
                     "대댓글은 sortType 기준 3개만 포함하며, 나머지는 대댓글 추가 조회로 가져옵니다. " +
                     "차단한 작성자의 댓글/대댓글은 제외하지 않고 isBlocked=true로 내려가며, 본문과 작성자 정보는 마스킹됩니다."
     )
-    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND})
+    @ApiErrorCodeExamples({ErrorCode.CONTENT_NOT_FOUND, ErrorCode.REQUIRED_PARAMETER})
     @GetMapping
     public Slice<CommunityCommentsResponse> getComments(
-            @ModelAttribute CommentsListRequest request,
+            @Valid @ModelAttribute CommentsListRequest request,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         return communityCommentsService.getComments(request, pageable);
+    }
+
+    @Operation(
+            summary = "댓글 하나 (알림에서 연 댓글)",
+            description = "알림 · 푸시의 commentId 로 그 댓글을 바로 보여 줄 때 씁니다. 비로그인도 조회할 수 있습니다.\n\n"
+                    + "- 댓글이면 comment 에 그 댓글(댓글 목록 항목과 같은 형식, 대댓글 미리보기 3개 · 대댓글 수), reply 는 null\n"
+                    + "- 대댓글이면 comment 에 원 댓글, reply 에 그 대댓글. reply 가 미리보기 3개 안에 있으면 childrenList 에도 있음 — id 로 한 번만 보여 줌\n"
+                    + "- sortType 은 대댓글 미리보기 정렬 (댓글 목록과 같음)\n"
+                    + "- 보이는 기준은 댓글 목록과 같음: 삭제 · 신고 · 차단은 목록처럼 표시 · 마스킹, 관리자가 숨긴 댓글(또는 원 댓글)은 COMMENT_NOT_FOUND"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMMENT_NOT_FOUND})
+    @GetMapping("/{id}")
+    public CommentThreadResponse getCommentThread(
+            @Parameter(name = "id", description = "댓글 ID (알림의 commentId)", required = true) @PathVariable Long id,
+            @Parameter(description = "대댓글 미리보기 정렬 (기본 댓글 목록과 같음)") @RequestParam(required = false) CommentsSortType sortType
+    ) {
+        return communityCommentsService.getCommentThread(id, sortType);
     }
 
     @Operation(

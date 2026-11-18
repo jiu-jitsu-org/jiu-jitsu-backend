@@ -10,6 +10,7 @@ import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.util.LikeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -108,11 +109,8 @@ public class CompetitionService {
         return new CompetitionCreateResponse(created, skipped);
     }
 
-    // LIKE 특수문자(\ % _)를 이스케이프한다 (Repository 의 ESCAPE '\' 와 짝)
+    // LIKE 특수문자(\ % _)를 이스케이프한다 (Repository 의 ESCAPE '\' 와 짝). 규칙은 LikeUtil 한 곳
     public static String escapeLike(String value) {
-        return value
-                .replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
+        return LikeUtil.escape(value);
     }
 }

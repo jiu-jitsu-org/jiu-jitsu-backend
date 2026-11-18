@@ -24,7 +24,11 @@ public class AdminReportController {
 
     private final ReportService reportService;
 
-    @Operation(summary = "신고 목록 조회", description = "전체 신고 목록을 페이징 조회합니다.")
+    @Operation(summary = "신고 목록 조회", description = "전체 신고 목록을 페이징 조회합니다.<br>"
+            + "- BOARD: targetId = contentId, targetPreview = 게시글 제목 + 본문, isHidden = 숨김 여부<br>"
+            + "- COMMENT: targetId = commentId, targetPreview = 댓글 내용, isHidden = 숨김 여부<br>"
+            + "- USER (회원 신고): targetId = userId, targetPreview = 대상 닉네임, isHidden 은 항상 false (자동 숨김·숨김 해제 없음)<br>"
+            + "totalReportCount 는 같은 대상이 받은 신고 수")
     @GetMapping
     public Page<AdminReportListResponse> getReports(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable

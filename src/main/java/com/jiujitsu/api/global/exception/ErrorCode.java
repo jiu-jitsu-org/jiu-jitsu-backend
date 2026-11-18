@@ -40,6 +40,10 @@ public enum ErrorCode {
     COMPETITION_REQUIRED_FIELDS_MISSING(400, "R0012", "공개에 필요한 칸이 비어 있습니다. 비어 있는 칸을 채운 뒤 다시 공개해 주세요."),
     COMPETITION_CLUB_REGISTRATION_ONLY(400, "R0013", "도장(감독·코치)을 통해 신청하는 대회라 신청 링크를 넣을 수 없습니다."),
     COMPETITION_REGISTRATION_LINK_EXISTS(400, "R0014", "신청 링크가 있어 도장(감독·코치)을 통해 신청하는 접수 사이트로 바꿀 수 없습니다. 신청 링크를 먼저 지워 주세요."),
+    // Spring 이 던지는 요청 오류 (#258). 없는 주소 · 지원하지 않는 메서드 · Content-Type
+    API_NOT_FOUND(404, "R0015", "존재하지 않는 API 주소입니다."),
+    METHOD_NOT_ALLOWED(405, "R0016", "지원하지 않는 요청 방식입니다."),
+    UNSUPPORTED_MEDIA_TYPE(415, "R0017", "지원하지 않는 요청 형식입니다."),
 
 
     /**
@@ -59,8 +63,8 @@ public enum ErrorCode {
     USER_ALREADY_DEACTIVATED(400, "U0004", "이미 탈퇴 처리된 계정입니다."),
     USER_ACCOUNT_EXPIRED(400, "U0005", "탈퇴 후 30일이 지나 계정이 영구 삭제되었습니다."),
     SELF_BLOCK_NOT_ALLOWED(400, "U0006", "자기 자신을 차단할 수 없습니다."),
-    SELF_REPORT_NOT_ALLOWED(400, "U0007", "자신의 게시물/댓글은 신고할 수 없습니다."),
-    ALREADY_REPORTED(400, "U0008", "이미 신고한 게시물/댓글입니다."),
+    SELF_REPORT_NOT_ALLOWED(400, "U0007", "자기 자신이나 자신의 게시물/댓글은 신고할 수 없습니다."),
+    ALREADY_REPORTED(400, "U0008", "이미 신고한 대상입니다."),
     REPORT_NOT_FOUND(404, "U0009", "존재하지 않는 신고입니다."),
     SELF_HIDE_NOT_ALLOWED(400, "U0010", "자신의 게시물은 숨길 수 없습니다."),
     MEMBER_NOT_FOUND(404, "U0011", "존재하지 않는 회원입니다."),

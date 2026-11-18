@@ -10,6 +10,8 @@ import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.community.content.service.ContentService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -26,6 +28,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -75,8 +79,8 @@ class BalanceGameServiceViewCountTest {
     }
 
     @Test
-    @DisplayName("상세 조회 시 조회수가 1 증가한다")
-    void getDetail_incrementsViewCount() {
+    @DisplayName("상세 조회는 조회수를 올리지 않는다 (#249) — 같은 방문 안에서 다시 읽어도 그대로")
+    void getDetail_doesNotIncrementViewCount() {
         // given
         BalanceGame game = game();
         given(balanceGameRepository.findByContentId(CONTENT_ID)).willReturn(Optional.of(game));
@@ -84,9 +88,48 @@ class BalanceGameServiceViewCountTest {
 
         // when
         balanceGameService.getDetail(CONTENT_ID);
+        balanceGameService.getDetail(CONTENT_ID);
 
         // then
-        assertThat(game.getContent().getViewCount()).isEqualTo(1);
+        assertThat(game.getContent().getViewCount()).isZero();
+        verify(contentService, never()).increaseViewCount(anyLong(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("'봤음' 요청은 부를 때마다 +1 (작성자 예외 없음, 재진입도 셈)")
+    void increaseView_counts() {
+        given(balanceGameRepository.findByContentId(CONTENT_ID)).willReturn(Optional.of(game()));
+
+        balanceGameService.increaseView(CONTENT_ID);
+
+        verify(contentService).increaseViewCount(CONTENT_ID, false);
+    }
+
+    @Test
+    @DisplayName("없는 밸런스 게임 '봤음'은 BALANCE_GAME_NOT_FOUND, 세지 않음")
+    void increaseView_notFound() {
+        given(balanceGameRepository.findByContentId(CONTENT_ID)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> balanceGameService.increaseView(CONTENT_ID))
+                .isInstanceOf(ErrorException.class)
+                .extracting(e -> ((ErrorException) e).getErrorCode())
+                .isEqualTo(ErrorCode.BALANCE_GAME_NOT_FOUND);
+        verify(contentService, never()).increaseViewCount(anyLong(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("로그인한 사람이 상세를 열면 이 게임에 대한 내 알림을 읽음 처리 (#246), 비로그인은 하지 않음")
+    void getDetail_readsNotices() {
+        given(balanceGameRepository.findByContentId(CONTENT_ID)).willReturn(Optional.of(game()));
+        stubAggregations();
+
+        balanceGameService.getDetail(CONTENT_ID);
+        verify(noticeService, never()).readContentNotices(anyLong(), anyLong());
+
+        given(authenticationFacade.getCurrentUserOptional())
+                .willReturn(Optional.of(User.builder().id(7L).role(UserRole.USER).build()));
+        balanceGameService.getDetail(CONTENT_ID);
+        verify(noticeService).readContentNotices(7L, CONTENT_ID);
     }
 
     @Test

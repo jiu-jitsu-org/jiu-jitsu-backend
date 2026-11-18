@@ -9,6 +9,7 @@ import com.jiujitsu.api.domain.community.profile.repository.CommunityProfileRepo
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
+import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -27,6 +28,8 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
@@ -41,9 +44,11 @@ class CommunityProfileServicePublicProfileTest {
     @Mock private CommunityProfileRepository communityProfileRepository;
     @Mock private UserRepository userRepository;
     @Mock private AuthenticationFacade authenticationFacade;
+    @Mock private UserBlockService userBlockService;
     @Spy private CommunityProfileMapper communityProfileMapper;
 
     private static final Long USER_ID = 7L;
+    private static final Long VIEWER_ID = 9L;
 
     @Test
     @DisplayName("프로필이 있으면 공개 항목(도장·띠·인증·최애·대회)을 매핑한다")
@@ -229,14 +234,45 @@ class CommunityProfileServicePublicProfileTest {
     }
 
     @Test
-    @DisplayName("비로그인 허용 - 로그인 정보를 조회하지 않는다")
+    @DisplayName("비로그인 허용 - 비로그인이면 isBlocked 는 null 이고 차단 관계를 조회하지 않는다 (#232)")
     void getPublicProfile_doesNotRequireLogin() {
         User user = stubUser(UserRole.USER, UserStatus.ACTIVE);
         given(communityProfileRepository.findByUser(user)).willReturn(Optional.empty());
+        given(authenticationFacade.getCurrentUserOptional()).willReturn(Optional.empty());
 
-        communityProfileService.getPublicProfile(USER_ID);
+        CommunityPublicProfileResponse response = communityProfileService.getPublicProfile(USER_ID);
 
-        verifyNoInteractions(authenticationFacade);
+        assertThat(response.isBlocked()).isNull();
+        verifyNoInteractions(userBlockService);
+    }
+
+    @Test
+    @DisplayName("로그인했으면 isBlocked 는 내가 이 회원을 차단했는지 (차단 true / 아니면 false) (#232)")
+    void getPublicProfile_isBlockedForViewer() {
+        User user = stubUser(UserRole.USER, UserStatus.ACTIVE);
+        given(communityProfileRepository.findByUser(user)).willReturn(Optional.of(profileBuilder(user).build()));
+        User viewer = User.builder().id(VIEWER_ID).nickname("보는사람").role(UserRole.USER).status(UserStatus.ACTIVE).build();
+        given(authenticationFacade.getCurrentUserOptional()).willReturn(Optional.of(viewer));
+
+        given(userBlockService.hasBlocked(VIEWER_ID, USER_ID)).willReturn(true);
+        assertThat(communityProfileService.getPublicProfile(USER_ID).isBlocked()).isTrue();
+
+        given(userBlockService.hasBlocked(VIEWER_ID, USER_ID)).willReturn(false);
+        assertThat(communityProfileService.getPublicProfile(USER_ID).isBlocked()).isFalse();
+    }
+
+    @Test
+    @DisplayName("상대만 나를 차단한 경우는 isBlocked=false (내가 차단했는지만 본다) (#232)")
+    void getPublicProfile_isBlockedIsOneDirection() {
+        User user = stubUser(UserRole.USER, UserStatus.ACTIVE);
+        given(communityProfileRepository.findByUser(user)).willReturn(Optional.empty());
+        User viewer = User.builder().id(VIEWER_ID).nickname("보는사람").role(UserRole.USER).status(UserStatus.ACTIVE).build();
+        given(authenticationFacade.getCurrentUserOptional()).willReturn(Optional.of(viewer));
+        given(userBlockService.hasBlocked(VIEWER_ID, USER_ID)).willReturn(false);
+
+        assertThat(communityProfileService.getPublicProfile(USER_ID).isBlocked()).isFalse();
+        verify(userBlockService, never()).isBlockedBetween(VIEWER_ID, USER_ID);
+        verify(userBlockService, never()).hasBlocked(USER_ID, VIEWER_ID);
     }
 
     @Test
