@@ -36,7 +36,7 @@ public class CommunityProfileController {
 
     @Operation(
             summary = "다른 회원 공개 프로필 조회",
-            description = "회원 ID로 공개 프로필을 조회합니다. 비로그인도 조회 가능하며, 체급·성별·특기·지도 정보는 내려가지 않습니다. 대회 정보는 대회명이 있는 기록만 내려갑니다."
+            description = "회원 ID로 공개 프로필을 조회합니다. 비로그인도 조회 가능하며, 체급·성별·특기·지도 정보는 내려가지 않습니다. 대회 정보는 대회명이 있는 기록만 내려갑니다. isBlocked는 로그인했을 때 내가 이 회원을 차단했는지 (비로그인 null)."
     )
     @ApiErrorCodeExamples({ErrorCode.PROFILE_NOT_FOUND})
     @GetMapping("/{userId}")

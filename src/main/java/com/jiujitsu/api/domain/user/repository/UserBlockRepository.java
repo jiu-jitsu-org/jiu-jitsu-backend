@@ -1,6 +1,5 @@
 package com.jiujitsu.api.domain.user.repository;
 
-import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserBlock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,8 +11,6 @@ import java.util.Optional;
 
 @Repository
 public interface UserBlockRepository extends JpaRepository<UserBlock, Long> {
-
-    Optional<UserBlock> findByBlockerAndBlocked(User blocker, User blocked);
 
     Optional<UserBlock> findByBlockerIdAndBlockedId(Long blockerId, Long blockedId);
 

@@ -8,10 +8,10 @@ import jakarta.validation.constraints.Size;
 
 public record ReportCreateRequest(
         @NotNull(message = "신고 컨텐츠 구분은 필수입니다.")
-        @Schema(description = "신고 컨텐츠 구분", example = "BOARD", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "신고 대상 구분 (BOARD 게시물 · COMMENT 댓글 · USER 회원)", example = "BOARD", requiredMode = Schema.RequiredMode.REQUIRED)
         ReportType reportType,
         @NotNull(message = "신고 컨텐츠 id는 필수입니다.")
-        @Schema(description = "컨텐츠 id", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "대상 id (BOARD → contentId, COMMENT → commentId, USER → userId)", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
         Long targetId,
         @NotNull(message = "신고 사유는 필수입니다.")
         @Schema(description = "신고 사유", example = "SPAM", requiredMode = Schema.RequiredMode.REQUIRED)

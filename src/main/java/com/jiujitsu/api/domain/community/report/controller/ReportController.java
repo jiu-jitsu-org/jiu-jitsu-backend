@@ -24,14 +24,16 @@ public class ReportController {
 
     private final ReportService reportService;
 
-    @Operation(summary = "게시물/댓글 신고", description = "게시물 또는 댓글을 신고합니다. 동일 대상 중복 신고 불가.")
+    @Operation(summary = "게시물/댓글/회원 신고", description = "게시물·댓글·회원을 신고합니다. 같은 대상 중복 신고 불가(U0008), 자기 자신·자기 글/댓글 신고 불가(U0007). "
+            + "게시물·댓글은 신고 3건이면 자동 숨김, 회원 신고는 자동 처리 없음. 없는·탈퇴한 회원은 U0011.")
     @LoginErrorExamples
     @ApiErrorCodeExamples({
             ErrorCode.WRONG_PARAMETER,
             ErrorCode.ALREADY_REPORTED,
             ErrorCode.SELF_REPORT_NOT_ALLOWED,
             ErrorCode.BOARD_NOT_FOUND,
-            ErrorCode.COMMENT_NOT_FOUND
+            ErrorCode.COMMENT_NOT_FOUND,
+            ErrorCode.MEMBER_NOT_FOUND
     })
     @PostMapping
     public void createReport(@Valid @RequestBody ReportCreateRequest request) {

@@ -101,7 +101,7 @@ public class CommunityProfileMapper {
     /**
      * 공개 프로필 응답 생성 - profile 은 커뮤니티 프로필 미작성 시 null
      */
-    public CommunityPublicProfileResponse getCommunityPublicProfileResponse(User user, CommunityProfile profile) {
+    public CommunityPublicProfileResponse getCommunityPublicProfileResponse(User user, CommunityProfile profile, Boolean isBlocked) {
         boolean isOwner = user.getRole() == UserRole.OWNER;
         if (profile == null) {
             return new CommunityPublicProfileResponse(
@@ -112,7 +112,8 @@ public class CommunityProfileMapper {
                     isOwner,
                     null, null, null,
                     Collections.emptyList(),
-                    new MedalCountDto(0, 0, 0)
+                    new MedalCountDto(0, 0, 0),
+                    isBlocked
             );
         }
 
@@ -128,7 +129,8 @@ public class CommunityProfileMapper {
                 profile.getFavoriteTechnique(),
                 profile.getFavoriteSubmission(),
                 mapPublicCompetitions(profile),
-                countMedals(profile)
+                countMedals(profile),
+                isBlocked
         );
     }
 
