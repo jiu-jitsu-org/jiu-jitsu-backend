@@ -31,6 +31,15 @@ public final class BoardSpecifications {
                 cb.not(root.get("content").get("id").in(excludedContentIds)));
     }
 
+    public static Specification<Board> inCategory(Long categoryId) {
+        return (root, query, cb) -> cb.equal(root.get("category").get("id"), categoryId);
+    }
+
+    // 이 대회를 고른 글 (대회 상세 → 홈 피드 '이 대회 글만') (#269)
+    public static Specification<Board> inCompetition(Long competitionId) {
+        return (root, query, cb) -> cb.equal(root.get("competition").get("id"), competitionId);
+    }
+
     /**
      * 검색: 단어마다 제목 · 본문 · 태그 중 한 곳에 들어 있는 글 (모든 단어 AND).
      * 글 쪽은 띄어쓰기 · 줄바꿈을 지우고 소문자로 비교하므로, 패턴은 같은 형태(공백 없음 · 소문자)에 LIKE 이스케이프(\)가 끝난 값

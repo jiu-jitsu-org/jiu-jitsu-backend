@@ -87,7 +87,7 @@ class BoardSearchMissServiceTest {
     void notRecorded() {
         service.recordIfNoPosts(search("오픈매트"), first, 3);
         service.recordIfNoPosts(search("베림보로"), PageRequest.of(1, 20), 0);
-        service.recordIfNoPosts(new BoardListRequest(BoardListType.FEED, null, "베림보로"), first, 0);
+        service.recordIfNoPosts(new BoardListRequest(BoardListType.FEED, null, "베림보로", null), first, 0);
         service.recordIfNoPosts(search("  "), first, 0);
 
         verifyNoInteractions(boardRepository, boardSearchMissRepository);
@@ -115,7 +115,7 @@ class BoardSearchMissServiceTest {
     }
 
     private static BoardListRequest search(String keyword) {
-        return new BoardListRequest(BoardListType.SEARCH, null, keyword);
+        return new BoardListRequest(BoardListType.SEARCH, null, keyword, null);
     }
 
     @Test

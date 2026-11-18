@@ -33,6 +33,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,21 +75,34 @@ public class BoardService {
         BoardListType boardListType = boardListRequest.boardListType();
         FeedExclusions excluded = getFeedExclusions();
 
-        Page<Board> page = switch (boardListType) {
-            case CATEGORY -> boardRepository.findAllByCategoryFiltered(
-                    boardListRequest.categoryId(), excluded.authorIds(), excluded.contentIds(), pageable);
+        // 대회 조건은 공개 대회만 (대회 이야기와 같은 기준) (#269)
+        Long competitionId = boardListRequest.competitionId();
+        if (competitionId != null) {
+            competitionQueryService.getPublished(competitionId);
+        }
+
+        Specification<Board> condition = BoardSpecifications.visibleInFeed(excluded.authorIds(), excluded.contentIds());
+        switch (boardListType) {
+            case CATEGORY -> {
+                if (boardListRequest.categoryId() == null) {
+                    return Page.empty(pageable);
+                }
+                condition = condition.and(BoardSpecifications.inCategory(boardListRequest.categoryId()));
+            }
             case SEARCH -> {
                 List<String> words = searchWords(boardListRequest.searchKeyword());
                 if (words.isEmpty()) {
-                    yield Page.empty(pageable);
+                    return Page.empty(pageable);
                 }
-                yield boardRepository.findAll(
-                        BoardSpecifications.visibleInFeed(excluded.authorIds(), excluded.contentIds())
-                                .and(BoardSpecifications.containsAllWords(toLikePatterns(words))),
-                        pageable);
+                condition = condition.and(BoardSpecifications.containsAllWords(toLikePatterns(words)));
             }
-            default -> boardRepository.findAllFiltered(excluded.authorIds(), excluded.contentIds(), pageable);
-        };
+            default -> {
+            }
+        }
+        if (competitionId != null) {
+            condition = condition.and(BoardSpecifications.inCompetition(competitionId));
+        }
+        Page<Board> page = boardRepository.findAll(condition, pageable);
 
         return mapBoardsToResponse(page);
     }

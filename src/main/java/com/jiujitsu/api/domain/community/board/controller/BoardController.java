@@ -57,8 +57,11 @@ public class BoardController {
             + "- searchKeyword 를 띄어쓰기로 나눠 모든 단어가 제목 · 본문 · 태그 중 어딘가에 든 글 (단어마다 다른 곳이어도 됨)\n"
             + "- 글 쪽 띄어쓰기 · 줄바꿈과 영문 대소문자는 무시 ('오픈 매트' = '오픈매트', 'nogi' = 'NoGi'), % _ 는 글자 그대로\n"
             + "- 같은 단어는 하나로, 단어는 10개까지. 모든 카테고리에서 찾음 (categoryId 무시)\n"
-            + "- searchKeyword 가 없거나 빈 값 · 공백만이면 빈 페이지")
-    @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER})
+            + "- searchKeyword 가 없거나 빈 값 · 공백만이면 빈 페이지\n\n"
+            + "대회 조건(competitionId, 선택)\n"
+            + "- 주면 그 대회를 고른 글만. 목록 종류와 같이 씀 (예: CATEGORY '대회' + 이 대회 = 대회 상세의 '모두 보기')\n"
+            + "- 공개 대회만, 없거나 비공개면 404 COMPETITION_NOT_FOUND")
+    @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER, ErrorCode.COMPETITION_NOT_FOUND})
     @GetMapping
     public Page<BoardListResponse> getList(
             @Valid @ModelAttribute BoardListRequest boardListRequest,
