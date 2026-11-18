@@ -11,7 +11,7 @@ public record BoardListRequest(
         BoardListType boardListType,
         @Schema(description = "카테고리 ID", example = "1")
         Long categoryId,
-        @Schema(description = "검색 키워드", example = "검색어")
+        @Schema(description = "검색어 (SEARCH). 띄어쓰기로 나눈 모든 단어가 든 글, 비었거나 공백만이면 빈 페이지", example = "오픈매트 강남")
         String searchKeyword
 ) {
 }

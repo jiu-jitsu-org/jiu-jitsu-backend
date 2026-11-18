@@ -33,11 +33,11 @@ public final class BoardSpecifications {
 
     /**
      * 검색: 단어마다 제목 · 본문 · 태그 중 한 곳에 들어 있는 글 (모든 단어 AND).
-     * 글 쪽은 띄어쓰기 · 줄바꿈을 지우고 소문자로 비교하므로, 단어도 같은 형태(공백 없음 · 소문자)로 받는다
+     * 글 쪽은 띄어쓰기 · 줄바꿈을 지우고 소문자로 비교하므로, 패턴은 같은 형태(공백 없음 · 소문자)에 LIKE 이스케이프(\)가 끝난 값
      */
-    public static Specification<Board> containsAllWords(List<String> normalizedWords) {
-        return (root, query, cb) -> cb.and(normalizedWords.stream()
-                .map(word -> containsWord(root, query, cb, likePattern(word)))
+    public static Specification<Board> containsAllWords(List<String> patterns) {
+        return (root, query, cb) -> cb.and(patterns.stream()
+                .map(pattern -> containsWord(root, query, cb, pattern))
                 .toArray(Predicate[]::new));
     }
 
@@ -54,18 +54,15 @@ public final class BoardSpecifications {
                 cb.exists(tag));
     }
 
-    // 띄어쓰기 · 줄바꿈 · 탭을 지우고 소문자로 ('오픈 매트' = '오픈매트', 'NoGi' = 'nogi')
+    // 붙여 넣은 글에 섞이는 공백 (일반 · 줄바꿈 · 탭 · NBSP · 전각)
+    private static final List<String> BLANKS = List.of(" ", "\n", "\r", "\t", "\u00A0", "\u3000");
+
+    // 공백을 지우고 소문자로 ('오픈 매트' = '오픈매트', 'NoGi' = 'nogi')
     private static Expression<String> normalized(CriteriaBuilder cb, Expression<String> text) {
         Expression<String> result = text;
-        for (String blank : List.of(" ", "\n", "\r", "\t")) {
+        for (String blank : BLANKS) {
             result = cb.function("replace", String.class, result, cb.literal(blank), cb.literal(""));
         }
         return cb.lower(result);
-    }
-
-    // 사용자가 넣은 % _ 는 글자 그대로 찾는다
-    private static String likePattern(String word) {
-        String escaped = word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
-        return "%" + escaped + "%";
     }
 }

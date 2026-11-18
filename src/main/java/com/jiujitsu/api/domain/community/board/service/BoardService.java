@@ -26,6 +26,7 @@ import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.util.LikeUtil;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -61,6 +63,7 @@ public class BoardService {
 
     private static final int COMPETITION_STORY_LIMIT = 5;
     private static final int SEARCH_WORD_LIMIT = 10;
+    private static final Pattern SEARCH_WORD_SEPARATOR = Pattern.compile("[\\s\\u00A0\\u3000]+");
     private static final int COMPETITION_STORY_REACTION_LIMIT = 2;
 
     /**
@@ -75,13 +78,13 @@ public class BoardService {
             case CATEGORY -> boardRepository.findAllByCategoryFiltered(
                     boardListRequest.categoryId(), excluded.authorIds(), excluded.contentIds(), pageable);
             case SEARCH -> {
-                List<String> words = searchWords(boardListRequest.searchKeyword());
-                if (words.isEmpty()) {
+                List<String> patterns = searchPatterns(boardListRequest.searchKeyword());
+                if (patterns.isEmpty()) {
                     yield Page.empty(pageable);
                 }
                 yield boardRepository.findAll(
                         BoardSpecifications.visibleInFeed(excluded.authorIds(), excluded.contentIds())
-                                .and(BoardSpecifications.containsAllWords(words)),
+                                .and(BoardSpecifications.containsAllWords(patterns)),
                         pageable);
             }
             default -> boardRepository.findAllFiltered(excluded.authorIds(), excluded.contentIds(), pageable);
@@ -417,23 +420,25 @@ public class BoardService {
     }
 
     /**
-     * 피드에서 빼는 글: 내가 차단한 작성자, 내가 신고한 글, 내가 숨긴 글 (비로그인은 없음)
-     * 빈 리스트일 때 IN 절 오류 방지용 sentinel(-1)
+     * 검색어 → 검색 패턴: 공백(NBSP · 전각 포함)으로 나누고 소문자로, 같은 단어는 하나로, 최대 SEARCH_WORD_LIMIT 개,
+     * LIKE 이스케이프 후 %단어% (#265). 비었거나 공백만이면 빈 목록 → 검색 결과 빈 페이지
      */
-    /**
-     * 검색어 → 검색 단어: 띄어쓰기로 나누고 소문자로, 같은 단어는 하나로, 최대 SEARCH_WORD_LIMIT 개 (#265)
-     */
-    static List<String> searchWords(String keyword) {
-        if (StringUtils.isBlank(keyword)) {
+    public static List<String> searchPatterns(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
             return List.of();
         }
-        return Arrays.stream(keyword.strip().toLowerCase(Locale.ROOT).split("\\s+"))
+        return Arrays.stream(SEARCH_WORD_SEPARATOR.split(keyword.strip().toLowerCase(Locale.ROOT)))
                 .filter(word -> !word.isEmpty())
                 .distinct()
                 .limit(SEARCH_WORD_LIMIT)
+                .map(word -> "%" + LikeUtil.escape(word) + "%")
                 .toList();
     }
 
+    /**
+     * 피드에서 빼는 글: 내가 차단한 작성자, 내가 신고한 글, 내가 숨긴 글 (비로그인은 없음)
+     * 빈 리스트일 때 IN 절 오류 방지용 sentinel(-1)
+     */
     private FeedExclusions getFeedExclusions() {
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
         List<Long> reportedContentIds = reportService.getReportedTargetIds(ReportType.BOARD);

@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.board.repository;
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
 import com.jiujitsu.api.domain.community.board.entity.BoardTag;
+import com.jiujitsu.api.domain.community.board.service.BoardService;
 import com.jiujitsu.api.domain.community.content.entity.Content;
 import com.jiujitsu.api.domain.community.content.entity.ContentType;
 import com.jiujitsu.api.domain.user.entity.SnsProvider;
@@ -62,14 +63,15 @@ class BoardSearchRepositoryTest {
     }
 
     @Test
-    @DisplayName("띄어쓰기 무시: '오픈매트' ↔ '오픈 매트', 본문 줄바꿈도")
+    @DisplayName("띄어쓰기 무시: '오픈매트' 로 '오픈 매트' · 줄바꿈 · NBSP · 전각 공백 글도, 검색어 앞뒤 공백 무시")
     void ignoresSpaces() {
         post("토요일 오픈매트", "");
         post("일요일 오픈 매트", "");
         post("줄바꿈", "오픈\n매트 있어요");
+        post("붙여넣기", "오픈\u00A0매트 · 오픈\u3000매트");
 
-        assertThat(search("오픈 매트")).containsExactly("줄바꿈", "일요일 오픈 매트", "토요일 오픈매트");
-        assertThat(search("오픈매트")).containsExactly("줄바꿈", "일요일 오픈 매트", "토요일 오픈매트");
+        assertThat(search("오픈매트")).containsExactly("붙여넣기", "줄바꿈", "일요일 오픈 매트", "토요일 오픈매트");
+        assertThat(search(" 오픈매트 ")).containsExactly("붙여넣기", "줄바꿈", "일요일 오픈 매트", "토요일 오픈매트");
     }
 
     @Test
@@ -117,7 +119,7 @@ class BoardSearchRepositoryTest {
 
         List<String> result = boardRepository.findAll(
                         BoardSpecifications.visibleInFeed(List.of(blocked.getId()), List.of(reported.getContent().getId()))
-                                .and(BoardSpecifications.containsAllWords(List.of("오픈매트"))),
+                                .and(BoardSpecifications.containsAllWords(BoardService.searchPatterns("오픈매트"))),
                         PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .map(Board::getTitle).getContent();
 
@@ -127,9 +129,8 @@ class BoardSearchRepositoryTest {
     private List<String> search(String keyword) {
         em.flush();
         em.clear();
-        List<String> words = Arrays.stream(keyword.toLowerCase().split("\\s+")).toList();
         return boardRepository.findAll(
-                        BoardSpecifications.visibleInFeed(NONE, NONE).and(BoardSpecifications.containsAllWords(words)),
+                        BoardSpecifications.visibleInFeed(NONE, NONE).and(BoardSpecifications.containsAllWords(BoardService.searchPatterns(keyword))),
                         PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .map(Board::getTitle).getContent();
     }
