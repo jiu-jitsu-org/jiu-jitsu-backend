@@ -59,7 +59,8 @@ public class BoardController {
             + "- 같은 단어는 하나로, 단어는 10개까지. 모든 카테고리에서 찾음 (categoryId 무시)\n"
             + "- searchKeyword 가 없거나 빈 값 · 공백만이면 빈 페이지\n\n"
             + "대회 조건(competitionId, 선택)\n"
-            + "- 주면 그 대회를 고른 글만. 목록 종류와 같이 씀 (예: CATEGORY '대회' + 이 대회 = 대회 상세의 '모두 보기')\n"
+            + "- 주면 그 대회를 고른 글만. 목록 종류와 같이 씀\n"
+            + "- 대회 이야기 · 이야기 수는 카테고리와 상관없이 이 대회를 고른 글 전체라, 대회 상세의 '모두 보기'와 같은 범위는 FEED + competitionId\n"
             + "- 공개 대회만, 없거나 비공개면 404 COMPETITION_NOT_FOUND")
     @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER, ErrorCode.COMPETITION_NOT_FOUND})
     @GetMapping
