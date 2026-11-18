@@ -33,6 +33,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +66,6 @@ public class BoardService {
     private static final int COMPETITION_STORY_LIMIT = 5;
     private static final int SEARCH_WORD_LIMIT = 10;
     private static final Pattern SEARCH_WORD_SEPARATOR = Pattern.compile("[\\s\\u00A0\\u3000]+");
-    private static final int COMPETITION_STORY_REACTION_LIMIT = 2;
 
     /**
      * 게시물 목록 조회
@@ -139,27 +139,21 @@ public class BoardService {
     }
 
     /**
-     * 대회 이야기 (대회 상세, 비로그인 가능) — 이 대회를 고른 글 최대 5개
-     * 반응(댓글 + 좋아요)이 있는 글 중 많은 순 2개를 먼저, 나머지는 최신순으로 채운다 (겹치지 않게). 반응이 없으면 최신순
-     * 피드와 같은 글이 빠진다 (숨김·차단 작성자·내가 신고·내가 숨김). 없거나 미공개 대회면 COMPETITION_NOT_FOUND
+     * 대회 이야기 (대회 상세, 비로그인 가능) — 이 대회를 고른 최신 글 최대 5개와 전체 글 수 (#270)
+     * 피드와 같은 글이 빠진다 (숨김·차단 작성자·내가 신고·내가 숨김). 카테고리와 상관없이 세므로 FEED + competitionId 목록과 같은 범위.
+     * 없거나 미공개 대회면 COMPETITION_NOT_FOUND
      */
     @Transactional(readOnly = true)
-    public List<BoardListResponse> getCompetitionStories(Long competitionId) {
+    public CompetitionStoriesResponse getCompetitionStories(Long competitionId) {
         competitionQueryService.getPublished(competitionId);
         FeedExclusions excluded = getFeedExclusions();
 
-        List<Board> stories = new ArrayList<>(boardRepository.findCompetitionStoriesByReaction(
-                competitionId, excluded.authorIds(), excluded.contentIds(), PageRequest.of(0, COMPETITION_STORY_REACTION_LIMIT)));
-        // 반응 상위 글이 최신 글에도 들 수 있어 최대 개수만큼 가져와 겹치는 글을 건너뛴다
-        Set<Long> pickedIds = stories.stream().map(Board::getId).collect(Collectors.toSet());
-        boardRepository.findCompetitionStoriesLatest(
-                        competitionId, excluded.authorIds(), excluded.contentIds(), PageRequest.of(0, COMPETITION_STORY_LIMIT))
-                .stream()
-                .filter(board -> !pickedIds.contains(board.getId()))
-                .limit(COMPETITION_STORY_LIMIT - stories.size())
-                .forEach(stories::add);
+        Page<Board> latest = boardRepository.findAll(
+                BoardSpecifications.visibleInFeed(excluded.authorIds(), excluded.contentIds())
+                        .and(BoardSpecifications.inCompetition(competitionId)),
+                PageRequest.of(0, COMPETITION_STORY_LIMIT, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))));
 
-        return mapBoardsToResponses(stories);
+        return new CompetitionStoriesResponse(latest.getTotalElements(), mapBoardsToResponses(latest.getContent()));
     }
 
     /**
