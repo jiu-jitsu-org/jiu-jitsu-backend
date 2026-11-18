@@ -3,6 +3,9 @@ package com.jiujitsu.api.domain.community.report.entity;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * 신고 사유. 값을 더하면 PostgreSQL 의 report.reason CHECK 제약을 수동으로 고쳐야 한다 (ddl-auto: update 는 제약을 바꾸지 않음)
+ */
 @Getter
 @RequiredArgsConstructor
 public enum ReportReason {

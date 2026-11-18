@@ -48,7 +48,7 @@ class ReportServiceReasonTest {
     @Mock private CommunityCommentsRepository communityCommentsRepository;
     @Mock private AuthenticationFacade authenticationFacade;
     @Mock private ReportMapper reportMapper;
-    // 회원 신고(#233)가 ReportService 에 더하는 의존성. 지금 생성자에는 없어 무시되고, #233 머지 뒤에도 이 테스트가 그대로 돌게 미리 둔다
+    // 회원 신고(#232)에서 ReportService 가 쓰는 의존성. 생성자에 없으면 Mockito 가 무시한다
     @Mock private UserRepository userRepository;
     @Mock private TransactionTemplate transactionTemplate;
 
