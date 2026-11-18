@@ -48,7 +48,7 @@ public class CommunityCommentsController {
             summary = "댓글 하나 (알림에서 연 댓글)",
             description = "알림 · 푸시의 commentId 로 그 댓글을 바로 보여 줄 때 씁니다. 비로그인도 조회할 수 있습니다.\n\n"
                     + "- 댓글이면 comment 에 그 댓글(댓글 목록 항목과 같은 형식, 대댓글 미리보기 3개 · 대댓글 수), reply 는 null\n"
-                    + "- 대댓글이면 comment 에 원 댓글, reply 에 그 대댓글\n"
+                    + "- 대댓글이면 comment 에 원 댓글, reply 에 그 대댓글. reply 가 미리보기 3개 안에 있으면 childrenList 에도 있음 — id 로 한 번만 보여 줌\n"
                     + "- sortType 은 대댓글 미리보기 정렬 (댓글 목록과 같음)\n"
                     + "- 보이는 기준은 댓글 목록과 같음: 삭제 · 신고 · 차단은 목록처럼 표시 · 마스킹, 관리자가 숨긴 댓글(또는 원 댓글)은 COMMENT_NOT_FOUND"
     )
