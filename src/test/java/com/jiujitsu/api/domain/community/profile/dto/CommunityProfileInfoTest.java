@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 게시글·댓글 작성자 정보에 띠·그랄·인증 여부 (#163)
+ * 게시글·댓글 작성자 정보에 띠·그랄·인증 여부 (#163), 운영자 여부 (#268)
  */
 class CommunityProfileInfoTest {
 
@@ -32,6 +32,7 @@ class CommunityProfileInfoTest {
         assertThat(info.beltRank()).isEqualTo(BeltRank.BLACK);
         assertThat(info.beltStripe()).isEqualTo(BeltStripe.STRIPE_1);
         assertThat(info.isOwner()).isTrue();
+        assertThat(info.isOperator()).isFalse();
     }
 
     @Test
@@ -45,6 +46,25 @@ class CommunityProfileInfoTest {
         assertThat(info.beltRank()).isNull();
         assertThat(info.beltStripe()).isNull();
         assertThat(info.isOwner()).isFalse();
+        assertThat(info.isOperator()).isFalse();
+    }
+
+    @Test
+    @DisplayName("관리자(ADMIN) 계정이면 운영자, 관장/사범 인증은 아님. 닉네임은 그대로 (#268)")
+    void from_admin_isOperator() {
+        User admin = User.builder().id(3L).nickname("운영자의 닉네임").role(UserRole.ADMIN).build();
+
+        CommunityProfileInfo info = CommunityProfileInfo.from(admin, null);
+
+        assertThat(info.isOperator()).isTrue();
+        assertThat(info.isOwner()).isFalse();
+        assertThat(info.nickname()).isEqualTo("운영자의 닉네임");
+    }
+
+    @Test
+    @DisplayName("탈퇴 작성자면 운영자 여부도 null (#268)")
+    void withdrawn() {
+        assertThat(CommunityProfileInfo.from(null, null).isOperator()).isNull();
     }
 
     @Test
@@ -58,5 +78,6 @@ class CommunityProfileInfoTest {
         assertThat(info.beltRank()).isNull();
         assertThat(info.beltStripe()).isNull();
         assertThat(info.isOwner()).isNull();
+        assertThat(info.isOperator()).isNull();
     }
 }

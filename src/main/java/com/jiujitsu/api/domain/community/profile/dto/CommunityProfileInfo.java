@@ -14,7 +14,8 @@ public record CommunityProfileInfo(
         ImageInfo profileImage,
         @Schema(description = "벨트 등급 (미입력 시 null)", example = "BLUE") BeltRank beltRank,
         @Schema(description = "그랄 (미입력 시 null)", example = "STRIPE_2") BeltStripe beltStripe,
-        @Schema(description = "관장/사범 인증 여부") Boolean isOwner
+        @Schema(description = "관장/사범 인증 여부") Boolean isOwner,
+        @Schema(description = "운영자 여부 (관리자 계정). 닉네임 옆 '운영자' 배지") Boolean isOperator
 ) {
 
     /**
@@ -30,15 +31,16 @@ public record CommunityProfileInfo(
                 ImageInfo.from(user.getProfileImageFile()),
                 profile != null ? profile.getBeltRank() : null,
                 profile != null ? profile.getBeltStripe() : null,
-                user.getRole() == UserRole.OWNER
+                user.getRole() == UserRole.OWNER,
+                user.getRole() == UserRole.ADMIN
         );
     }
 
     public static CommunityProfileInfo withdrawn() {
-        return new CommunityProfileInfo(null, "탈퇴회원", null, null, null, null);
+        return new CommunityProfileInfo(null, "탈퇴회원", null, null, null, null, null);
     }
 
     public static CommunityProfileInfo masked() {
-        return new CommunityProfileInfo(null, null, null, null, null, null);
+        return new CommunityProfileInfo(null, null, null, null, null, null, null);
     }
 }
