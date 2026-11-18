@@ -50,15 +50,16 @@ public class BoardController {
     /**
      * 게시물
      */
-    @Operation(summary = "게시글 목록 조회", description = "피드(FEED) · 카테고리(CATEGORY) · 검색(SEARCH) 페이징 게시글 목록을 최신순으로 조회합니다. 숨김 · 차단한 작성자 · 내가 신고 · 숨긴 글은 빠집니다.\n\n"
+    @Operation(summary = "게시글 목록 조회", description = "피드(FEED) · 카테고리(CATEGORY) · 검색(SEARCH) 페이징 게시글 목록을 최신순으로 조회합니다. boardListType 은 필수 (없으면 400 R0001). 숨김 · 차단한 작성자 · 내가 신고 · 숨긴 글은 빠집니다.\n\n"
             + "검색(SEARCH)\n"
             + "- searchKeyword 를 띄어쓰기로 나눠 모든 단어가 제목 · 본문 · 태그 중 어딘가에 든 글 (단어마다 다른 곳이어도 됨)\n"
             + "- 글 쪽 띄어쓰기 · 줄바꿈과 영문 대소문자는 무시 ('오픈 매트' = '오픈매트', 'nogi' = 'NoGi'), % _ 는 글자 그대로\n"
             + "- 같은 단어는 하나로, 단어는 10개까지. 모든 카테고리에서 찾음 (categoryId 무시)\n"
             + "- searchKeyword 가 없거나 빈 값 · 공백만이면 빈 페이지")
+    @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER})
     @GetMapping
     public Page<BoardListResponse> getList(
-            @ModelAttribute BoardListRequest boardListRequest,
+            @Valid @ModelAttribute BoardListRequest boardListRequest,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return boardService.getList(boardListRequest, pageable);

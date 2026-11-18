@@ -40,6 +40,10 @@ public enum ErrorCode {
     COMPETITION_REQUIRED_FIELDS_MISSING(400, "R0012", "공개에 필요한 칸이 비어 있습니다. 비어 있는 칸을 채운 뒤 다시 공개해 주세요."),
     COMPETITION_CLUB_REGISTRATION_ONLY(400, "R0013", "도장(감독·코치)을 통해 신청하는 대회라 신청 링크를 넣을 수 없습니다."),
     COMPETITION_REGISTRATION_LINK_EXISTS(400, "R0014", "신청 링크가 있어 도장(감독·코치)을 통해 신청하는 접수 사이트로 바꿀 수 없습니다. 신청 링크를 먼저 지워 주세요."),
+    // Spring 이 던지는 요청 오류 (#258). 없는 주소 · 지원하지 않는 메서드 · Content-Type
+    API_NOT_FOUND(404, "R0015", "존재하지 않는 API 주소입니다."),
+    METHOD_NOT_ALLOWED(405, "R0016", "지원하지 않는 요청 방식입니다."),
+    UNSUPPORTED_MEDIA_TYPE(415, "R0017", "지원하지 않는 요청 형식입니다."),
 
 
     /**
