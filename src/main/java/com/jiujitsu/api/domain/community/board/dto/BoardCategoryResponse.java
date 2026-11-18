@@ -22,9 +22,13 @@ public class BoardCategoryResponse {
     @Schema(description = "설명 한 줄 (글쓰기 · 피드 카테고리 탭)", example = "도장 고르기, 오픈매트, 승급 · 도장 생활")
     private String description;
 
+    @Schema(description = "이번 주 써 볼 주제. 없으면 null (앱에서 안 보임)", example = "스파링하다 귀가 부었을 때, 어떻게 하셨나요?", nullable = true)
+    private String weeklyTopic;
+
     public BoardCategoryResponse(BoardCategory boardCategory) {
         this.id = boardCategory.getId();
         this.categoryName = boardCategory.getName();
         this.description = boardCategory.getDescription();
+        this.weeklyTopic = boardCategory.getWeeklyTopic();
     }
 }

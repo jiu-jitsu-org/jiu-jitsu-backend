@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.community.board.service;
 
 import com.jiujitsu.api.domain.community.board.dto.BoardCategoryResponse;
+import com.jiujitsu.api.domain.community.board.dto.BoardCategoryWeeklyTopicRequest;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
 import com.jiujitsu.api.domain.community.board.repository.BoardCategoryRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
@@ -52,6 +53,16 @@ public class BoardCategoryService {
                 .displayOrder(displayOrder)
                 .isActive(true)
                 .build();
+    }
+
+    /**
+     * 이번 주 써 볼 주제 바꾸기 (관리자) — 빈 값이면 지움. 사용 안 함 카테고리도 바꿀 수 있음
+     */
+    public BoardCategoryResponse changeWeeklyTopic(Long categoryId, BoardCategoryWeeklyTopicRequest request) {
+        BoardCategory category = boardCategoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_CATEGORY_NOT_FOUND));
+        category.changeWeeklyTopic(request == null ? null : request.weeklyTopic());
+        return new BoardCategoryResponse(category);
     }
 
     public BoardCategory findActiveCategory(Long categoryId) {
