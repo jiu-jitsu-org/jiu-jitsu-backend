@@ -89,6 +89,10 @@ public class CommunityProfile {
     @Column
     private Boolean weightHidden;   // 체급 숨김여부
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private ProfileBackgroundPattern backgroundPattern;  // MY 상단 바탕 무늬 (#234). 고른 적 없으면 null → 앱 기본 무늬
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
     @OnDelete(action = OnDeleteAction.CASCADE)
@@ -134,6 +138,13 @@ public class CommunityProfile {
     public void upsertBelt(BeltRank beltRank, BeltStripe beltStripe) {
         this.beltRank = beltRank;
         this.beltStripe = beltStripe;
+    }
+
+    /**
+     * MY 상단 바탕 무늬 수정 (#234)
+     */
+    public void upsertBackgroundPattern(ProfileBackgroundPattern backgroundPattern) {
+        this.backgroundPattern = backgroundPattern;
     }
 
     /**

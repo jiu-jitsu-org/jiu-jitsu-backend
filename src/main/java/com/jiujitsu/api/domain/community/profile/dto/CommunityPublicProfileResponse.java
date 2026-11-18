@@ -14,6 +14,7 @@ public record CommunityPublicProfileResponse(
         @Schema(description = "소속 도장명", example = "Gracie Barra Seoul") String academyName,
         @Schema(description = "벨트 등급", example = "BLUE") BeltRank beltRank,
         @Schema(description = "그랄(1~4)", example = "STRIPE_2") BeltStripe beltStripe,
+        @Schema(description = "MY 상단 바탕 무늬. 고른 적 없으면 null (앱 기본 무늬)", example = "BIG_BELT") ProfileBackgroundPattern backgroundPattern,
         @Schema(description = "관장/사범 인증 여부") Boolean isOwner,
         @Schema(description = "최애 포지션", example = "GUARD") PositionType favoritePosition,
         @Schema(description = "최애 기술", example = "GUARD_PASSES") TechniqueType favoriteTechnique,

@@ -13,7 +13,8 @@ public enum ProfileRequestType {
     SUBMISSION("서브미션"),
     TECHNIQUE("기술"),
     COMPETITION("대회정보"),
-    OWNER_INFO("관장/사범 지도정보");
+    OWNER_INFO("관장/사범 지도정보"),
+    BACKGROUND_PATTERN("MY 상단 바탕 무늬");
 
     private final String description;
 }

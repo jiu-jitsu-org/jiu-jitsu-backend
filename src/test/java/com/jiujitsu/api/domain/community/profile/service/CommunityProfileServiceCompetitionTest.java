@@ -73,7 +73,7 @@ class CommunityProfileServiceCompetitionTest {
     private CommunityProfileRequest competitionRequest(List<CompetitionDto> competitions) {
         return new CommunityProfileRequest(ProfileRequestType.COMPETITION,
                 null, null, null, null, null, competitions,
-                null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null);
     }
 
     @Test
