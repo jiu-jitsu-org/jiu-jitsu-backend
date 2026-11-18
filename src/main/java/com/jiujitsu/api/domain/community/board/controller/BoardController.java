@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.board.controller;
 import com.jiujitsu.api.domain.community.board.dto.*;
 import com.jiujitsu.api.domain.community.board.service.BoardCategoryService;
 import com.jiujitsu.api.domain.community.board.service.BoardHideService;
+import com.jiujitsu.api.domain.community.board.service.BoardSearchMissService;
 import com.jiujitsu.api.domain.community.board.service.BoardService;
 import com.jiujitsu.api.domain.community.content.dto.ContentLikeResponse;
 import com.jiujitsu.api.domain.community.content.dto.ContentViewResponse;
@@ -35,6 +36,7 @@ public class BoardController {
     private final BoardService boardService;
     private final BoardCategoryService boardCategoryService;
     private final BoardHideService boardHideService;
+    private final BoardSearchMissService boardSearchMissService;
     private final ContentService contentService;
 
     /**
@@ -62,7 +64,10 @@ public class BoardController {
             @Valid @ModelAttribute BoardListRequest boardListRequest,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return boardService.getList(boardListRequest, pageable);
+        Page<BoardListResponse> result = boardService.getList(boardListRequest, pageable);
+        // 검색 0건 기록은 목록 조회 트랜잭션이 끝난 뒤에 (#266)
+        boardSearchMissService.recordIfNoPosts(boardListRequest, pageable, result.getTotalElements());
+        return result;
     }
 
     @Operation(summary = "게시글 단건 조회", description = "ID로 게시글을 조회합니다.\n\n"

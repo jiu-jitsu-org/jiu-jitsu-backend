@@ -29,7 +29,6 @@ import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.util.LikeUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -42,7 +41,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -62,7 +60,6 @@ public class BoardService {
     private final BoardHideService boardHideService;
     private final CommunityProfileService communityProfileService;
     private final CompetitionQueryService competitionQueryService;
-    private final BoardSearchMissService boardSearchMissService;
 
     private static final int COMPETITION_STORY_LIMIT = 5;
     private static final int SEARCH_WORD_LIMIT = 10;
@@ -85,15 +82,10 @@ public class BoardService {
                 if (words.isEmpty()) {
                     yield Page.empty(pageable);
                 }
-                Page<Board> found = boardRepository.findAll(
+                yield boardRepository.findAll(
                         BoardSpecifications.visibleInFeed(excluded.authorIds(), excluded.contentIds())
                                 .and(BoardSpecifications.containsAllWords(toLikePatterns(words))),
                         pageable);
-                // 0건 검색어는 첫 페이지에서만 센다 (다음 페이지 요청으로 두 번 세지 않게) (#266)
-                if (pageable.getPageNumber() == 0 && found.getTotalElements() == 0) {
-                    recordSearchMiss(words);
-                }
-                yield found;
             }
             default -> boardRepository.findAllFiltered(excluded.authorIds(), excluded.contentIds(), pageable);
         };
@@ -454,15 +446,6 @@ public class BoardService {
                 .distinct()
                 .limit(SEARCH_WORD_LIMIT)
                 .toList();
-    }
-
-    // 기록이 실패해도 검색 응답은 그대로 (#266)
-    private void recordSearchMiss(List<String> words) {
-        try {
-            boardSearchMissService.record(words);
-        } catch (RuntimeException e) {
-            log.warn("0건 검색어 기록 실패", e);
-        }
     }
 
     // 검색 단어 → LIKE 패턴 (%단어%, 이스케이프 후)
