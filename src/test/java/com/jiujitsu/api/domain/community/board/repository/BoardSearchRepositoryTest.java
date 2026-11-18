@@ -119,7 +119,7 @@ class BoardSearchRepositoryTest {
 
         List<String> result = boardRepository.findAll(
                         BoardSpecifications.visibleInFeed(List.of(blocked.getId()), List.of(reported.getContent().getId()))
-                                .and(BoardSpecifications.containsAllWords(BoardService.searchPatterns("오픈매트"))),
+                                .and(BoardSpecifications.containsAllWords(BoardService.toLikePatterns(List.of("오픈매트")))),
                         PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .map(Board::getTitle).getContent();
 
@@ -130,7 +130,7 @@ class BoardSearchRepositoryTest {
         em.flush();
         em.clear();
         return boardRepository.findAll(
-                        BoardSpecifications.visibleInFeed(NONE, NONE).and(BoardSpecifications.containsAllWords(BoardService.searchPatterns(keyword))),
+                        BoardSpecifications.visibleInFeed(NONE, NONE).and(BoardSpecifications.containsAllWords(BoardService.toLikePatterns(BoardService.searchWords(keyword)))),
                         PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .map(Board::getTitle).getContent();
     }

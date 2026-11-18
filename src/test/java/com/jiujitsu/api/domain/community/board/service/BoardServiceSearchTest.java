@@ -36,7 +36,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 /**
- * 게시글 목록의 검색(SEARCH) 분기 (#265)
+ * 게시글 목록의 검색(SEARCH) 분기 (#265), 0건 검색어 기록 (#266)
  */
 @ExtendWith(MockitoExtension.class)
 class BoardServiceSearchTest {
@@ -58,6 +58,7 @@ class BoardServiceSearchTest {
     @Mock private BoardHideService boardHideService;
     @Mock private CommunityProfileService communityProfileService;
     @Mock private CompetitionQueryService competitionQueryService;
+    @Mock private BoardSearchMissService boardSearchMissService;
 
     private final Pageable pageable = PageRequest.of(0, 20);
 
@@ -81,5 +82,42 @@ class BoardServiceSearchTest {
         boardService.getList(new BoardListRequest(BoardListType.SEARCH, null, "오픈매트 강남"), pageable);
 
         verify(boardRepository).findAll(any(Specification.class), eq(pageable));
+    }
+
+    @Test
+    @DisplayName("첫 페이지가 0건이면 검색 단어로 0건 기록 (#266)")
+    @SuppressWarnings("unchecked")
+    void zeroResult_firstPage_recorded() {
+        given(boardRepository.findAll(any(Specification.class), any(Pageable.class))).willReturn(new PageImpl<Board>(List.of(), pageable, 0));
+
+        boardService.getList(new BoardListRequest(BoardListType.SEARCH, null, " 베림보로  NoGi "), pageable);
+
+        verify(boardSearchMissService).record(List.of("베림보로", "nogi"));
+    }
+
+    @Test
+    @DisplayName("다음 페이지 요청이나 결과가 있으면 기록하지 않음 (#266)")
+    @SuppressWarnings("unchecked")
+    void notRecorded_nextPageOrFound() {
+        Pageable second = PageRequest.of(1, 20);
+        given(boardRepository.findAll(any(Specification.class), eq(second))).willReturn(new PageImpl<Board>(List.of(), second, 0));
+        given(boardRepository.findAll(any(Specification.class), eq(pageable))).willReturn(new PageImpl<Board>(List.of(), pageable, 3));
+
+        boardService.getList(new BoardListRequest(BoardListType.SEARCH, null, "베림보로"), second);
+        boardService.getList(new BoardListRequest(BoardListType.SEARCH, null, "오픈매트"), pageable);
+
+        verify(boardSearchMissService, never()).record(any());
+    }
+
+    @Test
+    @DisplayName("0건 기록이 실패해도 검색 응답은 그대로 (#266)")
+    @SuppressWarnings("unchecked")
+    void recordFailure_searchStillReturns() {
+        given(boardRepository.findAll(any(Specification.class), any(Pageable.class))).willReturn(new PageImpl<Board>(List.of(), pageable, 0));
+        doThrow(new RuntimeException("db down")).when(boardSearchMissService).record(any());
+
+        Page<BoardListResponse> result = boardService.getList(new BoardListRequest(BoardListType.SEARCH, null, "베림보로"), pageable);
+
+        assertThat(result.getContent()).isEmpty();
     }
 }

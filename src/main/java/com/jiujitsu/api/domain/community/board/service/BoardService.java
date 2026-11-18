@@ -29,6 +29,7 @@ import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.util.LikeUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +42,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -60,6 +62,7 @@ public class BoardService {
     private final BoardHideService boardHideService;
     private final CommunityProfileService communityProfileService;
     private final CompetitionQueryService competitionQueryService;
+    private final BoardSearchMissService boardSearchMissService;
 
     private static final int COMPETITION_STORY_LIMIT = 5;
     private static final int SEARCH_WORD_LIMIT = 10;
@@ -78,14 +81,19 @@ public class BoardService {
             case CATEGORY -> boardRepository.findAllByCategoryFiltered(
                     boardListRequest.categoryId(), excluded.authorIds(), excluded.contentIds(), pageable);
             case SEARCH -> {
-                List<String> patterns = searchPatterns(boardListRequest.searchKeyword());
-                if (patterns.isEmpty()) {
+                List<String> words = searchWords(boardListRequest.searchKeyword());
+                if (words.isEmpty()) {
                     yield Page.empty(pageable);
                 }
-                yield boardRepository.findAll(
+                Page<Board> found = boardRepository.findAll(
                         BoardSpecifications.visibleInFeed(excluded.authorIds(), excluded.contentIds())
-                                .and(BoardSpecifications.containsAllWords(patterns)),
+                                .and(BoardSpecifications.containsAllWords(toLikePatterns(words))),
                         pageable);
+                // 0건 검색어는 첫 페이지에서만 센다 (다음 페이지 요청으로 두 번 세지 않게) (#266)
+                if (pageable.getPageNumber() == 0 && found.getTotalElements() == 0) {
+                    recordSearchMiss(words);
+                }
+                yield found;
             }
             default -> boardRepository.findAllFiltered(excluded.authorIds(), excluded.contentIds(), pageable);
         };
@@ -434,10 +442,10 @@ public class BoardService {
     }
 
     /**
-     * 검색어 → 검색 패턴: 공백(NBSP · 전각 포함)으로 나누고 소문자로, 같은 단어는 하나로, 최대 SEARCH_WORD_LIMIT 개,
-     * LIKE 이스케이프 후 %단어% (#265). 비었거나 공백만이면 빈 목록 → 검색 결과 빈 페이지
+     * 검색어 → 검색 단어: 공백(NBSP · 전각 포함)으로 나누고 소문자로, 같은 단어는 하나로, 최대 SEARCH_WORD_LIMIT 개 (#265).
+     * 비었거나 공백만이면 빈 목록 → 검색 결과 빈 페이지
      */
-    public static List<String> searchPatterns(String keyword) {
+    public static List<String> searchWords(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return List.of();
         }
@@ -445,8 +453,21 @@ public class BoardService {
                 .filter(word -> !word.isEmpty())
                 .distinct()
                 .limit(SEARCH_WORD_LIMIT)
-                .map(word -> "%" + LikeUtil.escape(word) + "%")
                 .toList();
+    }
+
+    // 기록이 실패해도 검색 응답은 그대로 (#266)
+    private void recordSearchMiss(List<String> words) {
+        try {
+            boardSearchMissService.record(words);
+        } catch (RuntimeException e) {
+            log.warn("0건 검색어 기록 실패", e);
+        }
+    }
+
+    // 검색 단어 → LIKE 패턴 (%단어%, 이스케이프 후)
+    public static List<String> toLikePatterns(List<String> words) {
+        return words.stream().map(word -> "%" + LikeUtil.escape(word) + "%").toList();
     }
 
     /**
