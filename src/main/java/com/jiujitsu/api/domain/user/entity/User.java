@@ -57,6 +57,7 @@ public class User {
 
     // GA 회원 ID. 회원 번호는 프로필을 여는 값이라 쓰지 않고, 바뀌지 않는 무작위 값을 둔다
     @Column(nullable = false, unique = true, updatable = false)
+    @Setter(AccessLevel.NONE)
     @Builder.Default
     private String analyticsId = UUID.randomUUID().toString();
 
