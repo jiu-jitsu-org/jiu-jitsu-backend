@@ -2,9 +2,11 @@ package com.jiujitsu.api.domain.community.board.repository;
 
 import com.jiujitsu.api.domain.community.board.entity.Board;
 import com.jiujitsu.api.domain.user.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -21,6 +23,16 @@ public interface BoardRepository extends JpaRepository<Board, Long>, JpaSpecific
     @Query("SELECT b FROM Board b WHERE b.content.id IN :contentIds")
     List<Board> findAllByContentIdIn(@Param("contentIds") List<Long> contentIds);
 
+    /**
+     * to-one 연관(content, category, createdBy, 프로필 이미지)을 한 번에 fetch join.
+     * to-many 컬렉션(tags, imageFiles)은 default_batch_fetch_size 로 처리 (#200).
+     * 카운트 쿼리에는 EntityGraph 가 적용되지 않아 페이징 성능에 영향 없음.
+     */
+    @Override
+    @EntityGraph(attributePaths = {"content", "category", "createdBy", "createdBy.profileImageFile"})
+    Page<Board> findAll(Specification<Board> spec, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"content", "category", "createdBy", "createdBy.profileImageFile"})
     @Query("""
     SELECT b FROM Board b
     WHERE b.createdBy = :createdBy
@@ -33,6 +45,7 @@ public interface BoardRepository extends JpaRepository<Board, Long>, JpaSpecific
      * - 숨김 · 신고 콘텐츠 제외
      * - 뷰어가 차단한 작성자 제외(자기 글 조회 시에는 빈 리스트 전달)
      */
+    @EntityGraph(attributePaths = {"content", "category", "createdBy", "createdBy.profileImageFile"})
     @Query("""
     SELECT b FROM Board b
     WHERE b.createdBy.id = :authorId
@@ -44,6 +57,7 @@ public interface BoardRepository extends JpaRepository<Board, Long>, JpaSpecific
             @Param("excludedContentIds") List<Long> excludedContentIds,
             Pageable pageable);
 
+    @EntityGraph(attributePaths = {"content", "category", "createdBy", "createdBy.profileImageFile"})
     @Query("""
     SELECT b
     FROM ContentSave cs

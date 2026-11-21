@@ -1,5 +1,10 @@
 # application.yml
 spring:
+  jpa:
+    properties:
+      hibernate:
+        # 지연 로딩 컬렉션(tags, imageFiles 등)을 글마다 따로 조회하지 않고 IN 으로 묶는다 (#200)
+        default_batch_fetch_size: 100
   mvc:
     servlet:
       path: /api
