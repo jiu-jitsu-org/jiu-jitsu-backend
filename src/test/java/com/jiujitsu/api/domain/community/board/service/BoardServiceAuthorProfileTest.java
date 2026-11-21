@@ -14,6 +14,7 @@ import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.global.profanity.ProfanityFilter;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
@@ -59,6 +60,7 @@ class BoardServiceAuthorProfileTest {
     @Mock private BoardHideService boardHideService;
     @Mock private CommunityProfileService communityProfileService;
     @Mock private CompetitionQueryService competitionQueryService;
+    @Mock private ProfanityFilter profanityFilter;
 
     @Test
     @DisplayName("목록은 페이지 작성자들의 프로필을 한 번에 조회해 각 글의 author 에 넘긴다")
@@ -103,7 +105,7 @@ class BoardServiceAuthorProfileTest {
         boardService.getById(100L);
 
         // then
-        verify(boardMapper).toResponse(eq(board), eq(profile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), any(), anyBoolean(), isNull());
+        verify(boardMapper).toResponse(eq(board), eq(profile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), any(), anyBoolean(), anyBoolean(), isNull());
     }
 
     @Test

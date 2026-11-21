@@ -13,6 +13,7 @@ import com.jiujitsu.api.domain.community.profile.service.CommunityProfileService
 import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.global.profanity.ProfanityFilter;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
@@ -58,6 +59,7 @@ class BoardServiceBodyOptionalTest {
     @Mock private BoardHideService boardHideService;
     @Mock private CommunityProfileService communityProfileService;
     @Mock private CompetitionQueryService competitionQueryService;
+    @Mock private ProfanityFilter profanityFilter;
 
     private final User me = User.builder().id(1L).role(UserRole.USER).build();
 

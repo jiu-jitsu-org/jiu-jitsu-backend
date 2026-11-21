@@ -14,6 +14,8 @@ public interface BoardHideRepository extends JpaRepository<BoardHide, Long> {
 
     Optional<BoardHide> findByCreatedByIdAndContentId(Long userId, Long contentId);
 
+    boolean existsByCreatedByIdAndContentId(Long userId, Long contentId);
+
     @Query("SELECT bh.contentId FROM BoardHide bh WHERE bh.createdBy.id = :userId")
     List<Long> findContentIdsByUserId(@Param("userId") Long userId);
 }

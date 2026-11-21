@@ -12,7 +12,8 @@ public record CommentSummaryInGroup(
         @Schema(description = "부모 댓글 ID (최상위 댓글은 null)") Long parentId,
         @Schema(description = "댓글 내용") String body,
         @Schema(description = "작성 일시") LocalDateTime createdAt,
-        @Schema(description = "경과 시간", example = "6일 전") String timeAgo
+        @Schema(description = "경과 시간", example = "6일 전") String timeAgo,
+        @Schema(description = "신고로 가려진 댓글 여부 (본인 조회 시 true 가능, 타인 조회 시 항상 false)") boolean isHidden
 ) {
     public static CommentSummaryInGroup from(CommunityComments comment) {
         Long parentId = (comment.getParentId() == null || comment.getParentId() == 0L)
@@ -23,7 +24,8 @@ public record CommentSummaryInGroup(
                 parentId,
                 comment.getBody(),
                 comment.getCreatedAt(),
-                TimeAgoUtil.format(comment.getCreatedAt())
+                TimeAgoUtil.format(comment.getCreatedAt()),
+                comment.isHidden()
         );
     }
 }

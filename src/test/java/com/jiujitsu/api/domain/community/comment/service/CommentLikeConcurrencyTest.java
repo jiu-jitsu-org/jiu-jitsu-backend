@@ -73,7 +73,8 @@ import static org.mockito.Mockito.mockingDetails;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Import({CommunityCommentsService.class, CommentLikeFactory.class, CommentLikeMapper.class,
-        AuditorAwareImpl.class, CommentLikeConcurrencyTest.NoticeEventCounter.class})
+        AuditorAwareImpl.class, CommentLikeConcurrencyTest.NoticeEventCounter.class,
+        com.jiujitsu.api.global.profanity.ProfanityFilter.class})
 class CommentLikeConcurrencyTest {
 
     @Autowired private CommunityCommentsService communityCommentsService;

@@ -19,6 +19,7 @@ import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
+import com.jiujitsu.api.global.profanity.ProfanityFilter;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +72,7 @@ class CommunityCommentsMentionNoticeTest {
     @Mock private CommentLikeMapper commentLikeMapper;
     @Mock private CommunityProfileService communityProfileService;
     @Mock private TransactionTemplate transactionTemplate;
+    @Mock private ProfanityFilter profanityFilter;
 
     private static final Long CONTENT_ID = 10L;
     private static final Long TOP_ID = 100L;

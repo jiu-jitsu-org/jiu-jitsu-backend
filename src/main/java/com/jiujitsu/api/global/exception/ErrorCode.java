@@ -32,6 +32,7 @@ public enum ErrorCode {
     COMPETITION_LINK_NOT_FOUND(404, "C0013", "이 대회에 해당 종류의 링크가 없습니다."),
     COMPETITION_INFO_REPORT_NOT_FOUND(404, "C0014", "존재하지 않는 대회 정보 제보입니다."),
     ANNOUNCEMENT_NOT_FOUND(404, "C0015", "존재하지 않는 공지입니다."),
+    BANNED_WORD_DETECTED(400, "C0016", "금칙어가 포함되어 있습니다."),
     EMAIL_DUPLICATED(400, "R0006", "이미 사용중인 이메일입니다."),
     COMPETITION_PIN_LIMIT_EXCEEDED(400, "R0007", "대표 기록은 3개까지 고정할 수 있습니다."),
     COMPETITION_DUPLICATED(400, "R0008", "같은 연도에 같은 이름의 대회가 중복되었습니다."),

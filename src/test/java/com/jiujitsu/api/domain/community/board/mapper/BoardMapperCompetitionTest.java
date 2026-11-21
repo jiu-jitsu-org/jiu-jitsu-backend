@@ -27,7 +27,7 @@ class BoardMapperCompetitionTest {
         Board linked = board(Competition.builder().id(7L).published(false).build(), author);
         Board unlinked = board(null, author);
 
-        BoardResponse detail = boardMapper.toResponse(linked, null, 0, 0, 0, false, false, false, null, true, null);
+        BoardResponse detail = boardMapper.toResponse(linked, null, 0, 0, 0, false, false, false, null, true, false, null);
         BoardResponse written = boardMapper.toResponse(linked, author, null, null);
 
         assertThat(detail.competitionId()).isEqualTo(7L);

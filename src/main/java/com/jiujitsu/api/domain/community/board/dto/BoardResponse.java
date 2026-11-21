@@ -25,6 +25,7 @@ public record BoardResponse(
         @Schema(description = "댓글 작성 여부", example = "true") Boolean isCommented,
         @Schema(description = "좋아요 여부", example = "true") Boolean isLiked,
         @Schema(description = "저장 여부", example = "true") Boolean isSaved,
+        @Schema(description = "내가 숨긴 글 여부 (비로그인·작성자 본인은 false)", example = "false") Boolean isHidden,
         @Schema(description = "이미지 리스트") List<ImageInfo> imageList,
         @Schema(description = "태그 목록", example = "[\"BJJ\", \"운동\"]") List<String> tags,
         @Schema(description = "게시물 알림 활성화 여부", example = "true") Boolean noticeEnabled,

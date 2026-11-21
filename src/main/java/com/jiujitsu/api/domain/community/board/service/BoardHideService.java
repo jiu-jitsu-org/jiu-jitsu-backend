@@ -61,4 +61,14 @@ public class BoardHideService {
                 .map(user -> boardHideRepository.findContentIdsByUserId(user.getId()))
                 .orElse(Collections.emptyList());
     }
+
+    /**
+     * 현재 로그인 유저가 특정 글을 숨겼는지 여부 (비로그인 → false)
+     */
+    @Transactional(readOnly = true)
+    public boolean isHiddenByCurrentUser(Long contentId) {
+        return authenticationFacade.getCurrentUserOptional()
+                .map(user -> boardHideRepository.existsByCreatedByIdAndContentId(user.getId(), contentId))
+                .orElse(false);
+    }
 }
