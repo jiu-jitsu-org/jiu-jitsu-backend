@@ -23,7 +23,7 @@ public class UserAppInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column
+    @Column(unique = true)
     private String token;
 
     @Column
@@ -41,7 +41,7 @@ public class UserAppInfo {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
-    @OneToMany(mappedBy = "userAppInfo", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "userAppInfo")
     @Builder.Default
     private List<PushSendLog> pushSendLogs = new ArrayList<>();
 

@@ -226,6 +226,10 @@ public class UserService {
                 .filter(info -> Objects.equals(userAppInfoRequest.getFcmToken(), info.getToken()))
                 .findFirst();
 
+        // 다른 계정에 등록된 같은 token 또는 deviceId를 먼저 정리 (한 토큰 = 한 계정 보장)
+        userAppInfoRepository.deleteByTokenAndUserIdNot(userAppInfoRequest.getFcmToken(), user.getId());
+        userAppInfoRepository.deleteByDeviceIdAndUserIdNot(userAppInfoRequest.getDeviceId(), user.getId());
+
         if (userAppInfoOptional.isPresent()) {
             // 동일한 fcm 토큰 있는 경우
             UserAppInfo userAppInfo = userAppInfoOptional.get();
@@ -234,14 +238,14 @@ public class UserService {
                 userAppInfoRepository.save(userAppInfo);
             }
         } else {
-            // deviceId 중복된 데이터 삭제
+            // 현재 계정 내 같은 deviceId 중복 행 삭제
             List<UserAppInfo> duplicateDevice = userAppInfos.stream()
                     .filter(info -> Objects.equals(info.getDeviceId(), userAppInfoRequest.getDeviceId()))
                     .toList();
 
             userAppInfoRepository.deleteAll(duplicateDevice);
 
-            // 동일한 fcm 토큰 없는 경우
+            // 동일한 fcm 토큰 없는 경우 신규 등록
             UserAppInfo userAppInfo = userAppInfoRequest.toEntity();
             userAppInfo.assignUser(user);
 
