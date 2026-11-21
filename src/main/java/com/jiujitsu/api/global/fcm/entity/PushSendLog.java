@@ -47,7 +47,7 @@ public class PushSendLog {
     private String data;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_app_info_id", nullable = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "user_app_info_id", nullable = true)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private UserAppInfo userAppInfo;
 }

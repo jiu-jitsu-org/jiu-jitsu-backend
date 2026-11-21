@@ -8,6 +8,7 @@ import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.factory.UserFactory;
 import com.jiujitsu.api.domain.user.mapper.AuthMapper;
+import com.jiujitsu.api.domain.user.repository.UserAppInfoRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.sns.SnsClient;
 import com.jiujitsu.api.domain.user.service.sns.SnsClientFactory;
@@ -33,6 +34,7 @@ public class AuthService {
     private final TokenBlacklistService tokenBlacklistService;
     private final AuthMapper authMapper;
     private final UserFactory userFactory;
+    private final UserAppInfoRepository userAppInfoRepository;
 
     // 테스트 로그인
     public AuthResponse testLogin(SnsLoginRequest request) {
@@ -185,6 +187,13 @@ public class AuthService {
     public LogoutResponse logout(LogoutRequest request) {
         processLogoutToken(request.accessToken());
         processLogoutToken(request.refreshToken());
+
+        // FCM 토큰이 전달된 경우 해당 기기의 푸시 토큰을 삭제
+        if (!isBlank(request.fcmToken()) && jwtTokenProvider.validateToken(request.accessToken())) {
+            Long userId = jwtTokenProvider.getUserIdFromToken(request.accessToken());
+            userAppInfoRepository.findByTokenAndUserId(request.fcmToken(), userId)
+                    .ifPresent(userAppInfoRepository::delete);
+        }
 
         return authMapper.toLogoutResponse();
     }

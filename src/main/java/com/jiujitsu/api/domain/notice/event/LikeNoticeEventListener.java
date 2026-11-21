@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.notice.service.LikeNoticeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -22,6 +23,7 @@ public class LikeNoticeEventListener {
 
     private final LikeNoticeService likeNoticeService;
 
+    @Async("pushExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(LikeNoticeEvent event) {
         try {

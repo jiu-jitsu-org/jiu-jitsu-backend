@@ -38,7 +38,10 @@ public class UserNoticeSetting {
     private Boolean marketingEnabled;   // 마케팅정보알림
 
     @Column
-    private LocalDateTime marketingAgreedAt; // 마케팅 수신 동의 일시 (미동의 시 null)
+    private LocalDateTime marketingAgreedAt;    // 마케팅 수신 동의 일시 (미동의·동의 전 null)
+
+    @Column
+    private LocalDateTime marketingWithdrawnAt; // 마케팅 수신 철회 일시 (철회 전 null)
 
     @Column
     private Boolean competitionEnabled;  // 관심 대회 마감 알림. 처음엔 꺼짐 (이 칸이 생기기 전 가입자는 null = 꺼짐)
@@ -72,12 +75,14 @@ public class UserNoticeSetting {
             this.competitionEnabled = request.competitionEnabled();
         }
 
-        // marketingEnabled 값이 실제로 변경될 때만 동의 일시를 갱신한다.
+        // marketingEnabled 값이 실제로 변경될 때만 동의/철회 일시를 갱신한다.
         if (!Objects.equals(this.marketingEnabled, request.marketingEnabled())) {
             this.marketingEnabled = request.marketingEnabled();
-            this.marketingAgreedAt = Boolean.TRUE.equals(request.marketingEnabled())
-                    ? LocalDateTime.now()
-                    : null;
+            if (Boolean.TRUE.equals(request.marketingEnabled())) {
+                this.marketingAgreedAt = LocalDateTime.now();    // 동의: 동의 일시 갱신 (철회 일시는 그대로)
+            } else {
+                this.marketingWithdrawnAt = LocalDateTime.now(); // 철회: 철회 일시 갱신 (동의 일시는 그대로)
+            }
         }
     }
 

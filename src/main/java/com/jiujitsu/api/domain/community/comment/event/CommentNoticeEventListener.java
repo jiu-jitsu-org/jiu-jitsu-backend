@@ -10,6 +10,7 @@ import com.jiujitsu.api.domain.user.repository.UserBlockRepository;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.global.fcm.event.FcmPushEventPublisher;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ public class CommentNoticeEventListener {
     private final ReportRepository reportRepository;
     private final UserRepository userRepository;
 
+    @Async("pushExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(CommentNoticeEvent event) {

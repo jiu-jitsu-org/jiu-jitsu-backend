@@ -11,6 +11,8 @@ public record LogoutRequest(
         @Schema(description = "로그아웃할 액세스 토큰", example = "eyJhbGciOiJIUzI1NiIs...")
             String accessToken,
         @Schema(description = "리프레시 토큰 (선택사항)", example = "eyJhbGciOiJIUzI1NiIs...")
-            String refreshToken
+            String refreshToken,
+        @Schema(description = "FCM 토큰 (선택사항) — 전달 시 해당 기기의 푸시 토큰을 서버에서 삭제합니다", example = "fHk3...")
+            String fcmToken
 ) {
 }
