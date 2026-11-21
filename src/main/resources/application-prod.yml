@@ -1,0 +1,47 @@
+# application-prod.yml
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver   # p6spy 없이 순수 JDBC
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    open-in-view: false
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+
+# logging — p6spy 없으므로 SQL 로그 비활성화
+logging:
+  level:
+    p6spy: off
+    org.hibernate.SQL: off
+    org.hibernate.type.descriptor.sql: off
+
+# CORS
+cors:
+  allowed-origins:
+    - ${CORS_ALLOWED_ORIGIN}
+
+# Swagger server URL
+springdoc:
+  swagger-ui:
+    server:
+      url: ${SWAGGER_SERVER_URL}
