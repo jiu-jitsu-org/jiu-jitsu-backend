@@ -39,11 +39,15 @@ public class JwtTokenProvider {
     }
 
     public String createAccessToken(Long userId, String email, UserRole role) {
+        return createAccessToken(userId, email, role != null ? role.name() : null);
+    }
+
+    public String createAccessToken(Long userId, String email, String role) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
-                .claim("role", role != null ? role.name() : null)
+                .claim("role", role)
                 .claim("type", "access")
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + accessTokenValidityInMilliseconds))
