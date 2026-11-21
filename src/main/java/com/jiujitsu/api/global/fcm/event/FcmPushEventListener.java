@@ -7,6 +7,7 @@ import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.service.FcmPushService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ public class FcmPushEventListener {
     private final UserRepository userRepository;
     private final FcmPushService fcmPushService;
 
+    @Async("pushExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleFcmPushRequested(FcmPushRequestedEvent event) {
