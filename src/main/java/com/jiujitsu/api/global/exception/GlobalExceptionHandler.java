@@ -93,6 +93,7 @@ public class GlobalExceptionHandler {
         log.error("Runtime exception occurred", e);
         request.setAttribute("api.error.type", e.getClass().getSimpleName());
         request.setAttribute("api.error.message", e.getMessage());
+        request.setAttribute("api.error.location", extractLocation(e));
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -183,9 +184,22 @@ public class GlobalExceptionHandler {
         log.error("Unexpected exception occurred", e);
         request.setAttribute("api.error.type", e.getClass().getSimpleName());
         request.setAttribute("api.error.message", e.getMessage());
+        request.setAttribute("api.error.location", extractLocation(e));
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(ErrorCode.SERVER_ERROR));
+    }
+
+    private static String extractLocation(Throwable e) {
+        Throwable cause = e.getCause() != null ? e.getCause() : e;
+        for (StackTraceElement frame : cause.getStackTrace()) {
+            if (frame.getClassName().startsWith("com.jiujitsu")) {
+                return frame.toString();
+            }
+        }
+        // 내부 프레임 없으면 최상단 프레임
+        StackTraceElement[] frames = cause.getStackTrace();
+        return frames.length > 0 ? frames[0].toString() : null;
     }
 }

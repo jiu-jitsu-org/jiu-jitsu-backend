@@ -45,6 +45,7 @@ public class ApiLogFilter extends OncePerRequestFilter {
             boolean success = statusCode < 400;
             String errorType = (String) request.getAttribute("api.error.type");
             String errorMessage = (String) request.getAttribute("api.error.message");
+            String errorLocation = (String) request.getAttribute("api.error.location");
 
             ApiLog apiLog = ApiLog.builder()
                     .requestedAt(requestedAt)
@@ -52,6 +53,7 @@ public class ApiLogFilter extends OncePerRequestFilter {
                     .statusCode(statusCode)
                     .errorType(errorType)
                     .errorMessage(errorMessage)
+                    .errorLocation(errorLocation)
                     .userId(getCurrentUserId())
                     .ipAddress(getClientIp(request))
                     .method(request.getMethod())
