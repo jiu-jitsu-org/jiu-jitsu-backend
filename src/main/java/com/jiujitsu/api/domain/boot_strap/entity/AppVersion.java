@@ -44,4 +44,8 @@ public class AppVersion {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    public void update(String minVersion, String nowVersion) {
+        this.minVersion = minVersion;
+        this.nowVersion = nowVersion;
+    }
 }
