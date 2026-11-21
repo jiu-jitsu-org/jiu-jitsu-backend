@@ -19,7 +19,7 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false   # p6spy가 이미 로깅 중 — Hibernate System.out 중복 제거 (#201)
     properties:
       hibernate:
         format_sql: true
