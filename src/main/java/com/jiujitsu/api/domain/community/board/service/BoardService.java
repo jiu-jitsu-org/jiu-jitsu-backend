@@ -27,6 +27,7 @@ import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.profanity.ProfanityFilter;
 import com.jiujitsu.api.global.util.LikeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -62,6 +63,7 @@ public class BoardService {
     private final BoardHideService boardHideService;
     private final CommunityProfileService communityProfileService;
     private final CompetitionQueryService competitionQueryService;
+    private final ProfanityFilter profanityFilter;
 
     private static final int COMPETITION_STORY_LIMIT = 5;
     private static final int SEARCH_WORD_LIMIT = 10;
@@ -218,6 +220,9 @@ public class BoardService {
      * 게시물 작성
      */
     public BoardResponse create(BoardCreateRequest request) {
+        // 금칙어 검사
+        profanityFilter.validate(request.title(), request.bodyOrEmpty());
+
         // 로그인 유저 조회
         User user = authenticationFacade.getCurrentUser();
 

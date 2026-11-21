@@ -22,6 +22,7 @@ import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
+import com.jiujitsu.api.global.profanity.ProfanityFilter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,6 +67,7 @@ class CommunityCommentsAuthorProfileTest {
     @Mock private CommentLikeFactory commentLikeFactory;
     @Mock private CommentLikeMapper commentLikeMapper;
     @Mock private CommunityProfileService communityProfileService;
+    @Mock private ProfanityFilter profanityFilter;
 
     private static final Long CONTENT_ID = 10L;
 

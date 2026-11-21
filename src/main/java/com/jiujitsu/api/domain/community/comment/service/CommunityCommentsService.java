@@ -37,6 +37,7 @@ import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.entity.PushActionType;
+import com.jiujitsu.api.global.profanity.ProfanityFilter;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
 import com.jiujitsu.api.global.util.ConstraintViolationUtil;
 import lombok.RequiredArgsConstructor;
@@ -80,6 +81,7 @@ public class CommunityCommentsService {
     private final CommentLikeFactory commentLikeFactory;
     private final CommentLikeMapper commentLikeMapper;
     private final CommunityProfileService communityProfileService;
+    private final ProfanityFilter profanityFilter;
 
 
     private static final int INITIAL_CHILD_LIMIT = 3;
@@ -218,6 +220,9 @@ public class CommunityCommentsService {
      * 댓글 작성
      */
     public CommunityCommentsResponse createComment(CommunityCommentsWriteRequest request) {
+        // 금칙어 검사
+        profanityFilter.validate(request.body());
+
         // 로그인 확인
         User user = authenticationFacade.getCurrentUser();
 

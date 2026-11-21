@@ -16,6 +16,7 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
+import com.jiujitsu.api.global.profanity.ProfanityFilter;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
@@ -73,6 +74,7 @@ class BoardServiceCompetitionTest {
     @Mock private BoardHideService boardHideService;
     @Mock private CommunityProfileService communityProfileService;
     @Mock private CompetitionQueryService competitionQueryService;
+    @Mock private ProfanityFilter profanityFilter;
 
     private final User me = User.builder().id(1L).role(UserRole.USER).build();
 
