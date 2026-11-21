@@ -7,7 +7,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "board_tag")
+@Table(name = "board_tag",
+        indexes = {
+                @Index(name = "idx_board_tag_board_id", columnList = "board_id")  // 글마다 태그 로딩
+        }
+)
 @Getter
 @Builder
 @NoArgsConstructor

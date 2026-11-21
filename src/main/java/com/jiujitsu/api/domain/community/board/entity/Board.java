@@ -24,7 +24,9 @@ import java.util.Objects;
 @Table(
         name = "board",
         indexes = {
-                @Index(name = "idx_board_competition_id", columnList = "competition_id")   // 대회 이야기 조회
+                @Index(name = "idx_board_competition_id", columnList = "competition_id"),  // 대회 이야기 조회
+                @Index(name = "idx_board_feed", columnList = "hidden_at, created_at"),     // 피드 목록: hidden_at IS NULL ORDER BY created_at DESC
+                @Index(name = "idx_board_category_id", columnList = "category_id")         // 카테고리 필터
         }
 )
 @Getter

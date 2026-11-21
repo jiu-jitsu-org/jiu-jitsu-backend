@@ -12,7 +12,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "user_app_info")
+@Table(name = "user_app_info",
+        indexes = {
+                @Index(name = "idx_user_app_info_user_id", columnList = "user_id")  // 푸시 토큰 조회
+        }
+)
 @Getter
 @Builder
 @NoArgsConstructor

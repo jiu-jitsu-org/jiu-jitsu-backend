@@ -21,7 +21,12 @@ import java.util.List;
 import java.util.Objects;
 
 @Entity
-@Table(name = "community_comments")
+@Table(name = "community_comments",
+        indexes = {
+                @Index(name = "idx_comments_content_id", columnList = "content_id"),                   // 댓글 수 집계: content_id IN (…)
+                @Index(name = "idx_comments_created_by_content", columnList = "created_by, content_id") // 내가 단 댓글 여부
+        }
+)
 @Getter
 @Builder
 @NoArgsConstructor
