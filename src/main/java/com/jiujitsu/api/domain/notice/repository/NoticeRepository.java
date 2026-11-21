@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface NoticeRepository extends JpaRepository<Notice, Long> {
@@ -40,4 +41,33 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Modifying
     @Query("DELETE FROM Notice n WHERE n.notifiedAt < :threshold AND (n.groupKey IS NULL OR n.likePushedCount = 0)")
     void deleteExpiredKeepingPushedLikeCards(@Param("threshold") LocalDateTime threshold);
+
+    /**
+     * 안 읽은 알림 수 집계 — 차단·숨김·LikeCard 필터를 SQL에서 처리해 엔티티 로드 없이 COUNT만 반환
+     *
+     * <p>빈 컬렉션 대응: blockedUserIds·excludedDataStrings 가 비어 있을 때는
+     * 절대 매칭되지 않는 더미 값(예: -1L, "-1")을 넣어 호출할 것.
+     *
+     * <p>좋아요 카드 "실제 좋아요 0개" 케이스는 content_like/comment_like 조인이 필요해
+     * SQL 단에서 제외하지 않는다. 모든 좋아요가 취소된 희귀 상황에서 점이 잠깐 과표시될 수 있으나
+     * 알림함(getNoticeList)에서는 여전히 정확히 필터된다.
+     */
+    @Query("""
+            SELECT COUNT(n) FROM Notice n
+            WHERE n.userId = :userId
+              AND n.isRead = false
+              AND (n.pushActionType = :competitionDetail
+                   OR ((n.senderUserId IS NULL OR n.senderUserId NOT IN :blockedUserIds)
+                       AND (n.data IS NULL OR n.data NOT IN :excludedDataStrings)))
+              AND (n.groupKey IS NULL
+                   OR (n.likePushedCount IS NOT NULL AND n.likePushedCount > 0
+                       AND n.notifiedAt >= :likeCardCutoff))
+            """)
+    long countUnreadFiltered(
+            @Param("userId") Long userId,
+            @Param("blockedUserIds") Collection<Long> blockedUserIds,
+            @Param("excludedDataStrings") Collection<String> excludedDataStrings,
+            @Param("competitionDetail") PushActionType competitionDetail,
+            @Param("likeCardCutoff") LocalDateTime likeCardCutoff
+    );
 }

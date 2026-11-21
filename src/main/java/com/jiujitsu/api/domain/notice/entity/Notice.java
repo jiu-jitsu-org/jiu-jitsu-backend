@@ -20,6 +20,9 @@ import java.time.LocalDateTime;
 @Table(name = "notice",
         uniqueConstraints = {
                 @UniqueConstraint(name = Notice.GROUP_KEY_UNIQUE_CONSTRAINT, columnNames = {"user_id", "group_key"})
+        },
+        indexes = {
+                @Index(name = "idx_notice_user_is_read", columnList = "user_id, is_read")
         })
 @Getter
 @Builder

@@ -39,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +70,7 @@ public class NoticeService {
 
     /**
      * 안 읽은 알림 수 조회 (종 아이콘 dot 용)
-     * - 집계 기준은 목록 조회와 동일 (차단·숨기기·신고 필터 적용)
+     * - 차단·숨기기·신고·LikeCard 필터를 SQL COUNT 로 처리해 엔티티 로드 없이 반환
      */
     @Transactional(readOnly = true)
     public long getUnreadCount() {
@@ -77,15 +78,18 @@ public class NoticeService {
         Set<Long> excludedContentIds = getExcludedContentIds();
         List<Long> blockedUserIds = userBlockService.getBlockedUserIds();
 
-        List<Notice> unread = noticeRepository.findByUserIdAndIsReadFalse(user.getId())
-                .stream()
-                .filter(n -> isVisible(n, blockedUserIds, excludedContentIds))
-                .toList();
-        LikeCounts likeCounts = loadLikeCounts(unread);
-        LocalDateTime likeCardCutoff = likeCardCutoff();
-        return unread.stream()
-                .filter(n -> !likeCounts.isHidden(n, likeCardCutoff))
-                .count();
+        // 빈 컬렉션은 NOT IN 에서 의도치 않게 전체 매칭되는 것을 막기 위해 더미 값으로 대체
+        Collection<Long> effectiveBlocked = blockedUserIds.isEmpty() ? List.of(-1L) : blockedUserIds;
+        Collection<String> effectiveExcluded = excludedContentIds.isEmpty() ? List.of("-1") :
+                excludedContentIds.stream().map(String::valueOf).toList();
+
+        return noticeRepository.countUnreadFiltered(
+                user.getId(),
+                effectiveBlocked,
+                effectiveExcluded,
+                PushActionType.COMPETITION_DETAIL,
+                likeCardCutoff()
+        );
     }
 
     /**
