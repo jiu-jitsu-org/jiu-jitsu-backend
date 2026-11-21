@@ -51,7 +51,7 @@ public class BoardMapper {
     /**
      * 상세 response
      */
-    public BoardResponse toResponse(Board board, CommunityProfile authorProfile, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, Boolean noticeEnabled, boolean isAuthor, CompetitionListItem competition) {
+    public BoardResponse toResponse(Board board, CommunityProfile authorProfile, long commentCount, long likeCount, long saveCount, boolean isCommented, boolean isLiked, boolean isSaved, Boolean noticeEnabled, boolean isAuthor, boolean isHidden, CompetitionListItem competition) {
         Content content = board.getContent();
         return new BoardResponse(
                 content.getId(),
@@ -69,6 +69,7 @@ public class BoardMapper {
                 isCommented,
                 isLiked,
                 isSaved,
+                isHidden,
                 getImageInfoList(content),
                 getTagNames(board),
                 noticeEnabled,
@@ -102,6 +103,7 @@ public class BoardMapper {
                 null,
                 null,
                 null,
+                false,
                 getImageInfoList(content),
                 getTagNames(board),
                 null,

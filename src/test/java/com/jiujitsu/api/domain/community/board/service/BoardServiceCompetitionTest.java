@@ -199,7 +199,7 @@ class BoardServiceCompetitionTest {
 
         boardService.getById(100L);
 
-        verify(boardMapper).toResponse(eq(linked), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), any(), anyBoolean(), eq(card));
+        verify(boardMapper).toResponse(eq(linked), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), any(), anyBoolean(), anyBoolean(), eq(card));
     }
 
     // ---------- 대회 이야기 ----------

@@ -105,7 +105,7 @@ class BoardServiceAuthorProfileTest {
         boardService.getById(100L);
 
         // then
-        verify(boardMapper).toResponse(eq(board), eq(profile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), any(), anyBoolean(), isNull());
+        verify(boardMapper).toResponse(eq(board), eq(profile), anyLong(), anyLong(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean(), any(), anyBoolean(), anyBoolean(), isNull());
     }
 
     @Test

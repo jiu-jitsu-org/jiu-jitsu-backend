@@ -185,11 +185,13 @@ public class BoardService {
         Set<Long> savedContentIds = new HashSet<>();
 
         Boolean noticeEnabled = null;
+        boolean isHidden = false;
         if (currentUser.isPresent()) {
             commentedContentIds = communityCommentsService.getUserCommentedContentIds(currentUser.get().getId(), List.of(contentId));
             likedContentIds = contentService.getUserLikedContentIds(currentUser.get().getId(), List.of(contentId));
             savedContentIds = contentService.getUserSavedContentIds(currentUser.get().getId(), List.of(contentId));
             noticeEnabled = noticeService.isContentNoticeEnabled(currentUser.get().getId(), contentId);
+            isHidden = boardHideService.isHiddenByCurrentUser(contentId);
             // 글을 열었으면 그 글에 대한 내 알림은 읽음 (#246)
             noticeService.readContentNotices(currentUser.get().getId(), contentId);
         }
@@ -212,6 +214,7 @@ public class BoardService {
                 savedContentIds.contains(contentId),
                 noticeEnabled,
                 isAuthor,
+                isHidden,
                 competition
                 );
     }
