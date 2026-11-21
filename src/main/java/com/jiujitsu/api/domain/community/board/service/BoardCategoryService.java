@@ -1,5 +1,7 @@
 package com.jiujitsu.api.domain.community.board.service;
 
+import com.jiujitsu.api.domain.community.board.dto.AdminBoardCategoryRequest;
+import com.jiujitsu.api.domain.community.board.dto.AdminBoardCategoryResponse;
 import com.jiujitsu.api.domain.community.board.dto.BoardCategoryResponse;
 import com.jiujitsu.api.domain.community.board.dto.BoardCategoryWeeklyTopicRequest;
 import com.jiujitsu.api.domain.community.board.entity.BoardCategory;
@@ -63,6 +65,40 @@ public class BoardCategoryService {
                 .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_CATEGORY_NOT_FOUND));
         category.changeWeeklyTopic(request == null ? null : request.weeklyTopic());
         return new BoardCategoryResponse(category);
+    }
+
+    // ── 관리자 API ──────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<AdminBoardCategoryResponse> getAllCategoriesForAdmin() {
+        return boardCategoryRepository.findAllByOrderByDisplayOrderAscIdAsc()
+                .stream()
+                .map(AdminBoardCategoryResponse::new)
+                .toList();
+    }
+
+    public AdminBoardCategoryResponse createCategoryByAdmin(AdminBoardCategoryRequest request) {
+        if (boardCategoryRepository.existsByName(request.name())) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+        }
+        BoardCategory category = BoardCategory.builder()
+                .name(request.name())
+                .description(request.description() == null ? "" : request.description())
+                .displayOrder(request.displayOrder())
+                .weeklyTopic(request.weeklyTopic())
+                .isActive(request.isActive())
+                .build();
+        return new AdminBoardCategoryResponse(boardCategoryRepository.save(category));
+    }
+
+    public AdminBoardCategoryResponse updateCategoryByAdmin(Long categoryId, AdminBoardCategoryRequest request) {
+        BoardCategory category = boardCategoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_CATEGORY_NOT_FOUND));
+        if (boardCategoryRepository.existsByNameAndIdNot(request.name(), categoryId)) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+        }
+        category.update(request.name(), request.description(), request.displayOrder(), request.weeklyTopic(), request.isActive());
+        return new AdminBoardCategoryResponse(category);
     }
 
     public BoardCategory findActiveCategory(Long categoryId) {

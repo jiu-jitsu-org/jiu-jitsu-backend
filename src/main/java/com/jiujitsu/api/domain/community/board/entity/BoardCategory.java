@@ -46,4 +46,12 @@ public class BoardCategory extends BaseEntity {
     public void changeWeeklyTopic(String weeklyTopic) {
         this.weeklyTopic = weeklyTopic == null || weeklyTopic.isBlank() ? null : weeklyTopic.strip();
     }
+
+    public void update(String name, String description, int displayOrder, String weeklyTopic, boolean isActive) {
+        this.name = name;
+        this.description = description == null ? "" : description;
+        this.displayOrder = displayOrder;
+        this.weeklyTopic = weeklyTopic == null || weeklyTopic.isBlank() ? null : weeklyTopic.strip();
+        this.isActive = isActive;
+    }
 }

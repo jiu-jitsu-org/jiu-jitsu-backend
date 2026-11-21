@@ -10,6 +10,10 @@ import java.util.List;
 public interface BoardCategoryRepository extends JpaRepository<BoardCategory, Long> {
     boolean existsByName(String name);
 
+    boolean existsByNameAndIdNot(String name, Long id);
+
     List<BoardCategory> findAllByIsActiveTrueOrderByDisplayOrderAscIdAsc();
+
+    List<BoardCategory> findAllByOrderByDisplayOrderAscIdAsc();
 }
 
