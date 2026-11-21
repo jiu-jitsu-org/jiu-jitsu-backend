@@ -41,6 +41,8 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -128,7 +130,11 @@ class NoticeServiceCompetitionTest {
         given(boardHideService.getHiddenContentIds()).willReturn(List.of(7L));
         given(reportService.getReportedTargetIds(ReportType.BOARD)).willReturn(List.of());
         given(userBlockService.getBlockedUserIds()).willReturn(List.of());
-        given(noticeRepository.findByUserIdAndIsReadFalse(1L)).willReturn(List.of(competitionNotice(1, "7"), boardNotice(3, "7")));
+        // SQL 이 대회 알림(1개)만 통과시키고 게시글 7 알림은 excludedData "7" 로 걸러냄
+        given(noticeRepository.countUnreadFiltered(anyLong(), anyCollection(), anyCollection(), any()))
+                .willReturn(1L);
+        given(noticeRepository.findUnreadLikeCards(anyLong(), anyCollection(), anyCollection(), any()))
+                .willReturn(List.of());
 
         assertThat(noticeService.getUnreadCount()).isEqualTo(1);
     }

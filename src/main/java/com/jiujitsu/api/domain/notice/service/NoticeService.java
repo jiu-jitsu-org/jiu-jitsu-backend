@@ -70,7 +70,7 @@ public class NoticeService {
 
     /**
      * 안 읽은 알림 수 조회 (종 아이콘 dot 용)
-     * - 차단·숨기기·신고·LikeCard 필터를 SQL COUNT 로 처리해 엔티티 로드 없이 반환
+     * - 일반 알림(좋아요 카드 제외)은 SQL COUNT, 좋아요 카드는 실제 좋아요 수 확인 후 합산
      */
     @Transactional(readOnly = true)
     public long getUnreadCount() {
@@ -83,13 +83,37 @@ public class NoticeService {
         Collection<String> effectiveExcluded = excludedContentIds.isEmpty() ? List.of("-1") :
                 excludedContentIds.stream().map(String::valueOf).toList();
 
-        return noticeRepository.countUnreadFiltered(
+        long regularCount = noticeRepository.countUnreadFiltered(
                 user.getId(),
                 effectiveBlocked,
                 effectiveExcluded,
-                PushActionType.COMPETITION_DETAIL,
+                PushActionType.COMPETITION_DETAIL
+        );
+
+        List<Notice> likeCards = noticeRepository.findUnreadLikeCards(
+                user.getId(),
+                effectiveBlocked,
+                effectiveExcluded,
                 likeCardCutoff()
         );
+
+        return regularCount + countVisibleLikeCards(likeCards);
+    }
+
+    /** 좋아요 카드 중 실제 좋아요 수가 1개 이상인 카드 수 (취소돼 0개인 카드는 뺀다) */
+    private long countVisibleLikeCards(List<Notice> likeCards) {
+        if (likeCards.isEmpty()) return 0L;
+        List<Long> contentIds = likeCards.stream()
+                .filter(n -> n.getPushType() == FcmPushType.CONTENTS_LIKE && n.getData() != null)
+                .map(n -> Long.parseLong(n.getData())).distinct().toList();
+        List<Long> commentIds = likeCards.stream()
+                .filter(n -> n.getPushType() == FcmPushType.COMMENTS_LIKE && n.getRefId() != null)
+                .map(Notice::getRefId).distinct().toList();
+        LikeCounts counts = new LikeCounts(
+                contentIds.isEmpty() ? Map.of() : toCountMap(contentLikeRepository.countContentLikeByContentIds(contentIds)),
+                commentIds.isEmpty() ? Map.of() : toCountMap(commentLikeRepository.countGroupByCommentIds(commentIds))
+        );
+        return likeCards.stream().filter(n -> counts.of(n) > 0).count();
     }
 
     /**

@@ -40,7 +40,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
@@ -155,7 +158,9 @@ class NoticeServiceLikeTest {
     void zeroLikeCard_hidden() {
         given(noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(1L))
                 .willReturn(List.of(contentLikeCard(1, 10, false), contentLikeCard(2, 11, false)));
-        given(noticeRepository.findByUserIdAndIsReadFalse(1L))
+        given(noticeRepository.countUnreadFiltered(anyLong(), anyCollection(), anyCollection(), any()))
+                .willReturn(0L);
+        given(noticeRepository.findUnreadLikeCards(anyLong(), anyCollection(), anyCollection(), any()))
                 .willReturn(List.of(contentLikeCard(1, 10, false), contentLikeCard(2, 11, false)));
         given(contentLikeRepository.countContentLikeByContentIds(anyList()))
                 .willReturn(List.<Object[]>of(new Object[]{11L, 1L})); // 10번 글은 0개
@@ -180,7 +185,11 @@ class NoticeServiceLikeTest {
                 .notifiedAt(PUSHED_AT.minusDays(30)).isRead(false).build();
         Notice live = contentLikeCard(3, 12, false);
         given(noticeRepository.findByUserIdOrderByNotifiedAtDescIdDesc(1L)).willReturn(List.of(beforeFirstPush, live, expired));
-        given(noticeRepository.findByUserIdAndIsReadFalse(1L)).willReturn(List.of(live, expired));
+        given(noticeRepository.countUnreadFiltered(anyLong(), anyCollection(), anyCollection(), any()))
+                .willReturn(0L);
+        // SQL 이 likePushedCount=0 과 만료 카드를 걸러내므로 live 만 반환
+        given(noticeRepository.findUnreadLikeCards(anyLong(), anyCollection(), anyCollection(), any()))
+                .willReturn(List.of(live));
         given(contentLikeRepository.countContentLikeByContentIds(anyList())).willReturn(List.of(
                 new Object[]{10L, 3L}, new Object[]{11L, 14L}, new Object[]{12L, 5L}));
         stubContentExists(12L, "글");
@@ -192,7 +201,10 @@ class NoticeServiceLikeTest {
     @Test
     @DisplayName("좋아요 카드는 발신자가 없어 차단 목록에 걸리지 않는다")
     void likeCard_notFilteredByBlock() {
-        given(noticeRepository.findByUserIdAndIsReadFalse(1L)).willReturn(List.of(contentLikeCard(1, 10, false)));
+        given(noticeRepository.countUnreadFiltered(anyLong(), anyCollection(), anyCollection(), any()))
+                .willReturn(0L);
+        given(noticeRepository.findUnreadLikeCards(anyLong(), anyCollection(), anyCollection(), any()))
+                .willReturn(List.of(contentLikeCard(1, 10, false)));
         given(contentLikeRepository.countContentLikeByContentIds(anyList()))
                 .willReturn(List.<Object[]>of(new Object[]{10L, 1L}));
 
