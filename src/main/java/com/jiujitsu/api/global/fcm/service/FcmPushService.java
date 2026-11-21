@@ -1,6 +1,8 @@
 package com.jiujitsu.api.global.fcm.service;
 
 import com.google.firebase.ErrorCode;
+import com.google.firebase.messaging.ApnsConfig;
+import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -47,6 +49,12 @@ public class FcmPushService {
                                 Notification.builder()
                                         .setTitle(title)
                                         .setBody(body)
+                                        .build()
+                        )
+                        // iOS 기본 소리 — aps.sound 가 없으면 무음이므로 명시 설정 (#240)
+                        .setApnsConfig(
+                                ApnsConfig.builder()
+                                        .setAps(Aps.builder().setSound("default").build())
                                         .build()
                         )
                         .putData("type", actionType)
