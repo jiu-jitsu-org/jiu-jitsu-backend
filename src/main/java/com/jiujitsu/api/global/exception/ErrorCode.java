@@ -90,6 +90,7 @@ public enum ErrorCode {
      * 앱 버전 조회 에러
      */
     NO_APP_VERSION_DATA(400, "V0001", "데이터가 존재하지 않습니다."),
+    APP_VERSION_MIN_EXCEEDS_NOW(400, "V0002", "최소 버전이 최신 버전보다 클 수 없습니다."),
 
     /**
      * 서버 에러
