@@ -22,6 +22,10 @@ public record AdminBoardCategoryRequest(
         @NotNull
         Integer displayOrder,
 
+        @Schema(description = "이번 주 써 볼 주제. null·빈 값이면 앱에서 숨김", example = "스파링하다 귀가 부었을 때, 어떻게 하셨나요?", nullable = true)
+        @Size(max = 100)
+        String weeklyTopic,
+
         @Schema(description = "사용 여부", example = "true")
         @JsonProperty("isActive")
         @NotNull
