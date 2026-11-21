@@ -12,6 +12,8 @@ public record AdminSignupRequest(
         @Schema(description = "관리자 이메일") String email,
         @NotBlank(message = "비밀번호를 입력해 주세요.")
         @Size(min = 8, message = "비밀번호는 8자 이상으로 입력해 주세요.")
-        @Schema(description = "관리자 비밀번호 (8자 이상)") String password
+        @Schema(description = "관리자 비밀번호 (8자 이상)") String password,
+        @NotBlank(message = "이름을 입력해 주세요.")
+        @Schema(description = "관리자 이름") String name
 ) {
 }
