@@ -163,6 +163,45 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
             Pageable pageable);
 
     /**
+     * 타인이 볼 때: 신고로 가려진 댓글·내가 신고한 댓글을 묶음 집계에서 제외
+     * - c.hiddenAt IS NULL AND c.isReported = false : 신고로 자동 가려진 댓글 제외
+     * - c.id NOT IN :reportedCommentIds : 뷰어가 직접 신고한 댓글 제외
+     * - 빈 묶음이 생기지 않도록 집계 기준도 같은 필터 적용
+     * (reportedCommentIds 가 비어 있으면 [-1L] 을 전달)
+     */
+    @Query(value = """
+            SELECT b.id, MAX(c.createdAt)
+            FROM Board b
+            INNER JOIN CommunityComments c ON c.content = b.content
+            WHERE c.createdBy.id = :userId
+              AND c.deletedAt IS NULL
+              AND c.hiddenAt IS NULL
+              AND c.isReported = false
+              AND c.id NOT IN :reportedCommentIds
+              AND b.hiddenAt IS NULL
+              AND b.createdBy.id NOT IN :excludedAuthorIds
+            GROUP BY b.id
+            ORDER BY MAX(c.createdAt) DESC
+            """,
+            countQuery = """
+            SELECT COUNT(DISTINCT b.id)
+            FROM Board b
+            INNER JOIN CommunityComments c ON c.content = b.content
+            WHERE c.createdBy.id = :userId
+              AND c.deletedAt IS NULL
+              AND c.hiddenAt IS NULL
+              AND c.isReported = false
+              AND c.id NOT IN :reportedCommentIds
+              AND b.hiddenAt IS NULL
+              AND b.createdBy.id NOT IN :excludedAuthorIds
+            """)
+    Page<Object[]> findBoardsWithLatestCommentByUserFiltered(
+            @Param("userId") Long userId,
+            @Param("excludedAuthorIds") List<Long> excludedAuthorIds,
+            @Param("reportedCommentIds") List<Long> reportedCommentIds,
+            Pageable pageable);
+
+    /**
      * 특정 원글(content) 목록에서 특정 사용자가 단 댓글 조회 (삭제 제외, 최신순)
      */
     @Query("""
@@ -175,4 +214,23 @@ public interface CommunityCommentsRepository extends JpaRepository<CommunityComm
     List<CommunityComments> findByContentIdsAndUserId(
             @Param("contentIds") List<Long> contentIds,
             @Param("userId") Long userId);
+
+    /**
+     * 타인이 볼 때: 신고로 가려진 댓글·내가 신고한 댓글을 댓글 목록에서 제외
+     * (reportedCommentIds 가 비어 있으면 [-1L] 을 전달)
+     */
+    @Query("""
+            SELECT c FROM CommunityComments c
+            WHERE c.content.id IN :contentIds
+              AND c.createdBy.id = :userId
+              AND c.deletedAt IS NULL
+              AND c.hiddenAt IS NULL
+              AND c.isReported = false
+              AND c.id NOT IN :reportedCommentIds
+            ORDER BY c.createdAt DESC
+            """)
+    List<CommunityComments> findByContentIdsAndUserIdFiltered(
+            @Param("contentIds") List<Long> contentIds,
+            @Param("userId") Long userId,
+            @Param("reportedCommentIds") List<Long> reportedCommentIds);
 }

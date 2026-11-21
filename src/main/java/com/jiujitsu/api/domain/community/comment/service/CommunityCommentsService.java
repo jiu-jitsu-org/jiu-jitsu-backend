@@ -460,20 +460,29 @@ public class CommunityCommentsService {
         userRepository.findById(userId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
-        // 차단 확인
-        authenticationFacade.getCurrentUserOptional().ifPresent(viewer -> {
-            if (userBlockService.isBlockedBetween(viewer.getId(), userId)) {
-                throw new ErrorException(ErrorCode.USER_NOT_FOUND);
-            }
-        });
+        // 차단 확인 & 소유자 여부
+        User viewer = authenticationFacade.getCurrentUserOptional().orElse(null);
+        if (viewer != null && userBlockService.isBlockedBetween(viewer.getId(), userId)) {
+            throw new ErrorException(ErrorCode.USER_NOT_FOUND);
+        }
+        boolean isOwner = viewer != null && viewer.getId().equals(userId);
 
         // 뷰어가 차단한 사용자의 게시물 제외
         List<Long> blockedIds = userBlockService.getBlockedUserIds();
         List<Long> excludedAuthorIds = blockedIds.isEmpty() ? List.of(-1L) : blockedIds;
 
+        // 타인이 볼 때: 뷰어가 직접 신고한 댓글 ID 목록 (본인은 해당 없음)
+        List<Long> reportedCommentIds = List.of(-1L);
+        if (!isOwner) {
+            List<Long> raw = reportService.getReportedTargetIds(ReportType.COMMENT);
+            if (!raw.isEmpty()) reportedCommentIds = raw;
+        }
+
         // Step 1: 묶음 페이징 — boardId + latestCommentedAt
-        Page<Object[]> groupPage = communityCommentsRepository.findBoardsWithLatestCommentByUser(
-                userId, excludedAuthorIds, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+        Pageable step1Pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        Page<Object[]> groupPage = isOwner
+                ? communityCommentsRepository.findBoardsWithLatestCommentByUser(userId, excludedAuthorIds, step1Pageable)
+                : communityCommentsRepository.findBoardsWithLatestCommentByUserFiltered(userId, excludedAuthorIds, reportedCommentIds, step1Pageable);
 
         List<Long> boardIds = groupPage.getContent().stream()
                 .map(row -> (Long) row[0])
@@ -492,8 +501,10 @@ public class CommunityCommentsService {
 
         // Step 3: 해당 contentId들에 달린 user 댓글 일괄 조회
         List<Long> contentIds = new ArrayList<>(contentIdByBoardId.values());
-        Map<Long, List<CommunityComments>> commentsByContentId = communityCommentsRepository
-                .findByContentIdsAndUserId(contentIds, userId)
+        List<CommunityComments> rawComments = isOwner
+                ? communityCommentsRepository.findByContentIdsAndUserId(contentIds, userId)
+                : communityCommentsRepository.findByContentIdsAndUserIdFiltered(contentIds, userId, reportedCommentIds);
+        Map<Long, List<CommunityComments>> commentsByContentId = rawComments
                 .stream()
                 .collect(Collectors.groupingBy(c -> c.getContent().getId()));
 
