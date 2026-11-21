@@ -43,3 +43,9 @@ deploy/webhook/*.secret
 deploy/docker-compose.local.yml
 
 deploy/secrets/*.json
+
+# local design docs
+admin_text.md
+api-spec.md
+schedule-to-1220.md
+table-design.md
