@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.file.ImageFileStatus;
 import com.jiujitsu.api.domain.file.repository.ImageFileRepository;
 import com.jiujitsu.api.domain.user.dto.*;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.factory.UserFactory;
 import com.jiujitsu.api.domain.user.mapper.AuthMapper;
@@ -78,6 +79,10 @@ public class AuthService {
      * SNS 로그인 - 기존 유저 처리
      */
     private AuthResponse handleExistingUser(User user, SnsUserInfo snsUserInfo) {
+        // 관리자 계정은 유저 로그인 불가
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new ErrorException(ErrorCode.AUTHENTICATION_FAILED);
+        }
         // 탈퇴회원 확인
         boolean deactivatedWithinGrace = handleUserStatus(user);
 
