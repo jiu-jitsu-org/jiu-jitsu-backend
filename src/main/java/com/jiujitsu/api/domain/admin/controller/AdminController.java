@@ -9,6 +9,7 @@ import com.jiujitsu.api.domain.admin.service.AdminAuthService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
+import com.jiujitsu.api.global.security.annotation.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -51,6 +52,7 @@ public class AdminController {
         return adminAuthService.refresh(request);
     }
 
+    @AdminOnly
     @Operation(summary = "로그아웃", description = "액세스·리프레시 토큰을 무효화합니다.")
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
