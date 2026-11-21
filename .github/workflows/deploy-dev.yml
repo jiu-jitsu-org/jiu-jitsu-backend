@@ -1,0 +1,41 @@
+# develop 브랜치의 최신 이미지를 개발 서버에 수동 배포합니다.
+# GitHub Actions > Deploy Dev > Run workflow 버튼으로 실행합니다.
+#
+# 사전 준비 (최초 1회):
+#   GitHub repo → Settings → Secrets and variables → Actions에
+#   DEPLOY_WEBHOOK_SECRET 시크릿을 추가하세요.
+#   값은 서버의 .env에 있는 WEBHOOK_SECRET과 동일해야 합니다.
+name: Deploy Dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "배포 사유 (선택)"
+        required: false
+        default: ""
+
+jobs:
+  deploy:
+    name: Pull & restart API on dev server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger deploy via webhook
+        env:
+          WEBHOOK_SECRET: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}
+        run: |
+          PAYLOAD='{"source":"github-actions","trigger":"manual"}'
+          SIG="sha256=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | awk '{print $NF}')"
+          curl -fsS -X POST "https://developer-chanq.xyz/hooks/deploy-api-manual" \
+            -H "Content-Type: application/json" \
+            -H "X-Hub-Signature-256: $SIG" \
+            -d "$PAYLOAD"
+          echo "✅ Deploy triggered"
+
+      - name: Summary
+        run: |
+          echo "### 🚀 Deploy Dev triggered" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 이미지: \`ghcr.io/jiu-jitsu-org/jiu-jitsu-backend-api:latest-develop\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 사유: ${{ inputs.reason || '(없음)' }}" >> "$GITHUB_STEP_SUMMARY"
