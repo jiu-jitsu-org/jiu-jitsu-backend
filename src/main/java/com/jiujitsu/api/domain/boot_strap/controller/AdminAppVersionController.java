@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.boot_strap.service.AppVersionService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
+import com.jiujitsu.api.global.security.annotation.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +24,7 @@ import java.util.List;
 
 @Tag(name = "admin-app-version-controller", description = "관리자 앱 버전 API")
 @CommonApiResponses
+@AdminOnly
 @RestController
 @RequestMapping("/admin/app-versions")
 @RequiredArgsConstructor

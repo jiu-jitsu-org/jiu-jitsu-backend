@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.user.service.OwnerVerificationService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
+import com.jiujitsu.api.global.security.annotation.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "admin-owner-request-controller", description = "관리자 관장/사범 인증 신청 관리 API")
 @CommonApiResponses
+@AdminOnly
 @RestController
 @RequestMapping("/admin/owner-requests")
 @RequiredArgsConstructor

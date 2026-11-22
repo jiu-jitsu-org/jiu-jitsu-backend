@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.notice.controller;
 import com.jiujitsu.api.domain.notice.dto.CompetitionDeadlineNoticeRunResponse;
 import com.jiujitsu.api.domain.notice.service.CompetitionDeadlineNoticeRunService;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
+import com.jiujitsu.api.global.security.annotation.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "admin-competition-deadline-notice-controller", description = "관리자 대회 마감 알림 API")
 @CommonApiResponses
+@AdminOnly
 @RestController
 @RequestMapping("/admin/competitions/deadline-notices")
 @RequiredArgsConstructor

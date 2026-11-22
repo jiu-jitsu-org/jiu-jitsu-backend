@@ -23,10 +23,10 @@ import java.time.LocalDateTime;
 public class AppSetting {
 
     @Id
-    @Column(length = 100)
+    @Column(name = "setting_key", length = 100)
     private String key;
 
-    @Column(nullable = false, length = 255)
+    @Column(name = "setting_value", nullable = false, length = 255)
     private String value;
 
     @Column(name = "updated_at")

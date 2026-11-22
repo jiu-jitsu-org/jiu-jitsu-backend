@@ -8,6 +8,7 @@ import com.jiujitsu.api.domain.competition.dto.CompetitionFeeResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionLinkResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionSourceResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLink;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLinkWindow;
@@ -101,7 +102,9 @@ public class CompetitionMapper {
     }
 
     // 관리자 상세 — 공개 여부와 상관없이 (status 를 부르지 않는다)
-    public AdminCompetitionDetailResponse toAdminDetail(Competition competition, long interestCount, List<AdminCompetitionLinkResponse> links) {
+    public AdminCompetitionDetailResponse toAdminDetail(Competition competition, long interestCount,
+                                                        List<AdminCompetitionLinkResponse> links,
+                                                        CompetitionSourceResponse source) {
         return new AdminCompetitionDetailResponse(
                 competition.getId(),
                 competition.getName(),
@@ -127,6 +130,7 @@ public class CompetitionMapper {
                 interestCount,
                 competition.getRegistrationSite(),
                 links,
+                source,
                 competition.missingRequiredFields()
         );
     }

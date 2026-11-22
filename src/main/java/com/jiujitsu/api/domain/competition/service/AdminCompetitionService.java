@@ -6,6 +6,7 @@ import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListItem;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionListRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionSaveResponse;
+import com.jiujitsu.api.domain.competition.dto.CompetitionSourceResponse;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLink;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLinkType;
@@ -13,6 +14,7 @@ import com.jiujitsu.api.domain.competition.event.CompetitionRenamedEvent;
 import com.jiujitsu.api.domain.competition.mapper.CompetitionMapper;
 import com.jiujitsu.api.domain.competition.repository.CompetitionLinkRepository;
 import com.jiujitsu.api.domain.competition.repository.CompetitionRepository;
+import com.jiujitsu.api.domain.competition.repository.CompetitionSourceRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import com.jiujitsu.api.global.util.ConstraintViolationUtil;
@@ -53,6 +55,7 @@ public class AdminCompetitionService {
     private final CompetitionMapper competitionMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final CompetitionLinkRepository competitionLinkRepository;
+    private final CompetitionSourceRepository competitionSourceRepository;
     private final Clock clock;
 
     /**
@@ -231,6 +234,10 @@ public class AdminCompetitionService {
                 .sorted(Comparator.comparing(CompetitionLink::getType))
                 .map(link -> competitionMapper.toAdminLink(link, competition, now))
                 .toList();
-        return competitionMapper.toAdminDetail(competition, interestCount, links);
+        CompetitionSourceResponse source = competitionSourceRepository.findByCompetitionId(competitionId)
+                .map(s -> new CompetitionSourceResponse(s.getId(), s.getSite(), s.getSourceUrl(),
+                        s.getPageTitle(), s.getLastCrawledAt(), s.getLastSeenInListAt()))
+                .orElse(null);
+        return competitionMapper.toAdminDetail(competition, interestCount, links, source);
     }
 }
