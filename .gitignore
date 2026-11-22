@@ -46,6 +46,7 @@ deploy/secrets/*.json
 
 # local design docs
 admin_text.md
+admin-competition.txt
 api-spec.md
 schedule-to-1220.md
 table-design.md
