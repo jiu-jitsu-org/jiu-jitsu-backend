@@ -32,4 +32,8 @@ public interface CompetitionInfoReportRepository extends JpaRepository<Competiti
     @Override
     @EntityGraph(attributePaths = {"competition", "user"})
     Page<CompetitionInfoReport> findAll(Specification<CompetitionInfoReport> spec, Pageable pageable);
+
+    // 오늘 할 일용 — 미처리(resolvedAt IS NULL AND cancelledAt IS NULL) 제보 전체
+    @Query("SELECT r FROM CompetitionInfoReport r WHERE r.resolvedAt IS NULL AND r.cancelledAt IS NULL")
+    java.util.List<CompetitionInfoReport> findAllUnresolved();
 }

@@ -17,4 +17,9 @@ public interface CompetitionLinkRepository extends JpaRepository<CompetitionLink
     Optional<CompetitionLink> findByCompetitionIdAndType(Long competitionId, CompetitionLinkType type);
 
     boolean existsByCompetitionIdAndType(Long competitionId, CompetitionLinkType type);
+
+    // 확인 필요 플래그가 있는 모든 링크 (오늘 할 일 LINK_CHECK 용)
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT l FROM CompetitionLink l WHERE l.checkNeededReason IS NOT NULL")
+    List<CompetitionLink> findAllWithCheckNeeded();
 }
