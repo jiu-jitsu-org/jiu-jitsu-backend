@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface StatusLinkCandidateRepository extends JpaRepository<StatusLinkCandidate, Long> {
 
     void deleteAllByCompetitionIdAndStatus(Long competitionId, LinkCandidateStatus status);
+
+    java.util.List<StatusLinkCandidate> findAllByStatus(LinkCandidateStatus status);
 }

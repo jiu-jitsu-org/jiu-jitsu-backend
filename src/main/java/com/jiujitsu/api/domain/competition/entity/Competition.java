@@ -332,6 +332,7 @@ public class Competition extends BaseEntity {
      */
     public void unpublish() {
         this.published = false;
+        this.adminStatus = CompetitionAdminStatus.UNPUBLISHED;
     }
 
     /**
