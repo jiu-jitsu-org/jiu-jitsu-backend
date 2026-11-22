@@ -25,6 +25,12 @@ public class AuditorAwareImpl implements AuditorAware<User> {
             return Optional.empty();
         }
 
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_OPERATOR"));
+        if (isAdmin) {
+            return Optional.empty();
+        }
+
         Object principal = authentication.getPrincipal();
 
         if (principal instanceof Long userId) {
