@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.user.service.UserService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
+import com.jiujitsu.api.global.security.annotation.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "admin-user-controller", description = "관리자 회원 관리 API")
 @CommonApiResponses
+@AdminOnly
 @RestController
 @RequestMapping("/admin/users")
 @RequiredArgsConstructor

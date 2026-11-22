@@ -64,6 +64,8 @@ public record AdminCompetitionDetailResponse(
             RegistrationSite registrationSite,
         @Schema(description = "상태 링크 (종류 순서). 지금 보이는지와 보이는 기간 포함")
             List<AdminCompetitionLinkResponse> links,
+        @Schema(description = "크롤 출처 (없으면 null)", nullable = true)
+            CompetitionSourceResponse source,
         @Schema(description = "공개에 필요한데 비어 있는 칸 (입력 화면 순서). 빈 배열이면 공개할 수 있음 (마지막 확인일은 공개할 때 오늘로 채워져 넣지 않음)")
             List<CompetitionRequiredField> missingFields
 ) { }
