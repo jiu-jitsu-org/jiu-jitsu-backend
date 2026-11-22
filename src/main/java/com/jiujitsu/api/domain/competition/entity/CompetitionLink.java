@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.competition.entity;
 
+import com.jiujitsu.api.domain.admin.entity.Account;
 import com.jiujitsu.api.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -50,6 +51,42 @@ public class CompetitionLink extends BaseEntity {
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
+    // ── 신규 필드 (table-design.md §2 competition_links 추가 컬럼) ──────────
+
+    @Column(name = "page_title", length = 500)
+    private String pageTitle;
+
+    @org.hibernate.annotations.ColumnDefault("false")
+    @Column(name = "is_operator_added", nullable = false)
+    private boolean isOperatorAdded;        // 운영자가 직접 넣은 주소 여부
+
+    @Column(name = "visible_from")
+    private LocalDateTime visibleFrom;      // 보이기 시작 시각
+
+    @Column(name = "visible_until")
+    private LocalDateTime visibleUntil;     // 보이기 끝 시각
+
+    @Column(name = "last_read_at")
+    private LocalDateTime lastReadAt;       // 크롤러 마지막 읽음
+
+    @Column(name = "hidden_reason", columnDefinition = "TEXT")
+    private String hiddenReason;            // 숨김 사유
+
+    @Column(name = "hidden_at")
+    private LocalDateTime hiddenAt;         // 숨김 처리 시각
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "check_needed_reason", length = 30)
+    private CompetitionLinkCheckNeededReason checkNeededReason;
+
+    @Column(name = "check_needed_at")
+    private LocalDateTime checkNeededAt;    // 확인 필요 감지 시각
+
+    // competition_links.created_by 는 BaseEntity 가 users.id 로 선점
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_account_id")
+    private Account createdByAccount;       // 직접 넣기 계정
+
     public CompetitionLink(Competition competition, CompetitionLinkType type, String url) {
         this.competition = competition;
         this.type = type;
@@ -84,5 +121,13 @@ public class CompetitionLink extends BaseEntity {
      */
     public void hide() {
         this.status = CompetitionLinkStatus.HIDDEN;
+    }
+
+    /**
+     * 확인 필요 플래그 해제 — 운영자가 "문제 없음"으로 확인한 경우
+     */
+    public void clearCheckNeeded() {
+        this.checkNeededReason = null;
+        this.checkNeededAt = null;
     }
 }

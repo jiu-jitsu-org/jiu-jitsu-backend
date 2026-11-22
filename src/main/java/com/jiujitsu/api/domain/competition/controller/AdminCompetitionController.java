@@ -7,14 +7,19 @@ import com.jiujitsu.api.domain.competition.dto.AdminCompetitionRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionSaveResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionCreateRequest;
 import com.jiujitsu.api.domain.competition.dto.CompetitionLinkRequest;
+import com.jiujitsu.api.domain.competition.dto.CompetitionSourceRequest;
+import com.jiujitsu.api.domain.competition.dto.CompetitionSourceResponse;
+import com.jiujitsu.api.domain.competition.dto.EarlyCloseRequest;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLinkType;
 import com.jiujitsu.api.domain.competition.dto.CompetitionCreateResponse;
 import com.jiujitsu.api.domain.competition.service.AdminCompetitionLinkService;
 import com.jiujitsu.api.domain.competition.service.AdminCompetitionService;
+import com.jiujitsu.api.domain.competition.service.AdminCompetitionSourceService;
 import com.jiujitsu.api.domain.competition.service.CompetitionService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
+import com.jiujitsu.api.global.security.annotation.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,6 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "admin-competition-controller", description = "관리자 대회 API (대회 목록·상세·만들기·고치기·확인·공개·비공개·상태 링크, 자동완성용 대회 일괄 등록)")
 @CommonApiResponses
+@AdminOnly
 @RestController
 @RequestMapping("/admin/competitions")
 @RequiredArgsConstructor
@@ -44,6 +50,7 @@ public class AdminCompetitionController {
     private final CompetitionService competitionService;
     private final AdminCompetitionService adminCompetitionService;
     private final AdminCompetitionLinkService adminCompetitionLinkService;
+    private final AdminCompetitionSourceService adminCompetitionSourceService;
 
     @Operation(
             summary = "자동완성용 대회 일괄 등록",
@@ -195,5 +202,57 @@ public class AdminCompetitionController {
             @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId,
             @Parameter(description = "링크 종류", required = true) @PathVariable CompetitionLinkType type) {
         return adminCompetitionLinkService.hide(competitionId, type);
+    }
+
+    @Operation(
+            summary = "관리자 대회 상태 링크 확인 — 문제 없음",
+            description = "크롤러가 올린 '확인 필요' 플래그를 운영자가 직접 확인 후 해제합니다. 없는 링크면 R0040. (ROLE_ADMIN 필요)"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE, ErrorCode.COMPETITION_LINK_NOT_FOUND})
+    @PatchMapping("/{competitionId}/links/{type}/check-ok")
+    public AdminCompetitionDetailResponse checkOkLink(
+            @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId,
+            @Parameter(description = "링크 종류", required = true) @PathVariable CompetitionLinkType type) {
+        return adminCompetitionLinkService.checkOk(competitionId, type);
+    }
+
+    @Operation(
+            summary = "관리자 대회 상태 링크 조기 마감 반영",
+            description = "접수 마감일·얼리버드 마감일을 앞당기고 링크를 숨깁니다. registrationDeadline · earlyBirdDeadline 중 적어도 하나는 있어야 합니다. "
+                    + "얼리버드 마감일을 바꾸면 마지막 할인 단계의 기한도 함께 맞춰집니다. 없는 링크면 C0013. (ROLE_ADMIN 필요)"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE,
+            ErrorCode.COMPETITION_LINK_NOT_FOUND, ErrorCode.WRONG_PARAMETER, ErrorCode.COMPETITION_INVALID_EVENT_INFO})
+    @PatchMapping("/{competitionId}/links/{type}/early-close")
+    public AdminCompetitionDetailResponse earlyCloseLink(
+            @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId,
+            @Parameter(description = "링크 종류", required = true) @PathVariable CompetitionLinkType type,
+            @RequestBody EarlyCloseRequest request) {
+        return adminCompetitionLinkService.earlyClose(competitionId, type, request);
+    }
+
+    @Operation(
+            summary = "관리자 대회 출처 연결",
+            description = "대회에 크롤 출처(원문 주소)를 연결합니다. 이미 출처가 있으면 R0018. (ROLE_ADMIN 필요)"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE,
+            ErrorCode.COMPETITION_SOURCE_ALREADY_EXISTS, ErrorCode.REQUIRED_PARAMETER})
+    @PostMapping("/{competitionId}/source")
+    public CompetitionSourceResponse linkSource(
+            @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId,
+            @Valid @RequestBody CompetitionSourceRequest request) {
+        return adminCompetitionSourceService.link(competitionId, request);
+    }
+
+    @Operation(
+            summary = "관리자 대회 출처 끊기",
+            description = "연결된 출처를 제거합니다. 연결된 출처가 없으면 C0017. (ROLE_ADMIN 필요)"
+    )
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_NOT_FOUND, ErrorCode.COMPETITION_CATALOG_NOT_EDITABLE,
+            ErrorCode.COMPETITION_SOURCE_NOT_FOUND})
+    @DeleteMapping("/{competitionId}/source")
+    public void unlinkSource(
+            @Parameter(description = "대회 ID", required = true) @PathVariable Long competitionId) {
+        adminCompetitionSourceService.unlink(competitionId);
     }
 }

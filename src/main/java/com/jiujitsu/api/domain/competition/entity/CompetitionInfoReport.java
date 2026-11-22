@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.competition.entity;
 
+import com.jiujitsu.api.domain.admin.entity.Account;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -63,6 +64,20 @@ public class CompetitionInfoReport {
     @Column(name = "resolution_note", length = NOTE_MAX_LENGTH)
     private String resolutionNote;
 
+    // ── 신규 필드 (table-design.md §2 competition_info_reports 추가 컬럼) ──
+    // 상태 파생: resolvedAt IS NULL → PENDING, cancelledAt IS NOT NULL → CANCELLED, 나머지 → PROCESSED
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cancelled_by")
+    private Account cancelledBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "processed_by")
+    private Account processedBy;
+
     /**
      * 내용은 앞뒤 공백을 지우고, 비면 null. "다른 정보"는 무엇이 다른지 알 수 없으므로 내용이 있어야 한다
      */
@@ -104,5 +119,21 @@ public class CompetitionInfoReport {
     public void unresolve() {
         resolvedAt = null;
         resolutionNote = null;
+    }
+
+    /**
+     * 취소 처리
+     */
+    public void cancel(Account operator) {
+        this.cancelledAt = LocalDateTime.now();
+        this.cancelledBy = operator;
+    }
+
+    /**
+     * 처리 완료 (processedBy 포함)
+     */
+    public void resolveBy(LocalDateTime now, String note, Account operator) {
+        resolve(now, note);
+        this.processedBy = operator;
     }
 }
