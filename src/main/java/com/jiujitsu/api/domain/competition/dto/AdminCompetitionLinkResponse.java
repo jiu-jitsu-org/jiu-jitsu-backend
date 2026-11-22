@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.competition.dto;
 
+import com.jiujitsu.api.domain.competition.entity.CompetitionLinkCheckNeededReason;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLinkStatus;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLinkType;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -8,10 +9,14 @@ import java.time.LocalDateTime;
 
 @Schema(description = "관리자 대회 상태 링크")
 public record AdminCompetitionLinkResponse(
+        @Schema(description = "링크 ID")
+            Long id,
         @Schema(description = "종류")
             CompetitionLinkType type,
         @Schema(description = "주소")
             String url,
+        @Schema(description = "페이지 제목 (크롤러가 채움, 없으면 null)", nullable = true)
+            String pageTitle,
         @Schema(description = "PENDING 승인 전 · APPROVED 승인 · HIDDEN 숨김. 승인한 링크만 앱에 나감")
             CompetitionLinkStatus status,
         @Schema(description = "처음 승인한 시각 (한국 시간)", nullable = true)
@@ -21,5 +26,9 @@ public record AdminCompetitionLinkResponse(
         @Schema(description = "보이는 끝 (한국 시간, 포함). 끝이 없으면 null (결과 주소가 고정인 사이트의 결과)", nullable = true)
             LocalDateTime visibleUntil,
         @Schema(description = "지금 앱에 보이는가 (승인 + 기간 안)")
-            boolean visibleNow
+            boolean visibleNow,
+        @Schema(description = "확인 필요 사유 (없으면 null)", nullable = true)
+            CompetitionLinkCheckNeededReason checkNeededReason,
+        @Schema(description = "확인 필요 감지 시각 (없으면 null)", nullable = true)
+            LocalDateTime checkNeededAt
 ) { }

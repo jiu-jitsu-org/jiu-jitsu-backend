@@ -31,6 +31,8 @@ public enum ErrorCode {
     COMPETITION_NOT_FOUND(404, "C0010", "존재하지 않는 대회입니다."),
     COMPETITION_LINK_NOT_FOUND(404, "C0013", "이 대회에 해당 종류의 링크가 없습니다."),
     COMPETITION_INFO_REPORT_NOT_FOUND(404, "C0014", "존재하지 않는 대회 정보 제보입니다."),
+    COMPETITION_SOURCE_NOT_FOUND(404, "C0017", "대회 출처 정보가 없습니다."),
+    COMPETITION_SOURCE_ALREADY_EXISTS(400, "R0018", "이 대회에 이미 출처가 연결되어 있습니다."),
     ANNOUNCEMENT_NOT_FOUND(404, "C0015", "존재하지 않는 공지입니다."),
     BANNED_WORD_DETECTED(400, "C0016", "금칙어가 포함되어 있습니다."),
     EMAIL_DUPLICATED(400, "R0006", "이미 사용중인 이메일입니다."),

@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.competition.entity;
 
+import com.jiujitsu.api.domain.admin.entity.Account;
 import com.jiujitsu.api.global.entity.BaseEntity;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -160,6 +161,47 @@ public class Competition extends BaseEntity {
     @Column(name = "view_count", nullable = false, updatable = false)
     private long viewCount;                  // 조회수 (CompetitionRepository#incrementViewCount 로만 올린다)
 
+    // ── 신규 필드 (table-design.md §2 competitions 추가 컬럼) ────────────────
+
+    @Column(name = "short_name", length = 100)
+    private String shortName;               // 짧은 이름 (목록 표시용)
+
+    // published(boolean) 를 대체 예정. 마이그레이션 완료 전까지 published 와 병행 사용
+    // Note: BaseEntity 에 created_by(→ users.id) 가 이미 있어 accounts.id 는 별도 컬럼명 사용
+    @Enumerated(EnumType.STRING)
+    @Column(name = "admin_status", length = 20)
+    private CompetitionAdminStatus adminStatus;
+
+    @Column(name = "status_reason", length = 255)
+    private String statusReason;            // 비공개·숨김 사유
+
+    @Column(name = "hidden_at")
+    private LocalDate hiddenAt;             // 비공개 전환일
+
+    @Column(name = "source_memo", columnDefinition = "TEXT")
+    private String sourceMemo;             // 직접 입력 대회 출처 메모
+
+    @ColumnDefault("0")
+    @Column(name = "interest_count", nullable = false, updatable = false)
+    @Builder.Default
+    private int interestCount = 0;         // 관심 수 (역정규화 — CompetitionInterestRepository 에서 직접 UPDATE)
+
+    @ColumnDefault("false")
+    @Column(name = "is_autocomplete_only", nullable = false)
+    @Builder.Default
+    private boolean isAutocompleteOnly = false; // 프로필 기록 자동완성 전용 엔트리
+
+    @ColumnDefault("0")
+    @Column(name = "profile_record_count", nullable = false, updatable = false)
+    @Builder.Default
+    private int profileRecordCount = 0;    // 연결된 프로필 기록 수 (역정규화)
+
+    // competitions.created_by 는 BaseEntity 가 users.id 로 선점.
+    // 생성한 어드민 계정은 별도 컬럼(created_account_id)에 저장
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_account_id")
+    private Account createdByAccount;
+
     // 웹 페이지(공개 일정)에서 복사한 대회명에 섞여 들어오는 문자를 정리한다
     // - \s 는 ASCII 공백만 잡으므로 NBSP(U+00A0)·전각 공백(U+3000) 등 유니코드 공백(\p{Z})도 함께 본다
     // - 폭 없는 공백(U+200B)·BOM(U+FEFF) 같은 서식 문자(\p{Cf}), NUL 등 공백이 아닌 제어 문자(\p{Cc})는 지운다
@@ -290,6 +332,29 @@ public class Competition extends BaseEntity {
      */
     public void unpublish() {
         this.published = false;
+    }
+
+    /**
+     * 조기 마감 반영 — null 이 아닌 날짜만 갱신한다. 적어도 하나는 null 이 아니어야 한다.
+     * earlyBirdDeadline 을 바꾸면 마지막 할인 단계의 기한도 함께 맞춘다
+     * (validateFees 는 earlyBirdDeadline == 마지막 할인 단계 기한을 요구하므로 맞추지 않으면 @PreUpdate 에서 거부됨)
+     */
+    public void updateDeadlines(LocalDate registrationDeadline, LocalDate earlyBirdDeadline) {
+        if (registrationDeadline != null) {
+            this.registrationDeadline = registrationDeadline;
+        }
+        if (earlyBirdDeadline != null) {
+            this.earlyBirdDeadline = earlyBirdDeadline;
+            // 마지막 할인 단계(until 있는 단계) 기한을 새 얼리버드 마감일로 맞춘다
+            for (int i = fees.size() - 1; i >= 0; i--) {
+                CompetitionFee fee = fees.get(i);
+                if (fee.getUntil() != null) {
+                    fees.set(i, new CompetitionFee(fee.getLabel(), fee.getAmount(), earlyBirdDeadline));
+                    break;
+                }
+            }
+        }
+        validateEventInfo();
     }
 
     /**

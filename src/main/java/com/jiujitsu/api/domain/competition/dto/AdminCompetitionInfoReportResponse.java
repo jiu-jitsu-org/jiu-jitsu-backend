@@ -18,6 +18,8 @@ public record AdminCompetitionInfoReportResponse(
         @Schema(description = "처리한 시각 (null = 미처리)", nullable = true)
         LocalDateTime resolvedAt,
         @Schema(description = "처리 메모", nullable = true)
-        String resolutionNote
+        String resolutionNote,
+        @Schema(description = "취소한 시각 (null = 취소 안 됨)", nullable = true)
+        LocalDateTime cancelledAt
 ) {
 }

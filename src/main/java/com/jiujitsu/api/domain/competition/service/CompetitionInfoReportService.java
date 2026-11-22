@@ -1,5 +1,6 @@
 package com.jiujitsu.api.domain.competition.service;
 
+import com.jiujitsu.api.domain.admin.service.AdminAuthenticationFacade;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionInfoReportListRequest;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionInfoReportResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionInfoReportResolveRequest;
@@ -40,6 +41,7 @@ public class CompetitionInfoReportService {
     private final CompetitionInfoReportRepository competitionInfoReportRepository;
     private final CompetitionRepository competitionRepository;
     private final AuthenticationFacade authenticationFacade;
+    private final AdminAuthenticationFacade adminAuthenticationFacade;
     private final CompetitionInfoReportMapper competitionInfoReportMapper;
     private final Clock clock;
 
@@ -93,6 +95,15 @@ public class CompetitionInfoReportService {
     public AdminCompetitionInfoReportResponse unresolve(Long reportId) {
         CompetitionInfoReport report = getReport(reportId);
         report.unresolve();
+        return competitionInfoReportMapper.toAdminResponse(report);
+    }
+
+    /**
+     * 관리자: 제보 취소 — 운영자가 직접 취소 처리. 없으면 COMPETITION_INFO_REPORT_NOT_FOUND
+     */
+    public AdminCompetitionInfoReportResponse cancel(Long reportId) {
+        CompetitionInfoReport report = getReport(reportId);
+        report.cancel(adminAuthenticationFacade.getCurrentAccount());
         return competitionInfoReportMapper.toAdminResponse(report);
     }
 

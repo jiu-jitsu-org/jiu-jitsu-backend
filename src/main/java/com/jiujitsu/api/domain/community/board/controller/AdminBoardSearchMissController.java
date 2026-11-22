@@ -6,6 +6,7 @@ import com.jiujitsu.api.domain.community.board.service.BoardSearchMissService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
+import com.jiujitsu.api.global.security.annotation.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -19,6 +20,7 @@ import java.util.List;
 
 @Tag(name = "admin-board-search-miss-controller", description = "관리자 결과 0건 검색어 API")
 @CommonApiResponses
+@AdminOnly
 @RestController
 @RequestMapping("/admin/board/search-misses")
 @RequiredArgsConstructor

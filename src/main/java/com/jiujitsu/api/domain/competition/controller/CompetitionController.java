@@ -1,12 +1,6 @@
 package com.jiujitsu.api.domain.competition.controller;
 
-import com.jiujitsu.api.domain.competition.dto.CompetitionDetailResponse;
-import com.jiujitsu.api.domain.competition.dto.CompetitionListRequest;
-import com.jiujitsu.api.domain.competition.dto.CompetitionListResponse;
-import com.jiujitsu.api.domain.competition.dto.CompetitionPickerResponse;
-import com.jiujitsu.api.domain.competition.dto.CompetitionRegionsResponse;
-import com.jiujitsu.api.domain.competition.dto.CompetitionResponse;
-import com.jiujitsu.api.domain.competition.dto.CompetitionViewResponse;
+import com.jiujitsu.api.domain.competition.dto.*;
 import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
 import com.jiujitsu.api.domain.competition.service.CompetitionService;
 import com.jiujitsu.api.domain.competition.service.CompetitionViewService;
@@ -20,13 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 

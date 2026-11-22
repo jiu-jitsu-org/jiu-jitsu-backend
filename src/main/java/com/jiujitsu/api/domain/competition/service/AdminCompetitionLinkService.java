@@ -1,10 +1,16 @@
 package com.jiujitsu.api.domain.competition.service;
 
+import com.jiujitsu.api.domain.admin.entity.Account;
+import com.jiujitsu.api.domain.admin.service.AdminAuthenticationFacade;
 import com.jiujitsu.api.domain.competition.dto.AdminCompetitionDetailResponse;
 import com.jiujitsu.api.domain.competition.dto.CompetitionLinkRequest;
+import com.jiujitsu.api.domain.competition.dto.EarlyCloseRequest;
+import com.jiujitsu.api.domain.competition.entity.ChangeActorType;
+import com.jiujitsu.api.domain.competition.entity.ChangeHistory;
 import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLink;
 import com.jiujitsu.api.domain.competition.entity.CompetitionLinkType;
+import com.jiujitsu.api.domain.competition.repository.ChangeHistoryRepository;
 import com.jiujitsu.api.domain.competition.repository.CompetitionLinkRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
@@ -15,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -29,6 +36,8 @@ public class AdminCompetitionLinkService {
 
     private final AdminCompetitionService adminCompetitionService;
     private final CompetitionLinkRepository competitionLinkRepository;
+    private final ChangeHistoryRepository changeHistoryRepository;
+    private final AdminAuthenticationFacade adminAuthenticationFacade;
     private final Clock clock;
 
     /**
@@ -72,6 +81,67 @@ public class AdminCompetitionLinkService {
     public AdminCompetitionDetailResponse hide(Long competitionId, CompetitionLinkType type) {
         Competition competition = adminCompetitionService.getEditable(competitionId);
         getLink(competitionId, type).hide();
+        return adminCompetitionService.toDetail(competition);
+    }
+
+    /**
+     * 링크 확인 "문제 없음" — 크롤러가 올린 확인 필요 플래그를 운영자가 직접 확인 후 해제한다. 없는 링크면 COMPETITION_LINK_NOT_FOUND
+     */
+    public AdminCompetitionDetailResponse checkOk(Long competitionId, CompetitionLinkType type) {
+        Competition competition = adminCompetitionService.getEditable(competitionId);
+        CompetitionLink link = getLink(competitionId, type);
+        link.clearCheckNeeded();
+        Account operator = adminAuthenticationFacade.getCurrentAccount();
+        changeHistoryRepository.save(ChangeHistory.builder()
+                .competition(competition)
+                .actorType(ChangeActorType.OPERATOR)
+                .actor(operator)
+                .action("link_check_ok")
+                .fieldName(type.name())
+                .build());
+        return adminCompetitionService.toDetail(competition);
+    }
+
+    /**
+     * 조기 마감 반영 — 접수 마감일·얼리버드 마감일을 앞당기고 링크를 숨긴다. 적어도 하나는 null 이 아니어야 한다.
+     * 없는 링크면 COMPETITION_LINK_NOT_FOUND
+     */
+    public AdminCompetitionDetailResponse earlyClose(Long competitionId, CompetitionLinkType type, EarlyCloseRequest request) {
+        if (request.registrationDeadline() == null && request.earlyBirdDeadline() == null) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+        }
+        Competition competition = adminCompetitionService.getEditable(competitionId);
+        CompetitionLink link = getLink(competitionId, type);
+
+        LocalDate oldRegDeadline = competition.getRegistrationDeadline();
+        LocalDate oldEarlyBirdDeadline = competition.getEarlyBirdDeadline();
+
+        competition.updateDeadlines(request.registrationDeadline(), request.earlyBirdDeadline());
+        link.hide();
+
+        Account operator = adminAuthenticationFacade.getCurrentAccount();
+        if (request.registrationDeadline() != null) {
+            changeHistoryRepository.save(ChangeHistory.builder()
+                    .competition(competition)
+                    .actorType(ChangeActorType.OPERATOR)
+                    .actor(operator)
+                    .action("link_early_close")
+                    .fieldName("registration_deadline")
+                    .oldValue(oldRegDeadline != null ? oldRegDeadline.toString() : null)
+                    .newValue(request.registrationDeadline().toString())
+                    .build());
+        }
+        if (request.earlyBirdDeadline() != null) {
+            changeHistoryRepository.save(ChangeHistory.builder()
+                    .competition(competition)
+                    .actorType(ChangeActorType.OPERATOR)
+                    .actor(operator)
+                    .action("link_early_close")
+                    .fieldName("early_bird_deadline")
+                    .oldValue(oldEarlyBirdDeadline != null ? oldEarlyBirdDeadline.toString() : null)
+                    .newValue(request.earlyBirdDeadline().toString())
+                    .build());
+        }
         return adminCompetitionService.toDetail(competition);
     }
 
