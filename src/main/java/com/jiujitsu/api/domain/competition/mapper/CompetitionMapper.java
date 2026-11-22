@@ -147,13 +147,17 @@ public class CompetitionMapper {
     public AdminCompetitionLinkResponse toAdminLink(CompetitionLink link, Competition competition, LocalDateTime now) {
         CompetitionLinkWindow window = CompetitionLinkWindow.of(link, competition);
         return new AdminCompetitionLinkResponse(
+                link.getId(),
                 link.getType(),
                 link.getUrl(),
+                link.getPageTitle(),
                 link.getStatus(),
                 link.getApprovedAt(),
                 window.from(),
                 window.until(),
-                CompetitionLinkWindow.isVisible(link, competition, now)
+                CompetitionLinkWindow.isVisible(link, competition, now),
+                link.getCheckNeededReason(),
+                link.getCheckNeededAt()
         );
     }
 }

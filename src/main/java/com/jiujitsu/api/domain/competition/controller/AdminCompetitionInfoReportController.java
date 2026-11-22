@@ -59,4 +59,11 @@ public class AdminCompetitionInfoReportController {
     public AdminCompetitionInfoReportResponse unresolve(@Parameter(description = "제보 ID", required = true) @PathVariable Long reportId) {
         return competitionInfoReportService.unresolve(reportId);
     }
+
+    @Operation(summary = "대회 정보 제보 취소", description = "운영자가 제보를 취소 처리합니다. 없으면 C0014. (ROLE_ADMIN 필요)")
+    @ApiErrorCodeExamples({ErrorCode.COMPETITION_INFO_REPORT_NOT_FOUND})
+    @PatchMapping("/{reportId}/cancel")
+    public AdminCompetitionInfoReportResponse cancel(@Parameter(description = "제보 ID", required = true) @PathVariable Long reportId) {
+        return competitionInfoReportService.cancel(reportId);
+    }
 }
