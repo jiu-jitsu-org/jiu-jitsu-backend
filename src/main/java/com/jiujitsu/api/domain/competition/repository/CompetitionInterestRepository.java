@@ -18,6 +18,15 @@ public interface CompetitionInterestRepository extends JpaRepository<Competition
 
     boolean existsByCompetitionIdAndUserId(Long competitionId, Long userId);
 
+    // 어드민 회원 상세 — 관심 대회 목록 (최신순)
+    @Query("""
+            SELECT i FROM CompetitionInterest i
+            JOIN FETCH i.competition
+            WHERE i.user.id = :userId
+            ORDER BY i.createdAt DESC
+            """)
+    List<CompetitionInterest> findByUserIdWithCompetition(@Param("userId") Long userId);
+
     Optional<CompetitionInterest> findByCompetitionIdAndUserId(Long competitionId, Long userId);
 
     @Modifying

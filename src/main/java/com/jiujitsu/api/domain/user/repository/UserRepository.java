@@ -6,7 +6,10 @@ import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,7 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
     
     Optional<User> findBySnsProviderAndSnsId(SnsProvider snsProvider, String snsId);
     //todo: 테스트용 삭제(findBySnsProviderAndNickname)
@@ -45,6 +48,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByIdWithAppInfos(@Param("id") Long id);
 
     Optional<User> findByProfileImageFile(ImageFile imageFile);
+
+    // 탈퇴 신청 목록 (deletedAt 기준 최신순)
+    @Query("SELECT u FROM User u WHERE u.deletedAt IS NOT NULL ORDER BY u.deletedAt DESC")
+    Page<User> findWithdrawals(Pageable pageable);
+
+    long countByStatus(UserStatus status);
 
     /**
      * 같은 유저의 동시 요청 직렬화용 행 잠금 (관장/사범 인증 신청 중복 생성 방지)
