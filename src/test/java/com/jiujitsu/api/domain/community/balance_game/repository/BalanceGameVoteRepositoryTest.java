@@ -10,8 +10,6 @@ import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.global.security.AuditorAwareImpl;
-import org.hibernate.SessionFactory;
-import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -232,31 +230,24 @@ class BalanceGameVoteRepositoryTest {
     }
 
     @Test
-    @DisplayName("내가 투표한 목록은 판이 여러 개여도 봤음 여부까지 조회 한 번으로 읽는다 (#290)")
-    void findMyVotes_resultSeenWithoutExtraQuery() {
+    @DisplayName("봤음을 남기기 전에 읽어 둔 투표를 바꿔 저장해도 봤음 기록은 지워지지 않는다 (마감 순간 다른 기기의 투표 변경, #290)")
+    void markResultSeen_survivesVoteChange() {
         // given
         User me = saveUser();
-        LocalDate today = LocalDate.now();
-        BalanceGame seen = saveGame(today.minusDays(1), LocalDateTime.now().minusDays(1));
-        BalanceGame unseen = saveGame(today.minusDays(2), LocalDateTime.now().minusDays(2));
-        vote(me, seen, BalanceGameOption.A);
-        vote(me, unseen, BalanceGameOption.B);
+        BalanceGame game = saveGame(LocalDate.now().minusDays(1), LocalDateTime.now().minusDays(1));
+        BalanceGameVote mine = vote(me, game, BalanceGameOption.A);
         em.flush();
-        balanceGameVoteRepository.markResultSeen(seen.getId(), me, LocalDateTime.now());
-        em.clear();
-        Statistics statistics = em.getEntityManager().getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
-        statistics.setStatisticsEnabled(true);
-        statistics.clear();
+        LocalDateTime first = LocalDateTime.of(2026, 11, 26, 9, 0);
 
-        // when
-        List<Boolean> resultSeen = balanceGameVoteRepository.findMyVotes(me, PageRequest.of(0, 20)).getContent().stream()
-                .map(BalanceGameVote::isResultSeen)
-                .toList();
-        long queries = statistics.getPrepareStatementCount();
-        statistics.setStatisticsEnabled(false);
+        // when: mine 은 아직 봤음이 없는 상태로 읽힌 채
+        balanceGameVoteRepository.markResultSeen(game.getId(), me, first);
+        mine.changeOption(BalanceGameOption.B);
+        em.flush();
+        em.clear();
 
         // then
-        assertThat(resultSeen).containsExactly(true, false);
-        assertThat(queries).isEqualTo(1);
+        BalanceGameVote saved = em.find(BalanceGameVote.class, mine.getId());
+        assertThat(saved.getOption()).isEqualTo(BalanceGameOption.B);
+        assertThat(saved.getResultSeenAt()).isEqualTo(first);
     }
 }

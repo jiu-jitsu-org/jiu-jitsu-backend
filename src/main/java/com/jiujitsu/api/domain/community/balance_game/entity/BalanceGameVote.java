@@ -41,8 +41,9 @@ public class BalanceGameVote extends BaseEntity {
     @Column(nullable = false, length = 1)
     private BalanceGameOption option;   // 선택한 선택지 (A/B)
 
-    // 끝난 판의 결과를 처음 본 시각 (#290). 안 봤으면 null. 기록은 BalanceGameVoteRepository#markResultSeen
-    @Column(name = "result_seen_at")
+    // 끝난 판의 결과를 처음 본 시각 (#290). 안 봤으면 null
+    // 기록은 BalanceGameVoteRepository#markResultSeen 으로만 — 먼저 읽어 둔 투표 변경의 저장이 null 로 되돌리지 않게 updatable = false
+    @Column(name = "result_seen_at", updatable = false)
     private LocalDateTime resultSeenAt;
 
     // 다른 선택지로 투표 변경
