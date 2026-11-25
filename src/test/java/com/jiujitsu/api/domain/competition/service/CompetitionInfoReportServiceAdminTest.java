@@ -59,8 +59,11 @@ class CompetitionInfoReportServiceAdminTest {
     @Autowired
     private TestEntityManager em;
 
-    @MockBean   // 제보 등록 의존성. 관리자 기능은 쓰지 않는다
+    @MockBean   // 제보 등록 의존성
     private AuthenticationFacade authenticationFacade;
+
+    @MockBean   // 관리자 처리 의존성
+    private com.jiujitsu.api.domain.admin.service.AdminAuthenticationFacade adminAuthenticationFacade;
 
     private User saveUser() {
         return em.persist(User.builder()
