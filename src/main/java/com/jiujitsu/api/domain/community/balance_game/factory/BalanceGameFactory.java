@@ -26,11 +26,13 @@ public class BalanceGameFactory {
     }
 
     public BalanceGame createBalanceGame(Content content,
+                                         String title,
                                          String optionAText, Long optionAImageId,
                                          String optionBText, Long optionBImageId,
                                          LocalDateTime startAt, LocalDateTime endAt, LocalDate gameDate) {
         return BalanceGame.builder()
                 .content(content)
+                .title(title)
                 .optionAText(optionAText)
                 .optionAImage(findActiveImageOrNull(optionAImageId))
                 .optionBText(optionBText)

@@ -227,6 +227,7 @@ public class BalanceGameService {
         Content content = balanceGameFactory.createContent();
         BalanceGame game = balanceGameFactory.createBalanceGame(
                 content,
+                request.title(),
                 request.optionAText(), request.optionAImageFileId(),
                 request.optionBText(), request.optionBImageFileId(),
                 startAt,

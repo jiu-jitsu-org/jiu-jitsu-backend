@@ -35,6 +35,7 @@ public class BalanceGameMapper {
                 game.isStarted(now),                    // started
                 game.isClosed(now),                     // closed
                 resultUntil,
+                game.getTitle(),
                 new BalanceGameOptionResponse(
                         BalanceGameOption.A, game.getOptionAText(), ImageInfo.from(game.getOptionAImage()), voteCountA),
                 new BalanceGameOptionResponse(
