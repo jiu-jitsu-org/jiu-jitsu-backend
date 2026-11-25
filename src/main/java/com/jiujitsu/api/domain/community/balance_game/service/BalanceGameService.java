@@ -96,7 +96,7 @@ public class BalanceGameService {
         BalanceGame game = balanceGameRepository.findByContentId(contentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND));
 
-        // 상세를 열었으면 이 게임에 대한 내 알림(댓글 · 답글 · 좋아요)은 읽음 (#246, 글 상세와 같은 기준)
+        // 상세를 열었으면 이 게임에 대한 내 알림(댓글 · 답글 · 좋아요 · 결과)은 읽음 (#246, 글 상세와 같은 기준)
         authenticationFacade.getCurrentUserOptional()
                 .ifPresent(user -> noticeService.readContentNotices(user.getId(), contentId));
 
@@ -133,6 +133,7 @@ public class BalanceGameService {
             return;
         }
         balanceGameVoteRepository.markResultSeen(game.getId(), user, now);
+        // 순서 중요: 봤음 갱신이 발송 중인 투표 행을 기다린 뒤라야 방금 커밋된 결과 알림까지 읽음이 된다
         noticeService.readBalanceResultNotice(user.getId(), contentId);
     }
 

@@ -29,7 +29,7 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Notice> findForUpdateByUserIdAndGroupKey(Long userId, String groupKey);
 
-    // 글 · 밸런스 게임 상세를 열면 그 콘텐츠에 대한 내 안 읽은 알림(댓글 · 답글 · 좋아요)을 읽음으로 (#246)
+    // 글 · 밸런스 게임 상세를 열면 그 콘텐츠에 대한 내 안 읽은 알림(댓글 · 답글 · 좋아요 · 밸런스 게임 결과)을 읽음으로 (#246)
     // data 가 콘텐츠 id 인 알림만 — 대회 알림은 data 가 대회 id 라 actionTypes 로 뺀다
     @Modifying
     @Query("UPDATE Notice n SET n.isRead = true WHERE n.userId = :userId AND n.data = :data"

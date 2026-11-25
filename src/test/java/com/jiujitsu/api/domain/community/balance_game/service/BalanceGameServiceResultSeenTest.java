@@ -24,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -40,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -119,9 +121,11 @@ class BalanceGameServiceResultSeenTest {
         balanceGameService.markResultSeen(CONTENT_ID);
 
         ArgumentCaptor<LocalDateTime> seenAt = ArgumentCaptor.forClass(LocalDateTime.class);
-        verify(balanceGameVoteRepository).markResultSeen(eq(GAME_ID), eq(user), seenAt.capture());
+        // 그 판의 결과 알림도 읽음 (#291). 봤음 갱신이 먼저라야 발송 중이던 알림까지 읽음이 된다
+        InOrder inOrder = inOrder(balanceGameVoteRepository, noticeService);
+        inOrder.verify(balanceGameVoteRepository).markResultSeen(eq(GAME_ID), eq(user), seenAt.capture());
+        inOrder.verify(noticeService).readBalanceResultNotice(7L, CONTENT_ID);
         assertThat(seenAt.getValue()).isBetween(before, LocalDateTime.now());
-        verify(noticeService).readBalanceResultNotice(7L, CONTENT_ID);   // 그 판의 결과 알림도 읽음 (#291)
     }
 
     @Test
@@ -134,6 +138,7 @@ class BalanceGameServiceResultSeenTest {
         balanceGameService.markResultSeen(CONTENT_ID);
 
         verifyNoMoreInteractions(balanceGameVoteRepository);
+        verify(noticeService).readBalanceResultNotice(7L, CONTENT_ID);   // 이미 본 판이어도 남은 결과 알림은 읽음 (#291)
     }
 
     @Test
@@ -144,7 +149,7 @@ class BalanceGameServiceResultSeenTest {
 
         balanceGameService.markResultSeen(CONTENT_ID);
 
-        verifyNoInteractions(balanceGameVoteRepository);
+        verifyNoInteractions(balanceGameVoteRepository, noticeService);
     }
 
     @Test
