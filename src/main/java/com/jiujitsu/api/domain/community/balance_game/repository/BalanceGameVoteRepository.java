@@ -6,10 +6,12 @@ import com.jiujitsu.api.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +23,22 @@ public interface BalanceGameVoteRepository extends JpaRepository<BalanceGameVote
 
     // 현재 사용자의 투표 (myVote / 토글 판단)
     Optional<BalanceGameVote> findByBalanceGameIdAndCreatedBy(Long balanceGameId, User user);
+
+    /**
+     * 내 투표에 결과를 처음 본 시각을 남긴다 (#290)
+     * 아직 안 본 행만 고쳐, 다시 · 동시에 불러도 처음 시각이 남는다. 투표하지 않았거나 이미 봤으면 0행.
+     */
+    @Modifying
+    @Query("""
+            UPDATE BalanceGameVote v
+            SET v.resultSeenAt = :seenAt
+            WHERE v.balanceGame.id = :balanceGameId
+            AND v.createdBy = :user
+            AND v.resultSeenAt IS NULL
+            """)
+    int markResultSeen(@Param("balanceGameId") Long balanceGameId,
+                       @Param("user") User user,
+                       @Param("seenAt") LocalDateTime seenAt);
 
     /**
      * 내가 투표한 밸런스 게임 목록 (마감 포함, gameDate 최신순)

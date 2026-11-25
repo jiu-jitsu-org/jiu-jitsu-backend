@@ -10,6 +10,8 @@ import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.global.security.AuditorAwareImpl;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -179,5 +181,82 @@ class BalanceGameVoteRepositoryTest {
                         List.of(g1.getId(), BalanceGameOption.A, 2L),
                         List.of(g1.getId(), BalanceGameOption.B, 1L),
                         List.of(g2.getId(), BalanceGameOption.B, 1L));
+    }
+
+    @Test
+    @DisplayName("결과 봤음은 내 행에만 남고, 다시 불러도 처음 시각 그대로다 — 남의 투표·다른 판은 건드리지 않는다 (#290)")
+    void markResultSeen() {
+        // given
+        User me = saveUser();
+        User other = saveUser();
+        BalanceGame game = saveGame(LocalDate.now().minusDays(1), LocalDateTime.now().minusDays(1));
+        BalanceGame anotherGame = saveGame(LocalDate.now().minusDays(2), LocalDateTime.now().minusDays(2));
+        BalanceGameVote mine = vote(me, game, BalanceGameOption.A);
+        BalanceGameVote others = vote(other, game, BalanceGameOption.B);
+        BalanceGameVote mineOnAnother = vote(me, anotherGame, BalanceGameOption.A);
+        em.flush();
+        em.clear();
+        LocalDateTime first = LocalDateTime.of(2026, 11, 26, 9, 0);
+
+        // when
+        int marked = balanceGameVoteRepository.markResultSeen(game.getId(), me, first);
+        int again = balanceGameVoteRepository.markResultSeen(game.getId(), me, first.plusHours(1));
+        em.clear();
+
+        // then
+        assertThat(marked).isEqualTo(1);
+        assertThat(again).isZero();
+        assertThat(em.find(BalanceGameVote.class, mine.getId()).getResultSeenAt()).isEqualTo(first);
+        assertThat(em.find(BalanceGameVote.class, others.getId()).isResultSeen()).isFalse();
+        assertThat(em.find(BalanceGameVote.class, mineOnAnother.getId()).isResultSeen()).isFalse();
+    }
+
+    @Test
+    @DisplayName("투표하지 않은 판에는 결과 봤음이 남지 않는다 (0행)")
+    void markResultSeen_notVoted() {
+        // given
+        User me = saveUser();
+        User other = saveUser();
+        BalanceGame game = saveGame(LocalDate.now().minusDays(1), LocalDateTime.now().minusDays(1));
+        BalanceGameVote others = vote(other, game, BalanceGameOption.B);
+        em.flush();
+        em.clear();
+
+        // when
+        int marked = balanceGameVoteRepository.markResultSeen(game.getId(), me, LocalDateTime.now());
+        em.clear();
+
+        // then
+        assertThat(marked).isZero();
+        assertThat(em.find(BalanceGameVote.class, others.getId()).isResultSeen()).isFalse();
+    }
+
+    @Test
+    @DisplayName("내가 투표한 목록은 판이 여러 개여도 봤음 여부까지 조회 한 번으로 읽는다 (#290)")
+    void findMyVotes_resultSeenWithoutExtraQuery() {
+        // given
+        User me = saveUser();
+        LocalDate today = LocalDate.now();
+        BalanceGame seen = saveGame(today.minusDays(1), LocalDateTime.now().minusDays(1));
+        BalanceGame unseen = saveGame(today.minusDays(2), LocalDateTime.now().minusDays(2));
+        vote(me, seen, BalanceGameOption.A);
+        vote(me, unseen, BalanceGameOption.B);
+        em.flush();
+        balanceGameVoteRepository.markResultSeen(seen.getId(), me, LocalDateTime.now());
+        em.clear();
+        Statistics statistics = em.getEntityManager().getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+        statistics.setStatisticsEnabled(true);
+        statistics.clear();
+
+        // when
+        List<Boolean> resultSeen = balanceGameVoteRepository.findMyVotes(me, PageRequest.of(0, 20)).getContent().stream()
+                .map(BalanceGameVote::isResultSeen)
+                .toList();
+        long queries = statistics.getPrepareStatementCount();
+        statistics.setStatisticsEnabled(false);
+
+        // then
+        assertThat(resultSeen).containsExactly(true, false);
+        assertThat(queries).isEqualTo(1);
     }
 }
