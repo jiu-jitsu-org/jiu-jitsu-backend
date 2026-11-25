@@ -74,6 +74,9 @@ public enum ErrorCode {
     MEMBER_NOT_FOUND(404, "U0011", "존재하지 않는 회원입니다."),
     OWNER_REQUEST_NOT_FOUND(404, "U0012", "존재하지 않는 관장/사범 인증 신청입니다."),
     OWNER_REQUEST_NOT_PENDING(400, "U0013", "이미 처리된 관장/사범 인증 신청입니다."),
+    SANCTION_NOT_FOUND(404, "U0014", "존재하지 않는 제재 내역입니다."),
+    SANCTION_ALREADY_RELEASED(400, "U0015", "이미 해제된 제재입니다."),
+    SANCTION_DURATION_REQUIRED(400, "U0016", "일시정지 제재는 durationDays가 필요합니다."),
     PROFILE_NOT_FOUND(404, "U0011", "존재하지 않는 회원입니다."),
     /**
      * 인증 에러

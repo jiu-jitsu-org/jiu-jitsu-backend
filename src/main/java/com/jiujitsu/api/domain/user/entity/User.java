@@ -77,6 +77,16 @@ public class User {
     @Column
     private LocalDateTime deletedAt;
 
+    // 그 유저의 콘텐츠가 받은 신고 수 합계 (신고 접수마다 증가, 감소 없음)
+    @Column(name = "report_count", nullable = false)
+    @Builder.Default
+    private int reportCount = 0;
+
+    // 운영자가 그 유저의 콘텐츠를 숨김·삭제한 횟수 (제재 검토 기준 판단용)
+    @Column(name = "violation_count", nullable = false)
+    @Builder.Default
+    private int violationCount = 0;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserAppInfo> appInfos = new ArrayList<>();
@@ -116,6 +126,24 @@ public class User {
 
     public void updateAccountType(AccountType accountType) {
         this.accountType = accountType;
+    }
+
+    public void suspend() {
+        this.status = UserStatus.SUSPENDED;
+    }
+
+    public void restore() {
+        if (this.status == UserStatus.SUSPENDED) {
+            this.status = UserStatus.ACTIVE;
+        }
+    }
+
+    public void incrementReportCount() {
+        this.reportCount++;
+    }
+
+    public void incrementViolationCount() {
+        this.violationCount++;
     }
 
     public boolean isWithinGracePeriod() {

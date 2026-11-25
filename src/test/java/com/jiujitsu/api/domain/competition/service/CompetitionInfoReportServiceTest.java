@@ -58,6 +58,7 @@ class CompetitionInfoReportServiceTest {
     @Mock private CompetitionInfoReportRepository competitionInfoReportRepository;
     @Mock private CompetitionRepository competitionRepository;
     @Mock private AuthenticationFacade authenticationFacade;
+    @Mock private com.jiujitsu.api.domain.admin.service.AdminAuthenticationFacade adminAuthenticationFacade;
     @Spy private CompetitionInfoReportMapper competitionInfoReportMapper = new CompetitionInfoReportMapper();
 
     private final User user = User.builder().id(1L).nickname("주짓수러").role(UserRole.USER).build();
@@ -75,7 +76,7 @@ class CompetitionInfoReportServiceTest {
     @BeforeEach
     void setUp() {
         competitionInfoReportService = new CompetitionInfoReportService(
-                competitionInfoReportRepository, competitionRepository, authenticationFacade, competitionInfoReportMapper, CLOCK);
+                competitionInfoReportRepository, competitionRepository, authenticationFacade, adminAuthenticationFacade, competitionInfoReportMapper, CLOCK);
     }
 
     private void givenLoginAndPublished(Competition target) {

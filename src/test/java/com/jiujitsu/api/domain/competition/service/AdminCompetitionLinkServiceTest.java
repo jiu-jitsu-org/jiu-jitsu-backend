@@ -62,6 +62,9 @@ class AdminCompetitionLinkServiceTest {
     @MockBean   // CompetitionInterestService 의존성
     private AuthenticationFacade authenticationFacade;
 
+    @MockBean   // AdminCompetitionLinkService 의존성
+    private com.jiujitsu.api.domain.admin.service.AdminAuthenticationFacade adminAuthenticationFacade;
+
     // 대회 12/5~12/6, 접수 11/1~11/30
     private Competition save(RegistrationSite site) {
         return em.persist(Competition.builder()
