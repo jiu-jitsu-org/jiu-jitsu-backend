@@ -120,6 +120,7 @@ public class BalanceGameService {
      * 끝난 판의 결과를 봤음 기록 (#290) — 홈의 '어제 결과 한 번'과 결과 알림 대상이 같은 기록을 쓴다
      * - 내가 투표한 끝난 판만 처음 본 시각을 남긴다 (다시 불러도 처음 시각 그대로)
      * - 투표하지 않은 판·아직 안 끝난 판은 남기지 않고 넘어간다 (웹이 구분하지 않고 부른다)
+     * - 그 판의 내 결과 알림도 읽음 (#291) — 홈에서 본 뒤 종 아이콘 점이 남지 않게
      */
     public void markResultSeen(Long contentId) {
         User user = authenticationFacade.getCurrentUser();
@@ -132,6 +133,7 @@ public class BalanceGameService {
             return;
         }
         balanceGameVoteRepository.markResultSeen(game.getId(), user, now);
+        noticeService.readBalanceResultNotice(user.getId(), contentId);
     }
 
     /**

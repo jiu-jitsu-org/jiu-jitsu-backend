@@ -44,11 +44,11 @@ class UserNoticeSettingCompetitionTest {
         UserNoticeSetting setting = newSetting();
         setting.answerCompetitionNoticePrompt(true, T1);
 
-        setting.update(new NoticeSettingRequest(true, true, false, false, null));
+        setting.update(new NoticeSettingRequest(true, true, false, false, null, null));
         assertThat(setting.isCompetitionEnabled()).isTrue();
         assertThat(setting.getCommunityEnabled()).isFalse();
 
-        setting.update(new NoticeSettingRequest(true, true, true, false, false));
+        setting.update(new NoticeSettingRequest(true, true, true, false, false, null));
         assertThat(setting.isCompetitionEnabled()).isFalse();
     }
 
@@ -56,7 +56,7 @@ class UserNoticeSettingCompetitionTest {
     @DisplayName("질문 답 나중에: 설정에서 미리 켜 둔 관심 대회 알림을 끄지 않는다")
     void prompt_later_keepsEnabled() {
         UserNoticeSetting setting = newSetting();
-        setting.update(new NoticeSettingRequest(true, true, true, false, true));
+        setting.update(new NoticeSettingRequest(true, true, true, false, true, null));
 
         setting.answerCompetitionNoticePrompt(false, T1);
 

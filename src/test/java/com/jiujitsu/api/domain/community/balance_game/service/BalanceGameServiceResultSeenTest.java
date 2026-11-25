@@ -121,6 +121,7 @@ class BalanceGameServiceResultSeenTest {
         ArgumentCaptor<LocalDateTime> seenAt = ArgumentCaptor.forClass(LocalDateTime.class);
         verify(balanceGameVoteRepository).markResultSeen(eq(GAME_ID), eq(user), seenAt.capture());
         assertThat(seenAt.getValue()).isBetween(before, LocalDateTime.now());
+        verify(noticeService).readBalanceResultNotice(7L, CONTENT_ID);   // 그 판의 결과 알림도 읽음 (#291)
     }
 
     @Test

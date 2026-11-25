@@ -46,6 +46,11 @@ public class BalanceGameVote extends BaseEntity {
     @Column(name = "result_seen_at", updatable = false)
     private LocalDateTime resultSeenAt;
 
+    // 결과 알림을 보낸 시각 (#291). 안 보냈으면 null — 한 사람 한 판에 한 번만 보내게 하는 기록
+    // 기록은 BalanceGameVoteRepository#markResultNoticed 로만 (resultSeenAt 과 같은 이유로 updatable = false)
+    @Column(name = "result_noticed_at", updatable = false)
+    private LocalDateTime resultNoticedAt;
+
     // 다른 선택지로 투표 변경
     public void changeOption(BalanceGameOption option) {
         this.option = option;
