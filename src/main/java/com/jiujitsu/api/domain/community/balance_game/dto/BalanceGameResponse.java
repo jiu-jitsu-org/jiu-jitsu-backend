@@ -21,6 +21,7 @@ public record BalanceGameResponse(
         @Schema(description = "선택지 B") BalanceGameOptionResponse optionB,
         @Schema(description = "전체 득표 수", example = "10") long totalVoteCount,
         @Schema(description = "내가 투표한 선택지 (null이면 미투표 → 결과·퍼센트 숨김)", example = "A") BalanceGameOption myVote,
+        @Schema(description = "결과 봤음 여부 (POST /community/balance-game/{contentId}/result-views 로 기록). 내가 투표한 끝난 판만 true/false, 비로그인·미투표·마감 전이면 null", example = "false", nullable = true) Boolean resultSeen,
         @Schema(description = "댓글 수 (0이면 '첫 댓글 남기러 가기'로 노출)", example = "5") long commentCount,
         @Schema(description = "좋아요 수", example = "17") long likeCount,
         @Schema(description = "조회 수 (상세 조회로는 오르지 않음. POST /community/balance-game/{contentId}/views)", example = "100") long viewCount,

@@ -117,6 +117,24 @@ public class BalanceGameService {
     }
 
     /**
+     * 끝난 판의 결과를 봤음 기록 (#290) — 홈의 '어제 결과 한 번'과 결과 알림 대상이 같은 기록을 쓴다
+     * - 내가 투표한 끝난 판만 처음 본 시각을 남긴다 (다시 불러도 처음 시각 그대로)
+     * - 투표하지 않은 판·아직 안 끝난 판은 남기지 않고 넘어간다 (웹이 구분하지 않고 부른다)
+     */
+    public void markResultSeen(Long contentId) {
+        User user = authenticationFacade.getCurrentUser();
+
+        BalanceGame game = balanceGameRepository.findByContentId(contentId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (!game.isClosed(now)) {
+            return;
+        }
+        balanceGameVoteRepository.markResultSeen(game.getId(), user, now);
+    }
+
+    /**
      * 밸런스 게임 투표/변경/취소 (토글)
      * - 미투표         → 등록
      * - 같은 선택지 재요청 → 취소
@@ -203,7 +221,9 @@ public class BalanceGameService {
                     voteCounts.getOrDefault(BalanceGameOption.A, 0L),
                     voteCounts.getOrDefault(BalanceGameOption.B, 0L),
                     vote.getOption(),       // 내 투표 = 조회 기준 행의 선택지
-                    now);
+                    vote.isResultSeen(),
+                    now,
+                    null);
         });
     }
 
@@ -280,11 +300,12 @@ public class BalanceGameService {
 
         Optional<User> currentUser = authenticationFacade.getCurrentUserOptional();
 
+        Optional<BalanceGameVote> vote = currentUser
+                .flatMap(user -> balanceGameVoteRepository.findByBalanceGameIdAndCreatedBy(balanceGameId, user));
+
         // 비로그인 사용자는 myVote = null (프론트에서 결과 숨김 처리)
-        BalanceGameOption myVote = currentUser
-                .flatMap(user -> balanceGameVoteRepository.findByBalanceGameIdAndCreatedBy(balanceGameId, user))
-                .map(BalanceGameVote::getOption)
-                .orElse(null);
+        BalanceGameOption myVote = vote.map(BalanceGameVote::getOption).orElse(null);
+        boolean resultSeen = vote.map(BalanceGameVote::isResultSeen).orElse(false);
 
         long commentCount = communityCommentsService.getCountComments(contentId);
 
@@ -306,6 +327,6 @@ public class BalanceGameService {
                 .orElse(null);
 
         return balanceGameMapper.toResponse(game, commentCount, likeCount, isLiked,
-                isCommented, noticeEnabled, voteCountA, voteCountB, myVote, now, resultUntil);
+                isCommented, noticeEnabled, voteCountA, voteCountB, myVote, resultSeen, now, resultUntil);
     }
 }
