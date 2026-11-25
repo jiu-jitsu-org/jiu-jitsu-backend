@@ -16,6 +16,7 @@ public record BalanceGameResponse(
         @Schema(description = "투표 시작 여부 (false면 아직 시작 전, 투표 불가 — 서버 시각 기준)", example = "true") boolean started,
         @Schema(description = "마감 여부 (true면 결과만 노출, 투표 불가)", example = "false") boolean closed,
         @Schema(description = "메인(오늘의 게임)에서 마감된 게임을 결과로 보여 줄 때, 결과를 보여 주는 끝 시각 — 이 시각(serverTime 기준)에 메인을 다시 조회하면 다음 게임. 진행 중 게임·상세·목록에선 null", nullable = true) LocalDateTime resultUntil,
+        @Schema(description = "타이틀 — 무엇을 고르는 판인지 알려 주는 질문 한 줄 (최대 30자). 타이틀 없이 등록된 지난 판은 null", example = "더 싫은 패배는?", nullable = true) String title,
         @Schema(description = "선택지 A") BalanceGameOptionResponse optionA,
         @Schema(description = "선택지 B") BalanceGameOptionResponse optionB,
         @Schema(description = "전체 득표 수", example = "10") long totalVoteCount,
