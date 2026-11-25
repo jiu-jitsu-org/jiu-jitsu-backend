@@ -14,6 +14,7 @@ import com.jiujitsu.api.domain.user.repository.UserSanctionRepository;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Subquery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -71,6 +72,25 @@ public class AdminUserService {
             }
             if (req.status() != null) {
                 predicates.add(cb.equal(root.get("status"), req.status()));
+            }
+            if (StringUtils.hasText(req.sanctionType())) {
+                // 활성 제재 서브쿼리: releasedAt IS NULL AND (endedAt IS NULL OR endedAt > now)
+                Subquery<Long> sub = query.subquery(Long.class);
+                var sanctionRoot = sub.from(UserSanction.class);
+                sub.select(sanctionRoot.get("user").get("id"));
+                Predicate notReleased = cb.isNull(sanctionRoot.get("releasedAt"));
+                Predicate noEnd = cb.isNull(sanctionRoot.get("endedAt"));
+                Predicate notExpired = cb.greaterThan(sanctionRoot.get("endedAt"), cb.currentTimestamp());
+                Predicate isActive = cb.and(notReleased, cb.or(noEnd, notExpired));
+
+                if ("NONE".equalsIgnoreCase(req.sanctionType())) {
+                    sub.where(isActive);
+                    predicates.add(cb.not(root.get("id").in(sub)));
+                } else {
+                    SanctionType type = SanctionType.valueOf(req.sanctionType().toUpperCase());
+                    sub.where(isActive, cb.equal(sanctionRoot.get("type"), type));
+                    predicates.add(root.get("id").in(sub));
+                }
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };

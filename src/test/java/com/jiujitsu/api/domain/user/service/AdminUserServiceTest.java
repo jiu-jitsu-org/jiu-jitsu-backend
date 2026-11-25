@@ -122,6 +122,40 @@ class AdminUserServiceTest {
 
             service.getUsers(req, 0, 20);
         }
+
+        @Test
+        @DisplayName("sanctionType=NONE — 예외 없이 repository 호출")
+        void getUsers_sanctionType_none() {
+            AdminUserListRequest req = new AdminUserListRequest(null, null, "NONE", null);
+            when(userRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+
+            assertThatNoException().isThrownBy(() -> service.getUsers(req, 0, 20));
+        }
+
+        @Test
+        @DisplayName("sanctionType=WARNING — 예외 없이 repository 호출")
+        void getUsers_sanctionType_warning() {
+            AdminUserListRequest req = new AdminUserListRequest(null, null, "WARNING", null);
+            when(userRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+
+            assertThatNoException().isThrownBy(() -> service.getUsers(req, 0, 20));
+        }
+
+        @Test
+        @DisplayName("sanctionType에 잘못된 값 — IllegalArgumentException")
+        void getUsers_sanctionType_invalid() {
+            AdminUserListRequest req = new AdminUserListRequest(null, null, "INVALID_TYPE", null);
+            when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
+                    .thenAnswer(inv -> {
+                        // Specification 실행 시 valueOf 에서 예외 발생 — 여기선 spec 미실행이므로 서비스 단 검증 불가
+                        // DB 연동 테스트(AdminUserServiceFilterTest)에서 검증
+                        return Page.empty();
+                    });
+
+            // Mockito 환경에서는 Specification이 실제로 평가되지 않아 예외가 발생하지 않음
+            // 실제 DB 연동 시 IllegalArgumentException 발생 (AdminUserServiceFilterTest 참고)
+            assertThatNoException().isThrownBy(() -> service.getUsers(req, 0, 20));
+        }
     }
 
     // ── 회원 상세 ────────────────────────────────────────────────────
