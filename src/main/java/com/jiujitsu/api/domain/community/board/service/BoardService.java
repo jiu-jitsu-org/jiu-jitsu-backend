@@ -257,6 +257,8 @@ public class BoardService {
         // 권한 체크
         board.validateOwner(authenticationFacade.getCurrentUser());
 
+        profanityFilter.validate(request.getTitle(), request.getBody());
+
         if (request.getCategoryId() != null) {
             board.changeCategory(boardCategoryService.findActiveCategory(request.getCategoryId()));
         }
