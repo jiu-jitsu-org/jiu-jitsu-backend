@@ -84,6 +84,7 @@ public class BalanceGameController {
     @Operation(
             summary = "밸런스 게임 결과 봤음 기록",
             description = "끝난 판의 결과를 화면에 보여 줄 때 부릅니다. 내가 투표한 끝난 판이면 처음 본 시각을 남기고, 다시 불러도 처음 시각 그대로입니다. "
+                    + "그 판의 내 결과 알림(BALANCE_RESULT)도 읽음이 됩니다. "
                     + "투표하지 않은 판·아직 안 끝난 판은 남기지 않고 성공 응답을 줍니다. 응답 data 는 null 이고, "
                     + "기록 여부는 조회 응답의 resultSeen 으로 확인합니다."
     )

@@ -21,7 +21,9 @@ public enum FcmPushType {
     COMMENTS_LIKE("내 댓글에 좋아요가 달렸어요.", null, COMMUNITY),
     // 대회 마감 전날 알림. 제목·본문은 대회·할인 단계마다 달라 발송 지점이 정한다 (여기 값은 기본 문구)
     COMPETITION_EARLY_BIRD_DEADLINE("얼리버드 마감 내일", null, COMPETITION),
-    COMPETITION_REGISTRATION_DEADLINE("접수 마감 내일", null, COMPETITION);
+    COMPETITION_REGISTRATION_DEADLINE("접수 마감 내일", null, COMPETITION),
+    // 끝난 밸런스 게임 결과 알림 (#291). 제목·본문은 판마다 달라 발송 지점이 정한다 (여기 값은 타이틀 없는 판의 제목)
+    BALANCE_RESULT("밸런스 게임 결과가 나왔어요", null, NoticeGroupType.BALANCE_RESULT);
 
     private String title;
     private String body;

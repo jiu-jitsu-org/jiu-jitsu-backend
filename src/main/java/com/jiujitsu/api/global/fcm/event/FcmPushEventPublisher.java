@@ -17,6 +17,7 @@ public class FcmPushEventPublisher {
      * 푸시 발송 요청. 제목·본문은 발송 지점이 정한다
      * - 커뮤니티: 제목 = 알림 종류 문구(좋아요는 개수 포함), 본문 = 알림함 미리보기와 같은 게시글 제목·댓글 내용 (#196)
      * - 대회 마감: 대회·마감 단계마다 다른 문구
+     * - 밸런스 게임 결과: 판의 타이틀·선택지 (알림함과 같은 문구)
      */
     public void publish(Long recipientUserId, FcmPushType pushType, Map<String, String> data, String title, String body) {
         if (recipientUserId == null || pushType == null) {

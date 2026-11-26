@@ -82,6 +82,12 @@ competition:
     top: 3
     min-interests: 5
 
+# 밸런스 게임 결과 알림 (#291): 전날 마감된 판의 결과를 안 본 투표자에게 보내는 시각 (Asia/Seoul), 총 투표가 min-votes 보다 적은 판은 보내지 않음
+balance-game:
+  result-notice:
+    cron: "0 55 11 * * *"
+    min-votes: 5
+
 # 좋아요 알림 푸시 기준 (#196): 1·5·10개, 그 뒤 10개마다. 사용자가 늘면 간격을 넓힌다
 notice:
   like-push:
