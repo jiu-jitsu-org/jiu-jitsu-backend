@@ -359,7 +359,7 @@ public class BalanceGameService {
         ImageFile optionAImage = balanceGameFactory.resolveImage(request.optionAImageFileId());
         ImageFile optionBImage = balanceGameFactory.resolveImage(request.optionBImageFileId());
 
-        game.update(request.optionAText(), optionAImage, request.optionBText(), optionBImage, startAt, endAt);
+        game.update(request.title(), request.optionAText(), optionAImage, request.optionBText(), optionBImage, startAt, endAt);
 
         return toResponseWithVotes(game);
     }
@@ -451,6 +451,7 @@ public class BalanceGameService {
                 game.getGameDate(),
                 game.getStartAt(),
                 game.getEndAt(),
+                game.getTitle(),
                 game.getOptionAText(),
                 game.getOptionBText(),
                 totalVoteCount,
