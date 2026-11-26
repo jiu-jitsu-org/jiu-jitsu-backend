@@ -7,16 +7,10 @@ import java.util.Objects;
 public record BootStrapResponse(
         @Schema(description = "앱 버전 정보")
         AppVersionResponse appVersionInfo,
-        @Schema(description = "Test Data")
-        String test
+        @Schema(description = "앱 시작 시 보여 줄 공지 (없으면 null)")
+        AppNoticeInfo notice
 ) {
         public BootStrapResponse {
-                Objects.requireNonNull(
-                        appVersionInfo,"appVersionInfo must not be null"
-                );
-
-                Objects.requireNonNull(
-                        test, "test data must not be null"
-                );
+                Objects.requireNonNull(appVersionInfo, "appVersionInfo must not be null");
         }
 }
