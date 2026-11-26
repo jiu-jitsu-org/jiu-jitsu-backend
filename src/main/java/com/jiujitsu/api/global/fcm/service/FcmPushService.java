@@ -10,7 +10,6 @@ import com.google.firebase.messaging.MessagingErrorCode;
 import com.google.firebase.messaging.Notification;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserAppInfo;
-import com.jiujitsu.api.domain.user.repository.UserAppInfoRepository;
 import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.entity.PushActionType;
 import com.jiujitsu.api.global.fcm.entity.PushSendLog;
@@ -28,7 +27,6 @@ import java.util.Map;
 public class FcmPushService {
     private final FirebaseMessaging firebaseMessaging;
     private final PushSendLogService pushSendLogService;
-    private final UserAppInfoRepository userAppInfoRepository;
 
     public void send(User user, FcmPushType pushType, Map<String, String> data, String title, String body) {
         String actionType = data.get("type");
@@ -98,9 +96,11 @@ public class FcmPushService {
             pushSendLogService.insertPushSendLog(pushSendLog);
         }
 
-        // 무효 토큰 삭제 (루프 완료 후 처리)
+        // 무효 토큰 삭제: 컬렉션에서 제거 → orphanRemoval이 DELETE를 처리
+        // userAppInfoRepository.deleteAll()은 User.appInfos(cascade=ALL, orphanRemoval=true)와
+        // 충돌해 삭제가 취소되므로, 컬렉션에서 직접 제거한다 (#285)
         if (!unregisteredTokens.isEmpty()) {
-            userAppInfoRepository.deleteAll(unregisteredTokens);
+            user.getAppInfos().removeAll(unregisteredTokens);
         }
     }
 }

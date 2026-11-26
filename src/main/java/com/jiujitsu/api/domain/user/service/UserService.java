@@ -243,7 +243,8 @@ public class UserService {
                     .filter(info -> Objects.equals(info.getDeviceId(), userAppInfoRequest.getDeviceId()))
                     .toList();
 
-            userAppInfoRepository.deleteAll(duplicateDevice);
+            // 컬렉션에서 제거 → orphanRemoval이 DELETE를 처리 (#285)
+            user.getAppInfos().removeAll(duplicateDevice);
 
             // 동일한 fcm 토큰 없는 경우 신규 등록
             UserAppInfo userAppInfo = userAppInfoRequest.toEntity();
