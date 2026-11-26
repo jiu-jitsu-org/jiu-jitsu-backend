@@ -22,6 +22,7 @@ import com.jiujitsu.api.domain.competition.entity.Competition;
 import com.jiujitsu.api.domain.competition.service.CompetitionQueryService;
 import com.jiujitsu.api.domain.notice.service.NoticeService;
 import com.jiujitsu.api.domain.user.entity.User;
+import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.UserRepository;
 import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.domain.user.service.UserBlockService;
@@ -117,7 +118,9 @@ public class BoardService {
         Optional<User> currentUser = authenticationFacade.getCurrentUserOptional();
         Board board = findViewableBoard(contentId, currentUser);
 
-        boolean isAuthor = Objects.equals(board.getCreatedBy(), currentUser.orElse(null));
+        // getCreatedBy() == null: 작성자 영구 삭제 → 누구도 작성자가 아님 (#240)
+        boolean isAuthor = board.getCreatedBy() != null
+                && Objects.equals(board.getCreatedBy(), currentUser.orElse(null));
         return contentService.increaseViewCount(contentId, isAuthor);
     }
 
@@ -166,7 +169,9 @@ public class BoardService {
     public BoardResponse getById(Long contentId) {
         Optional<User> currentUser = authenticationFacade.getCurrentUserOptional();
         Board board = findViewableBoard(contentId, currentUser);
-        boolean isAuthor = Objects.equals(board.getCreatedBy(), currentUser.orElse(null));
+        // getCreatedBy() == null: 작성자 영구 삭제 → 누구도 작성자가 아님 (#240)
+        boolean isAuthor = board.getCreatedBy() != null
+                && Objects.equals(board.getCreatedBy(), currentUser.orElse(null));
 
         // 댓글 수 조회
         long commentCount = communityCommentsService.getCountComments(contentId);
@@ -257,6 +262,8 @@ public class BoardService {
         // 권한 체크
         board.validateOwner(authenticationFacade.getCurrentUser());
 
+        profanityFilter.validate(request.getTitle(), request.getBody());
+
         if (request.getCategoryId() != null) {
             board.changeCategory(boardCategoryService.findActiveCategory(request.getCategoryId()));
         }
@@ -337,6 +344,7 @@ public class BoardService {
     @Transactional(readOnly = true)
     public Page<BoardListResponse> getUserBoardList(Long userId, Pageable pageable) {
         userRepository.findById(userId)
+                .filter(u -> u.getStatus() != UserStatus.DELETED)
                 .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         authenticationFacade.getCurrentUserOptional().ifPresent(viewer -> {
@@ -436,7 +444,7 @@ public class BoardService {
                             finalCommentedContentIds.contains(contentId),
                             finalLikedContentIds.contains(contentId),
                             finalSavedContentIds.contains(contentId),
-                            Objects.equals(board.getCreatedBy(), user.orElse(null)),
+                            board.getCreatedBy() != null && Objects.equals(board.getCreatedBy(), user.orElse(null)),
                             board.getCompetitionId() == null ? null : competitionCards.get(board.getCompetitionId())
                     );
                 }
