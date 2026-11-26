@@ -100,7 +100,9 @@ public class ContentService {
             contentLikeRepository.save(newLike);
 
             // 글쓴이 알림을 받는 컨텐츠만 (밸런스 게임 제외, ContentType#notifiesWriter)
+            // getCreatedBy() == null: 작성자가 영구 삭제된 경우 — 알림만 건너뜀 (#240)
             if (content.getContentType().isNotifiesWriter()
+                    && content.getCreatedBy() != null
                     && !Objects.equals(user.getId(), content.getCreatedBy().getId())) {
                 // 알림은 커밋 뒤 개수 기준으로 처리한다 (#196, LikeNoticeService)
                 eventPublisher.publishEvent(new LikeNoticeEvent(

@@ -43,6 +43,11 @@ public class BalanceGameFactory {
                 .build();
     }
 
+    // 이미지 ID가 있으면 조회 후 ACTIVE 처리(임시 이미지 정리 대상에서 제외), 없으면 null (공개용)
+    public ImageFile resolveImage(Long imageFileId) {
+        return findActiveImageOrNull(imageFileId);
+    }
+
     // 이미지 ID가 있으면 조회 후 ACTIVE 처리(임시 이미지 정리 대상에서 제외), 없으면 null
     private ImageFile findActiveImageOrNull(Long imageFileId) {
         if (imageFileId == null) {

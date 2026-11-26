@@ -366,7 +366,9 @@ public class CommunityCommentsService {
             newLike = commentLikeFactory.createCommentLike(comment);
             commentLikeRepository.save(newLike);
 
-            if (!Objects.equals(user.getId(), comment.getCreatedBy().getId())) {
+            // getCreatedBy() == null: 작성자가 영구 삭제된 경우 — 알림만 건너뜀 (#240)
+            if (comment.getCreatedBy() != null
+                    && !Objects.equals(user.getId(), comment.getCreatedBy().getId())) {
                 Content content = comment.getContent();
                 // data 는 상세 화면을 여는 데 쓰이므로 commentId 가 아닌 contentId 를 보낸다. 댓글은 commentId 로 따로 (#271)
                 // 나머지 3개 푸시와 동일한 규약이며, 밸런스 상세(GET /community/balance-game/{contentId})
@@ -458,6 +460,7 @@ public class CommunityCommentsService {
     @Transactional(readOnly = true)
     public Page<UserCommentGroupResponse> getUserCommentGroups(Long userId, Pageable pageable) {
         userRepository.findById(userId)
+                .filter(u -> u.getStatus() != UserStatus.DELETED)
                 .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
         // 차단 확인 & 소유자 여부

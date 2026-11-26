@@ -2,6 +2,8 @@ package com.jiujitsu.api.domain.user.service;
 
 import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.file.service.ImageService;
+import com.jiujitsu.api.domain.notice.entity.UserNoticeSetting;
+import com.jiujitsu.api.domain.notice.repository.UserNoticeSettingRepository;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserStatus;
 import com.jiujitsu.api.domain.user.repository.OwnerVerificationRequestRepository;
@@ -26,6 +28,7 @@ public class UserCleanupService {
     private final UserRepository userRepository;
     private final ImageService imageService;
     private final OwnerVerificationRequestRepository ownerVerificationRequestRepository;
+    private final UserNoticeSettingRepository userNoticeSettingRepository;
 
     // 트랜잭션 분리를 위한 self-injection (@Lazy 로 순환 참조 방지)
     @Lazy
@@ -74,6 +77,14 @@ public class UserCleanupService {
                 imageService.deleteImageFile(req.getDocumentImageFile().getId());
             }
         });
+
+        // user_notice_setting.user_id FK 를 명시적으로 먼저 삭제
+        // ddl-auto: update 는 기존 FK 의 ON DELETE 를 바꾸지 않으므로
+        // DB 에 CASCADE 가 적용되지 않은 경우 여기서 직접 지운다 (#241)
+        UserNoticeSetting noticeSetting = user.getUserNoticeSetting();
+        if (noticeSetting != null) {
+            userNoticeSettingRepository.delete(noticeSetting);
+        }
 
         userRepository.delete(user);
     }
