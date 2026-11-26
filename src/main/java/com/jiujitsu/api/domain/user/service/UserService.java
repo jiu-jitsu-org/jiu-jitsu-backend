@@ -15,6 +15,7 @@ import com.jiujitsu.api.domain.user.service.sns.SnsClient;
 import com.jiujitsu.api.domain.user.service.sns.SnsClientFactory;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
+import com.jiujitsu.api.global.profanity.ProfanityFilter;
 import com.jiujitsu.api.global.security.JwtTokenProvider;
 import com.jiujitsu.api.global.security.TokenBlacklistService;
 import com.jiujitsu.api.global.util.AuthenticationUtil;
@@ -47,6 +48,7 @@ public class UserService {
     private final AuthMapper authMapper;
     private final UserFactory userFactory;
     private final UserMapper userMapper;
+    private final ProfanityFilter profanityFilter;
 
     /**
      * 회원가입 - 로직 분리
@@ -208,6 +210,8 @@ public class UserService {
         if (!nickname.matches(pattern)) {
             throw new ErrorException(ErrorCode.NICKNAME_VALIDATION);
         }
+        // 금칙어 체크 (#237)
+        profanityFilter.validate(nickname);
         // 중복 체크
         if (userRepository.findByNickname(nickname).isPresent()) {
             throw new ErrorException(ErrorCode.NICKNAME_DUPLICATED);
