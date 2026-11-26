@@ -164,6 +164,11 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.USER_NOT_FOUND));
 
+        // 탈퇴 유예 중인 계정 거절 (안 A: 세션 종료 → 재로그인 시 탈퇴 취소 가능 — #305)
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new ErrorException(ErrorCode.USER_NOT_FOUND);
+        }
+
         // 새로운 토큰 생성
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getRole());
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
@@ -177,6 +182,11 @@ public class AuthService {
     public Long validateAndExtractUserId(String refreshToken) {
         // 리프레시 토큰 검증
         if (!jwtTokenProvider.validateToken(refreshToken)) {
+            throw new ErrorException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // 블랙리스트 확인 (로그아웃된 기기의 refresh 토큰 차단 — #305)
+        if (tokenBlacklistService.isBlacklisted(refreshToken)) {
             throw new ErrorException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
