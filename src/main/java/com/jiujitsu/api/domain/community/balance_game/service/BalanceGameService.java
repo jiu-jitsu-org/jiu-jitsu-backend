@@ -1,10 +1,16 @@
 package com.jiujitsu.api.domain.community.balance_game.service;
 
+import com.jiujitsu.api.domain.community.balance_game.dto.AdminBalanceGameListItem;
+import com.jiujitsu.api.domain.community.balance_game.dto.AdminBalanceGameListRequest;
+import com.jiujitsu.api.domain.community.balance_game.dto.AdminBalanceGameStatsResponse;
+import com.jiujitsu.api.domain.community.balance_game.dto.AdminBalanceGameUpdateRequest;
 import com.jiujitsu.api.domain.community.balance_game.dto.BalanceGameCreateRequest;
 import com.jiujitsu.api.domain.community.balance_game.dto.BalanceGameResponse;
 import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGame;
 import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGameOption;
+import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGameStatus;
 import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGameVote;
+import com.jiujitsu.api.domain.file.ImageFile;
 import com.jiujitsu.api.domain.community.balance_game.factory.BalanceGameFactory;
 import com.jiujitsu.api.domain.community.balance_game.mapper.BalanceGameMapper;
 import com.jiujitsu.api.domain.community.balance_game.repository.BalanceGameRepository;
@@ -19,16 +25,22 @@ import com.jiujitsu.api.domain.user.service.AuthenticationFacade;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.ErrorException;
 import lombok.RequiredArgsConstructor;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -231,8 +243,7 @@ public class BalanceGameService {
     }
 
     /**
-     * [임시] 관리자 밸런스 게임 등록 (테스트 데이터용)
-     * 추후 정식 관리자 등록 기능으로 대체 예정.
+     * 관리자 밸런스 게임 등록
      *
      * endAt 미입력 시 당일 한국 시간 23:59:59 자동 설정. 자동 설정된 값이 이미 과거라면(심야 요청) 다음 날 23:59:59로 설정.
      * startAt 만 넣으면 endAt 은 시작일 23:59:59 (다음 날 게임을 미리 등록할 수 있게).
@@ -247,6 +258,11 @@ public class BalanceGameService {
             throw new ErrorException(ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT);
         }
 
+        LocalDate gameDate = startAt.toLocalDate();
+        if (balanceGameRepository.existsByGameDate(gameDate)) {
+            throw new ErrorException(ErrorCode.BALANCE_GAME_DUPLICATE_DATE);
+        }
+
         Content content = balanceGameFactory.createContent();
         BalanceGame game = balanceGameFactory.createBalanceGame(
                 content,
@@ -255,7 +271,7 @@ public class BalanceGameService {
                 request.optionBText(), request.optionBImageFileId(),
                 startAt,
                 endAt,
-                startAt.toLocalDate()   // 진행일 = 시작일 (하루 1회 정책, 기본 일정에선 마감일과 같음)
+                gameDate   // 진행일 = 시작일 (하루 1회 정책, 기본 일정에선 마감일과 같음)
         );
         game = balanceGameRepository.save(game);
 
@@ -290,6 +306,166 @@ public class BalanceGameService {
     // 득표수/내 투표/댓글수 + 좋아요 지표를 채워 응답으로 변환
     private BalanceGameResponse toResponseWithVotes(BalanceGame game) {
         return toResponseWithVotes(game, LocalDateTime.now(), null);
+    }
+
+    // ── 관리자 API ──────────────────────────────────────────────────
+
+    /**
+     * 관리자 밸런스 게임 목록 (날짜 범위·상태 필터, gameDate 최신순)
+     */
+    @Transactional(readOnly = true)
+    public Page<AdminBalanceGameListItem> getAdminList(AdminBalanceGameListRequest req, int page, int size) {
+        LocalDateTime now = LocalDateTime.now();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "gameDate", "id"));
+        Page<BalanceGame> gamePage = balanceGameRepository.findAll(buildAdminListSpec(req, now), pageable);
+
+        if (gamePage.isEmpty()) {
+            return gamePage.map(g -> toAdminListItem(g, 0L, now));
+        }
+
+        List<Long> gameIds = gamePage.getContent().stream().map(BalanceGame::getId).toList();
+
+        Map<Long, Long> totalVoteMap = new HashMap<>();
+        for (Object[] row : balanceGameVoteRepository.countByBalanceGameIdsGroupByOption(gameIds)) {
+            Long gameId = (Long) row[0];
+            Long count = ((Number) row[2]).longValue();
+            totalVoteMap.merge(gameId, count, Long::sum);
+        }
+
+        return gamePage.map(g -> toAdminListItem(g, totalVoteMap.getOrDefault(g.getId(), 0L), now));
+    }
+
+    /**
+     * 관리자 밸런스 게임 상세 조회
+     */
+    @Transactional(readOnly = true)
+    public BalanceGameResponse getAdminDetail(Long id) {
+        BalanceGame game = balanceGameRepository.findById(id)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND));
+        return toResponseWithVotes(game);
+    }
+
+    /**
+     * 관리자 밸런스 게임 수정
+     * startAt/endAt 미입력 시 기존 값 유지. 수정 후 최신 상태를 반환.
+     */
+    public BalanceGameResponse updateAdmin(Long id, AdminBalanceGameUpdateRequest request) {
+        BalanceGame game = balanceGameRepository.findById(id)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND));
+
+        LocalDateTime startAt = request.startAt() != null ? request.startAt() : game.getStartAt();
+        LocalDateTime endAt = request.endAt() != null ? request.endAt() : game.getEndAt();
+
+        if (!startAt.isBefore(endAt)) {
+            throw new ErrorException(ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT);
+        }
+
+        LocalDate newGameDate = startAt.toLocalDate();
+        if (!newGameDate.equals(game.getGameDate()) && balanceGameRepository.existsByGameDateAndIdNot(newGameDate, id)) {
+            throw new ErrorException(ErrorCode.BALANCE_GAME_DUPLICATE_DATE);
+        }
+
+        ImageFile optionAImage = balanceGameFactory.resolveImage(request.optionAImageFileId());
+        ImageFile optionBImage = balanceGameFactory.resolveImage(request.optionBImageFileId());
+
+        game.update(request.title(), request.optionAText(), optionAImage, request.optionBText(), optionBImage, startAt, endAt);
+
+        return toResponseWithVotes(game);
+    }
+
+    /**
+     * 관리자 밸런스 게임 삭제
+     * 연결된 Content(댓글·좋아요·조회수)와 투표 기록도 함께 삭제된다.
+     */
+    public void deleteAdmin(Long id) {
+        BalanceGame game = balanceGameRepository.findById(id)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND));
+        balanceGameRepository.delete(game);
+    }
+
+    /**
+     * 관리자 밸런스 게임 결과 분석 (참여 수, 선택 비율, 댓글·조회 수)
+     */
+    @Transactional(readOnly = true)
+    public AdminBalanceGameStatsResponse getAdminStats(Long id) {
+        BalanceGame game = balanceGameRepository.findById(id)
+                .orElseThrow(() -> new ErrorException(ErrorCode.BALANCE_GAME_NOT_FOUND));
+
+        long voteCountA = balanceGameVoteRepository.countByBalanceGameIdAndOption(id, BalanceGameOption.A);
+        long voteCountB = balanceGameVoteRepository.countByBalanceGameIdAndOption(id, BalanceGameOption.B);
+        long total = voteCountA + voteCountB;
+
+        double rateA = total > 0
+                ? BigDecimal.valueOf((double) voteCountA / total * 100).setScale(2, RoundingMode.HALF_UP).doubleValue()
+                : 0.0;
+        double rateB = total > 0
+                ? BigDecimal.valueOf((double) voteCountB / total * 100).setScale(2, RoundingMode.HALF_UP).doubleValue()
+                : 0.0;
+
+        long commentCount = communityCommentsService.getCountComments(game.getContent().getId());
+
+        return new AdminBalanceGameStatsResponse(
+                id,
+                game.getContent().getId(),
+                game.getGameDate(),
+                game.getStartAt(),
+                game.getEndAt(),
+                voteCountA,
+                voteCountB,
+                total,
+                rateA,
+                rateB,
+                commentCount,
+                game.getContent().getViewCount()
+        );
+    }
+
+    private Specification<BalanceGame> buildAdminListSpec(AdminBalanceGameListRequest req, LocalDateTime now) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (req.dateFrom() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("gameDate"), req.dateFrom()));
+            }
+            if (req.dateTo() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("gameDate"), req.dateTo()));
+            }
+            if (req.status() != null) {
+                predicates.add(switch (req.status()) {
+                    case UPCOMING -> cb.greaterThan(root.get("startAt"), now);
+                    case ONGOING  -> cb.and(
+                            cb.lessThanOrEqualTo(root.get("startAt"), now),
+                            cb.greaterThanOrEqualTo(root.get("endAt"), now)
+                    );
+                    case CLOSED   -> cb.lessThan(root.get("endAt"), now);
+                });
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private AdminBalanceGameListItem toAdminListItem(BalanceGame game, long totalVoteCount, LocalDateTime now) {
+        BalanceGameStatus status;
+        if (game.getStartAt().isAfter(now)) {
+            status = BalanceGameStatus.UPCOMING;
+        } else if (!game.getEndAt().isBefore(now)) {
+            status = BalanceGameStatus.ONGOING;
+        } else {
+            status = BalanceGameStatus.CLOSED;
+        }
+        return new AdminBalanceGameListItem(
+                game.getId(),
+                game.getContent().getId(),
+                game.getGameDate(),
+                game.getStartAt(),
+                game.getEndAt(),
+                game.getTitle(),
+                game.getOptionAText(),
+                game.getOptionBText(),
+                totalVoteCount,
+                status
+        );
     }
 
     // now: 응답의 serverTime·started·closed 기준 시각. resultUntil: 메인에서 마감된 게임을 결과로 보여 줄 때만 (그 외 null)

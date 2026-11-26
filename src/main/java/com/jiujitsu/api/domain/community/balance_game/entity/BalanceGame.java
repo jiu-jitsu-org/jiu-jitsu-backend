@@ -105,6 +105,19 @@ public class BalanceGame extends BaseEntity {
      * - 없으면 마감(분 단위로 올림) + 버퍼. 기본 마감 23:59:59 는 다음 날 00:30:00(다음 게임 기본 시작)에 맞고,
      *   22:00:00 처럼 직접 넣은 마감은 22:30:00 그대로
      */
+    public void update(String title, String optionAText, ImageFile optionAImage,
+                       String optionBText, ImageFile optionBImage,
+                       LocalDateTime startAt, LocalDateTime endAt) {
+        this.title = title;
+        this.optionAText = optionAText;
+        this.optionAImage = optionAImage;
+        this.optionBText = optionBText;
+        this.optionBImage = optionBImage;
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.gameDate = startAt.toLocalDate();
+    }
+
     public LocalDateTime resultUntil(BalanceGame nextGame) {
         if (nextGame != null && nextGame.getStartAt().isAfter(endAt)
                 && !nextGame.getStartAt().isAfter(endAt.plus(NEXT_GAME_WINDOW))) {

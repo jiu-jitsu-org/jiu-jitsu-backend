@@ -3,6 +3,7 @@ package com.jiujitsu.api.domain.community.balance_game.repository;
 import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGame;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface BalanceGameRepository extends JpaRepository<BalanceGame, Long> {
+public interface BalanceGameRepository extends JpaRepository<BalanceGame, Long>, JpaSpecificationExecutor<BalanceGame> {
 
     // 진행 중인 게임 (시작했고 마감 전), 먼저 마감되는 순 — 마감이 같으면 먼저 시작한 것(하루 중간에 메인이 바뀌지 않게). 미리 등록한 다음 날 게임(시작 전)은 빠진다
     // 마감 시각까지는 진행 중 (BalanceGame#isStarted·isClosed 와 같은 경계). 메인은 첫 건을 쓴다
@@ -52,4 +53,8 @@ public interface BalanceGameRepository extends JpaRepository<BalanceGame, Long> 
 
     // 상세/투표 - contentId 로 조회 (마감된 게임도 조회 가능)
     Optional<BalanceGame> findByContentId(Long contentId);
+
+    // 같은 날짜(gameDate)에 다른 게임이 있는지 확인 (수정 시 자기 자신 제외)
+    boolean existsByGameDateAndIdNot(java.time.LocalDate gameDate, Long id);
+    boolean existsByGameDate(java.time.LocalDate gameDate);
 }
