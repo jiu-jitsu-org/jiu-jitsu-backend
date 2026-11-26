@@ -35,7 +35,7 @@ public class AdminBalanceGameController {
             summary = "밸런스 게임 등록",
             description = "새 밸런스 게임을 등록합니다. endAt 미입력 시 한국 시간 23:59:59 자동 설정."
     )
-    @ApiErrorCodeExamples({ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.BALANCE_GAME_END_AT_MUST_BE_FUTURE, ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT})
+    @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER, ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.BALANCE_GAME_END_AT_MUST_BE_FUTURE, ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT})
     @PostMapping
     public BalanceGameResponse create(@Valid @RequestBody BalanceGameCreateRequest request) {
         return balanceGameService.create(request);

@@ -49,6 +49,9 @@ public class UserNoticeSetting {
     @Column
     private LocalDateTime competitionNoticeAskedAt; // 처음 관심 등록 때 관심 대회 알림을 물어본 시각 (안 물었으면 null)
 
+    @Column
+    private Boolean balanceResultEnabled;  // 밸런스 게임 결과 알림. 처음엔 켜짐 (이 칸이 생기기 전 가입자는 null = 켜짐)
+
     @OneToOne
     @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
@@ -63,6 +66,7 @@ public class UserNoticeSetting {
         this.marketingEnabled = isMarketingAgreed;
         this.marketingAgreedAt = isMarketingAgreed ? LocalDateTime.now() : null;
         this.competitionEnabled = false;
+        this.balanceResultEnabled = true;
         this.user = user;
     }
 
@@ -73,6 +77,9 @@ public class UserNoticeSetting {
         // 이 칸을 모르는 옛 앱은 보내지 않는다 — null 이면 그대로 둔다
         if (request.competitionEnabled() != null) {
             this.competitionEnabled = request.competitionEnabled();
+        }
+        if (request.balanceResultEnabled() != null) {
+            this.balanceResultEnabled = request.balanceResultEnabled();
         }
 
         // marketingEnabled 값이 실제로 변경될 때만 동의/철회 일시를 갱신한다.
@@ -95,6 +102,7 @@ public class UserNoticeSetting {
             case COMMUNITY -> enabled = this.communityEnabled;
             case MARKETING -> enabled = this.marketingEnabled;
             case COMPETITION -> enabled = isCompetitionEnabled();
+            case BALANCE_RESULT -> enabled = isBalanceResultEnabled();
         }
 
         return enabled;
@@ -102,6 +110,10 @@ public class UserNoticeSetting {
 
     public boolean isCompetitionEnabled() {
         return Boolean.TRUE.equals(this.competitionEnabled);
+    }
+
+    public boolean isBalanceResultEnabled() {
+        return !Boolean.FALSE.equals(this.balanceResultEnabled);
     }
 
     public boolean isCompetitionNoticeAsked() {

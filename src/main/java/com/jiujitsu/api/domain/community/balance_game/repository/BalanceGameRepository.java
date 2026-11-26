@@ -41,6 +41,16 @@ public interface BalanceGameRepository extends JpaRepository<BalanceGame, Long>,
     """)
     List<BalanceGame> findUpcoming(@Param("now") LocalDateTime now, Pageable pageable);
 
+    // 결과 알림 대상 판 (#291): [from, to) 에 마감됐고 총 투표(화면에 보이는 수, 탈퇴한 사람 표 포함)가 minVotes 이상
+    @Query("""
+    SELECT g FROM BalanceGame g
+    WHERE g.endAt >= :from AND g.endAt < :to
+      AND (SELECT COUNT(v) FROM BalanceGameVote v WHERE v.balanceGame = g) >= :minVotes
+    ORDER BY g.endAt ASC, g.id ASC
+    """)
+    List<BalanceGame> findClosedBetweenWithMinVotes(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
+                                                    @Param("minVotes") long minVotes);
+
     // 상세/투표 - contentId 로 조회 (마감된 게임도 조회 가능)
     Optional<BalanceGame> findByContentId(Long contentId);
 }

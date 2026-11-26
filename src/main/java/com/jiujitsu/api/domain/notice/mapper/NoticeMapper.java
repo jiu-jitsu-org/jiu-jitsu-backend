@@ -41,7 +41,8 @@ public class NoticeMapper {
                 userNoticeSetting.getMarketingAgreedAt(),
                 userNoticeSetting.getMarketingWithdrawnAt(),
                 userNoticeSetting.isCompetitionEnabled(),
-                userNoticeSetting.isCompetitionNoticeAsked()
+                userNoticeSetting.isCompetitionNoticeAsked(),
+                userNoticeSetting.isBalanceResultEnabled()
         );
     }
 

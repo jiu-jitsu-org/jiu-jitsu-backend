@@ -219,6 +219,14 @@ public class NoticeService {
     }
 
     /**
+     * 끝난 밸런스 게임의 결과를 봤을 때 그 판의 내 결과 알림 읽음 처리 (#291)
+     * - 결과만 본 것이라 같은 판의 댓글 · 답글 · 좋아요 알림은 그대로 둔다 (상세를 열면 readContentNotices)
+     */
+    public void readBalanceResultNotice(Long userId, Long contentId) {
+        noticeRepository.markReadByUserIdAndContentAndPushType(userId, String.valueOf(contentId), FcmPushType.BALANCE_RESULT);
+    }
+
+    /**
      * 알림 개별 읽음 처리
      */
     public Boolean readNotice(Long id) {
@@ -248,7 +256,7 @@ public class NoticeService {
     }
 
     /**
-     * 알림 저장 — 제목·본문을 발송 지점이 정하는 알림 (대회 마감 알림)
+     * 알림 저장 — 제목·본문을 발송 지점이 정하는 알림 (대회 마감 · 밸런스 게임 결과 알림)
      */
     public void saveNoticeWithText(Long userId, FcmPushType pushType, Map<String, String> pushData, String title, String body) {
         noticeRepository.save(noticeFactory.createNotice(userId, pushType, pushData, null, null, title, body));
@@ -434,15 +442,15 @@ public class NoticeService {
      * 알림 body 동적 계산
      * - 커뮤니티 알림 : NoticePreview.body (푸시 본문과 같은 규칙 — 게시글 제목 / 댓글 내용, 삭제·숨김 댓글은 null, #196)
      *                    + 내가 신고한 댓글은 null (푸시 때는 새 댓글이라 신고했을 수 없음)
-     * - 대회 마감 알림 : 발송 때 저장한 본문
+     * - 대회 마감 · 밸런스 게임 결과 알림 : 발송 때 저장한 본문
      */
     private String computeBody(Notice notice,
                                Map<Long, String> boardTitleByContentId,
                                Map<Long, CommunityComments> commentByRefId,
                                Set<Long> reportedCommentIds) {
         return switch (notice.getPushType()) {
-            // 대회 이름·마감 단계가 들어간 문구를 발송 때 저장해 둔다
-            case COMPETITION_EARLY_BIRD_DEADLINE, COMPETITION_REGISTRATION_DEADLINE -> notice.getBody();
+            // 대회 이름·마감 단계, 판의 선택지가 들어간 문구를 발송 때 저장해 둔다
+            case COMPETITION_EARLY_BIRD_DEADLINE, COMPETITION_REGISTRATION_DEADLINE, BALANCE_RESULT -> notice.getBody();
             // 커뮤니티 알림: 푸시 본문과 같은 규칙 (NoticePreview.body), 값은 화면 단위 일괄 조회 결과에서
             default -> NoticePreview.body(notice.getPushType(),
                     notice.getData() == null ? null : Long.parseLong(notice.getData()),

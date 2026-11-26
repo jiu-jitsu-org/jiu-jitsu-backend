@@ -23,6 +23,9 @@ import java.time.temporal.ChronoUnit;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BalanceGame extends BaseEntity {
+    public static final int TITLE_MAX_LENGTH = 30;
+    public static final int OPTION_TEXT_MAX_LENGTH = 100;
+
     // 게임 교체 뒤 결과를 보여 주는 시간 (00:00~00:30). 다음 게임의 기본 시작이 진행일 00:30 인 이유
     public static final Duration RESULT_BUFFER = Duration.ofMinutes(30);
 
@@ -39,14 +42,18 @@ public class BalanceGame extends BaseEntity {
     @JoinColumn(name = "content_id", nullable = false, unique = true)
     private Content content;
 
-    @Column(nullable = false, length = 100)
+    // 무엇을 고르는 판인지 알려 주는 질문 한 줄 (#289). 타이틀 없이 등록된 지난 판은 null
+    @Column(length = TITLE_MAX_LENGTH)
+    private String title;
+
+    @Column(nullable = false, length = OPTION_TEXT_MAX_LENGTH)
     private String optionAText;         // 선택지 A 문구
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "option_a_image_id")
     private ImageFile optionAImage;     // 선택지 A 이미지 (선택)
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = OPTION_TEXT_MAX_LENGTH)
     private String optionBText;         // 선택지 B 문구
 
     @ManyToOne(fetch = FetchType.LAZY)

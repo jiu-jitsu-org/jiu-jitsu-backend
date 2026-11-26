@@ -20,7 +20,7 @@ public class NoticeFactory {
         return createNotice(userId, pushType, data, senderUserId, refId, pushType.getTitle(), pushType.getBody());
     }
 
-    // 제목·본문을 발송 지점이 정하는 알림 (대회 마감 알림)
+    // 제목·본문을 발송 지점이 정하는 알림 (대회 마감 · 밸런스 게임 결과 알림)
     public Notice createNotice(Long userId, FcmPushType pushType, Map<String, String> data,
                                Long senderUserId, Long refId, String title, String body) {
          return Notice.builder()

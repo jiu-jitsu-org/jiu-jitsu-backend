@@ -1,6 +1,7 @@
 package com.jiujitsu.api.domain.notice.repository;
 
 import com.jiujitsu.api.domain.notice.entity.Notice;
+import com.jiujitsu.api.global.fcm.entity.FcmPushType;
 import com.jiujitsu.api.global.fcm.entity.PushActionType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,13 +29,20 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Notice> findForUpdateByUserIdAndGroupKey(Long userId, String groupKey);
 
-    // 글 · 밸런스 게임 상세를 열면 그 콘텐츠에 대한 내 안 읽은 알림(댓글 · 답글 · 좋아요)을 읽음으로 (#246)
+    // 글 · 밸런스 게임 상세를 열면 그 콘텐츠에 대한 내 안 읽은 알림(댓글 · 답글 · 좋아요 · 밸런스 게임 결과)을 읽음으로 (#246)
     // data 가 콘텐츠 id 인 알림만 — 대회 알림은 data 가 대회 id 라 actionTypes 로 뺀다
     @Modifying
     @Query("UPDATE Notice n SET n.isRead = true WHERE n.userId = :userId AND n.data = :data"
             + " AND n.pushActionType IN :actionTypes AND n.isRead = false")
     int markReadByUserIdAndContent(@Param("userId") Long userId, @Param("data") String data,
                                    @Param("actionTypes") Collection<PushActionType> actionTypes);
+
+    // 한 콘텐츠에 대한 내 안 읽은 알림 중 이 종류만 읽음으로 (#291)
+    @Modifying
+    @Query("UPDATE Notice n SET n.isRead = true WHERE n.userId = :userId AND n.data = :data"
+            + " AND n.pushType = :pushType AND n.isRead = false")
+    int markReadByUserIdAndContentAndPushType(@Param("userId") Long userId, @Param("data") String data,
+                                              @Param("pushType") FcmPushType pushType);
 
     // 보관 기간 지난 알림 삭제. 푸시가 간 좋아요 카드는 이미 보낸 기준을 들고 있어 지우지 않는다 (알림함에서만 숨김, NoticeService)
     // 푸시가 한 번도 안 간 좋아요 카드(like_pushed_count 0)는 잃을 기준이 없어 같이 지운다
