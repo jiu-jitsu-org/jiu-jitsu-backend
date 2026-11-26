@@ -26,6 +26,16 @@ public class BalanceGameMapper {
                                           boolean isCommented, Boolean noticeEnabled,
                                           long voteCountA, long voteCountB,
                                           BalanceGameOption myVote, LocalDateTime now, LocalDateTime resultUntil) {
+        return toResponse(game, commentCount, likeCount, isLiked, isCommented, noticeEnabled, voteCountA, voteCountB, myVote, false, now, resultUntil);
+    }
+
+    // resultSeen: 내 투표에 결과를 본 기록이 있는지. 내가 투표한 끝난 판에만 내려 준다 (그 외 null, #290)
+    public BalanceGameResponse toResponse(BalanceGame game, long commentCount,
+                                          long likeCount, boolean isLiked,
+                                          boolean isCommented, Boolean noticeEnabled,
+                                          long voteCountA, long voteCountB,
+                                          BalanceGameOption myVote, boolean resultSeen,
+                                          LocalDateTime now, LocalDateTime resultUntil) {
         return new BalanceGameResponse(
                 game.getContent().getId(),
                 game.getGameDate(),
@@ -42,6 +52,7 @@ public class BalanceGameMapper {
                         BalanceGameOption.B, game.getOptionBText(), ImageInfo.from(game.getOptionBImage()), voteCountB),
                 voteCountA + voteCountB,
                 myVote,
+                myVote != null && game.isClosed(now) ? resultSeen : null,
                 commentCount,
                 likeCount,
                 game.getContent().getViewCount(),

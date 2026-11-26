@@ -180,4 +180,74 @@ class BalanceGameVoteRepositoryTest {
                         List.of(g1.getId(), BalanceGameOption.B, 1L),
                         List.of(g2.getId(), BalanceGameOption.B, 1L));
     }
+
+    @Test
+    @DisplayName("결과 봤음은 내 행에만 남고, 다시 불러도 처음 시각 그대로다 — 남의 투표·다른 판은 건드리지 않는다 (#290)")
+    void markResultSeen() {
+        // given
+        User me = saveUser();
+        User other = saveUser();
+        BalanceGame game = saveGame(LocalDate.now().minusDays(1), LocalDateTime.now().minusDays(1));
+        BalanceGame anotherGame = saveGame(LocalDate.now().minusDays(2), LocalDateTime.now().minusDays(2));
+        BalanceGameVote mine = vote(me, game, BalanceGameOption.A);
+        BalanceGameVote others = vote(other, game, BalanceGameOption.B);
+        BalanceGameVote mineOnAnother = vote(me, anotherGame, BalanceGameOption.A);
+        em.flush();
+        em.clear();
+        LocalDateTime first = LocalDateTime.of(2026, 11, 26, 9, 0);
+
+        // when
+        int marked = balanceGameVoteRepository.markResultSeen(game.getId(), me, first);
+        int again = balanceGameVoteRepository.markResultSeen(game.getId(), me, first.plusHours(1));
+        em.clear();
+
+        // then
+        assertThat(marked).isEqualTo(1);
+        assertThat(again).isZero();
+        assertThat(em.find(BalanceGameVote.class, mine.getId()).getResultSeenAt()).isEqualTo(first);
+        assertThat(em.find(BalanceGameVote.class, others.getId()).isResultSeen()).isFalse();
+        assertThat(em.find(BalanceGameVote.class, mineOnAnother.getId()).isResultSeen()).isFalse();
+    }
+
+    @Test
+    @DisplayName("투표하지 않은 판에는 결과 봤음이 남지 않는다 (0행)")
+    void markResultSeen_notVoted() {
+        // given
+        User me = saveUser();
+        User other = saveUser();
+        BalanceGame game = saveGame(LocalDate.now().minusDays(1), LocalDateTime.now().minusDays(1));
+        BalanceGameVote others = vote(other, game, BalanceGameOption.B);
+        em.flush();
+        em.clear();
+
+        // when
+        int marked = balanceGameVoteRepository.markResultSeen(game.getId(), me, LocalDateTime.now());
+        em.clear();
+
+        // then
+        assertThat(marked).isZero();
+        assertThat(em.find(BalanceGameVote.class, others.getId()).isResultSeen()).isFalse();
+    }
+
+    @Test
+    @DisplayName("봤음을 남기기 전에 읽어 둔 투표를 바꿔 저장해도 봤음 기록은 지워지지 않는다 (마감 순간 다른 기기의 투표 변경, #290)")
+    void markResultSeen_survivesVoteChange() {
+        // given
+        User me = saveUser();
+        BalanceGame game = saveGame(LocalDate.now().minusDays(1), LocalDateTime.now().minusDays(1));
+        BalanceGameVote mine = vote(me, game, BalanceGameOption.A);
+        em.flush();
+        LocalDateTime first = LocalDateTime.of(2026, 11, 26, 9, 0);
+
+        // when: mine 은 아직 봤음이 없는 상태로 읽힌 채
+        balanceGameVoteRepository.markResultSeen(game.getId(), me, first);
+        mine.changeOption(BalanceGameOption.B);
+        em.flush();
+        em.clear();
+
+        // then
+        BalanceGameVote saved = em.find(BalanceGameVote.class, mine.getId());
+        assertThat(saved.getOption()).isEqualTo(BalanceGameOption.B);
+        assertThat(saved.getResultSeenAt()).isEqualTo(first);
+    }
 }
