@@ -1,19 +1,27 @@
 package com.jiujitsu.api.domain.community.balance_game.dto;
 
+import com.jiujitsu.api.domain.community.balance_game.entity.BalanceGame;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 
 @Schema(description = "[임시] 밸런스 게임 등록 요청 (테스트 데이터용)")
 public record BalanceGameCreateRequest(
+        @NotBlank(message = "타이틀은 필수입니다.")
+        @Size(max = BalanceGame.TITLE_MAX_LENGTH, message = "타이틀은 30자 이하여야 합니다.")
+        @Schema(description = "타이틀 — 무엇을 고르는 판인지 알려 주는 질문 한 줄 (최대 30자, 앞뒤 공백은 잘라 저장)", example = "더 싫은 패배는?", maxLength = BalanceGame.TITLE_MAX_LENGTH, requiredMode = Schema.RequiredMode.REQUIRED)
+            String title,
         @NotBlank(message = "선택지 A 문구는 필수입니다.")
-        @Schema(description = "선택지 A 문구", example = "가드 패스 성공률 100%지만 서브 미션 절대 안 됨", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Size(max = BalanceGame.OPTION_TEXT_MAX_LENGTH, message = "선택지 A 문구는 100자 이하여야 합니다.")
+        @Schema(description = "선택지 A 문구 (최대 100자)", example = "가드 패스 성공률 100%지만 서브 미션 절대 안 됨", maxLength = BalanceGame.OPTION_TEXT_MAX_LENGTH, requiredMode = Schema.RequiredMode.REQUIRED)
             String optionAText,
         @Schema(description = "선택지 A 이미지 파일 ID (선택)", example = "1")
             Long optionAImageFileId,
         @NotBlank(message = "선택지 B 문구는 필수입니다.")
-        @Schema(description = "선택지 B 문구", example = "서브 미션 성공률 100%지만 가드 패스 절대 못 함", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Size(max = BalanceGame.OPTION_TEXT_MAX_LENGTH, message = "선택지 B 문구는 100자 이하여야 합니다.")
+        @Schema(description = "선택지 B 문구 (최대 100자)", example = "서브 미션 성공률 100%지만 가드 패스 절대 못 함", maxLength = BalanceGame.OPTION_TEXT_MAX_LENGTH, requiredMode = Schema.RequiredMode.REQUIRED)
             String optionBText,
         @Schema(description = "선택지 B 이미지 파일 ID (선택)", example = "2")
             Long optionBImageFileId,
@@ -22,4 +30,9 @@ public record BalanceGameCreateRequest(
         @Schema(description = "투표 시작 일시 (미입력 시 마감일 00:30 — 00:00~00:30 은 전날 결과 버퍼라 그 전엔 메인에 안 나오고 투표 불가). "
                 + "마감보다 앞이어야 함(아니면 C0012). 시작만 넣으면 마감은 시작일 23:59:59 이고, 그 시각이 이미 지났으면 C0009. 날짜를 넘기는 게임은 시작을 함께 넣고, 진행일은 시작일", example = "2026-07-15T00:30:00", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
             LocalDateTime startAt
-) { }
+) {
+    // 앞뒤 공백을 먼저 잘라 검증(빈 값 · 30자)과 저장이 같은 값을 쓰게 한다
+    public BalanceGameCreateRequest {
+        title = title == null ? null : title.strip();
+    }
+}
