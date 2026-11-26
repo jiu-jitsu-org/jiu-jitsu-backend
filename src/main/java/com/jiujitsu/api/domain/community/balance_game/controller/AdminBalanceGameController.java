@@ -35,7 +35,7 @@ public class AdminBalanceGameController {
             summary = "밸런스 게임 등록",
             description = "새 밸런스 게임을 등록합니다. endAt 미입력 시 한국 시간 23:59:59 자동 설정."
     )
-    @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER, ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.BALANCE_GAME_END_AT_MUST_BE_FUTURE, ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT})
+    @ApiErrorCodeExamples({ErrorCode.REQUIRED_PARAMETER, ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.BALANCE_GAME_END_AT_MUST_BE_FUTURE, ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT, ErrorCode.BALANCE_GAME_DUPLICATE_DATE})
     @PostMapping
     public BalanceGameResponse create(@Valid @RequestBody BalanceGameCreateRequest request) {
         return balanceGameService.create(request);
@@ -73,7 +73,7 @@ public class AdminBalanceGameController {
             summary = "밸런스 게임 수정",
             description = "선택지 문구·이미지·시작/마감 일시를 수정합니다. startAt/endAt 미입력 시 기존 값 유지. 이미지 파일 ID null이면 이미지 제거."
     )
-    @ApiErrorCodeExamples({ErrorCode.BALANCE_GAME_NOT_FOUND, ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT})
+    @ApiErrorCodeExamples({ErrorCode.BALANCE_GAME_NOT_FOUND, ErrorCode.IMAGE_FILE_NOT_FOUND, ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT, ErrorCode.BALANCE_GAME_DUPLICATE_DATE})
     @PutMapping("/{id}")
     public BalanceGameResponse update(
             @Parameter(description = "밸런스 게임 ID") @PathVariable Long id,

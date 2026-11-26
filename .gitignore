@@ -46,3 +46,6 @@ deploy/secrets/*.json
 
 # local design docs
 docs/
+
+# Claude Code
+CLAUDE.md

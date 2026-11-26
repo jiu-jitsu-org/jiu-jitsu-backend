@@ -53,4 +53,8 @@ public interface BalanceGameRepository extends JpaRepository<BalanceGame, Long>,
 
     // 상세/투표 - contentId 로 조회 (마감된 게임도 조회 가능)
     Optional<BalanceGame> findByContentId(Long contentId);
+
+    // 같은 날짜(gameDate)에 다른 게임이 있는지 확인 (수정 시 자기 자신 제외)
+    boolean existsByGameDateAndIdNot(java.time.LocalDate gameDate, Long id);
+    boolean existsByGameDate(java.time.LocalDate gameDate);
 }
