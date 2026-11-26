@@ -28,6 +28,7 @@ public enum ErrorCode {
     COMMENT_RESTORE_EXPIRED(400, "C0008", "복구 가능 시간이 만료됐습니다."),
     CONTENT_SAVE_NOT_SUPPORTED(400, "C0008", "저장할 수 없는 게시물입니다."),
     BALANCE_GAME_END_AT_MUST_BE_FUTURE(400, "C0009", "마감 일시는 미래 시간이어야 합니다."),
+    BALANCE_GAME_DUPLICATE_DATE(409, "C0018", "해당 날짜에 이미 등록된 밸런스 게임이 있습니다."),
     COMPETITION_NOT_FOUND(404, "C0010", "존재하지 않는 대회입니다."),
     COMPETITION_LINK_NOT_FOUND(404, "C0013", "이 대회에 해당 종류의 링크가 없습니다."),
     COMPETITION_INFO_REPORT_NOT_FOUND(404, "C0014", "존재하지 않는 대회 정보 제보입니다."),

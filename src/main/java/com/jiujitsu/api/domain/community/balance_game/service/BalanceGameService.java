@@ -243,8 +243,7 @@ public class BalanceGameService {
     }
 
     /**
-     * [임시] 관리자 밸런스 게임 등록 (테스트 데이터용)
-     * 추후 정식 관리자 등록 기능으로 대체 예정.
+     * 관리자 밸런스 게임 등록
      *
      * endAt 미입력 시 당일 한국 시간 23:59:59 자동 설정. 자동 설정된 값이 이미 과거라면(심야 요청) 다음 날 23:59:59로 설정.
      * startAt 만 넣으면 endAt 은 시작일 23:59:59 (다음 날 게임을 미리 등록할 수 있게).
@@ -259,6 +258,11 @@ public class BalanceGameService {
             throw new ErrorException(ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT);
         }
 
+        LocalDate gameDate = startAt.toLocalDate();
+        if (balanceGameRepository.existsByGameDate(gameDate)) {
+            throw new ErrorException(ErrorCode.BALANCE_GAME_DUPLICATE_DATE);
+        }
+
         Content content = balanceGameFactory.createContent();
         BalanceGame game = balanceGameFactory.createBalanceGame(
                 content,
@@ -267,7 +271,7 @@ public class BalanceGameService {
                 request.optionBText(), request.optionBImageFileId(),
                 startAt,
                 endAt,
-                startAt.toLocalDate()   // 진행일 = 시작일 (하루 1회 정책, 기본 일정에선 마감일과 같음)
+                gameDate   // 진행일 = 시작일 (하루 1회 정책, 기본 일정에선 마감일과 같음)
         );
         game = balanceGameRepository.save(game);
 
@@ -354,6 +358,11 @@ public class BalanceGameService {
 
         if (!startAt.isBefore(endAt)) {
             throw new ErrorException(ErrorCode.BALANCE_GAME_START_AT_NOT_BEFORE_END_AT);
+        }
+
+        LocalDate newGameDate = startAt.toLocalDate();
+        if (!newGameDate.equals(game.getGameDate()) && balanceGameRepository.existsByGameDateAndIdNot(newGameDate, id)) {
+            throw new ErrorException(ErrorCode.BALANCE_GAME_DUPLICATE_DATE);
         }
 
         ImageFile optionAImage = balanceGameFactory.resolveImage(request.optionAImageFileId());
