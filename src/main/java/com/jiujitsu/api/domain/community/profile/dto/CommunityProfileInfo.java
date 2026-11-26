@@ -7,6 +7,7 @@ import com.jiujitsu.api.domain.file.dto.ImageInfo;
 import com.jiujitsu.api.domain.user.entity.AccountType;
 import com.jiujitsu.api.domain.user.entity.User;
 import com.jiujitsu.api.domain.user.entity.UserRole;
+import com.jiujitsu.api.domain.user.entity.UserStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record CommunityProfileInfo(
@@ -23,7 +24,7 @@ public record CommunityProfileInfo(
      * 작성자 정보 - profile 은 커뮤니티 프로필 미작성 시 null
      */
     public static CommunityProfileInfo from(User user, CommunityProfile profile) {
-        if (user == null) {
+        if (user == null || user.getStatus() == UserStatus.DELETED) {
             return withdrawn();
         }
         return new CommunityProfileInfo(
