@@ -5,6 +5,7 @@ import com.jiujitsu.api.domain.community.report.service.ReportService;
 import com.jiujitsu.api.global.exception.ErrorCode;
 import com.jiujitsu.api.global.exception.annotation.ApiErrorCodeExamples;
 import com.jiujitsu.api.global.exception.annotation.CommonApiResponses;
+import com.jiujitsu.api.global.security.annotation.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "admin-report-controller", description = "관리자 신고 관리 API")
 @CommonApiResponses
+@AdminOnly
 @RestController
 @RequestMapping("/admin/reports")
 @RequiredArgsConstructor
@@ -54,5 +56,43 @@ public class AdminReportController {
             @PathVariable Long commentId
     ) {
         reportService.unhideComment(commentId);
+    }
+
+    // ── 신고 ID 기반 처리 ───────────────────────────────────────────
+
+    @Operation(
+            summary = "신고 대상 숨김",
+            description = "신고 ID로 대상 게시글·댓글을 숨김 처리합니다. 작성자 위반 처리 수가 1 증가합니다. USER 신고에는 사용할 수 없습니다."
+    )
+    @ApiErrorCodeExamples({ErrorCode.REPORT_NOT_FOUND, ErrorCode.BOARD_NOT_FOUND, ErrorCode.COMMENT_NOT_FOUND, ErrorCode.WRONG_PARAMETER})
+    @PatchMapping("/{reportId}/hide")
+    public void hide(
+            @Parameter(description = "신고 ID") @PathVariable Long reportId
+    ) {
+        reportService.hide(reportId);
+    }
+
+    @Operation(
+            summary = "신고 대상 삭제",
+            description = "신고 ID로 대상 게시글·댓글을 삭제합니다. 댓글은 대댓글이 있으면 soft-delete, 없으면 hard-delete. 작성자 위반 처리 수가 1 증가합니다. USER 신고에는 사용할 수 없습니다."
+    )
+    @ApiErrorCodeExamples({ErrorCode.REPORT_NOT_FOUND, ErrorCode.BOARD_NOT_FOUND, ErrorCode.COMMENT_NOT_FOUND, ErrorCode.WRONG_PARAMETER})
+    @DeleteMapping("/{reportId}")
+    public void delete(
+            @Parameter(description = "신고 ID") @PathVariable Long reportId
+    ) {
+        reportService.deleteTarget(reportId);
+    }
+
+    @Operation(
+            summary = "신고 반려 (숨김 해제)",
+            description = "신고 ID로 대상 게시글·댓글의 숨김을 해제합니다. 위반 처리 수는 변경하지 않습니다. USER 신고에는 사용할 수 없습니다."
+    )
+    @ApiErrorCodeExamples({ErrorCode.REPORT_NOT_FOUND, ErrorCode.BOARD_NOT_FOUND, ErrorCode.COMMENT_NOT_FOUND, ErrorCode.WRONG_PARAMETER})
+    @PatchMapping("/{reportId}/reject")
+    public void reject(
+            @Parameter(description = "신고 ID") @PathVariable Long reportId
+    ) {
+        reportService.reject(reportId);
     }
 }
