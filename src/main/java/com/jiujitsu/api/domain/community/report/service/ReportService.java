@@ -179,7 +179,7 @@ public class ReportService {
     }
 
     /**
-     * 관리자: 게시물 숨김 해제
+     * 관리자: 게시물 숨김 해제 (기존 — contentId 기반)
      */
     public void unhideBoard(Long contentId) {
         Board board = boardRepository.findByContent_Id(contentId)
@@ -188,12 +188,106 @@ public class ReportService {
     }
 
     /**
-     * 관리자: 댓글 숨김 해제
+     * 관리자: 댓글 숨김 해제 (기존 — commentId 기반)
      */
     public void unhideComment(Long commentId) {
         CommunityComments comment = communityCommentsRepository.findById(commentId)
                 .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
         comment.unhide();
+    }
+
+    /**
+     * 관리자: 신고 대상 숨김 처리 (reportId 기반)
+     * 게시글/댓글에만 적용. 작성자 violationCount 증가.
+     */
+    public void hide(Long reportId) {
+        Report report = findReport(reportId);
+        validateNotUserReport(report);
+
+        switch (report.getReportType()) {
+            case BOARD -> {
+                Board board = boardRepository.findByContent_Id(report.getTargetId())
+                        .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
+                board.hide();
+                incrementViolation(board.getCreatedBy());
+            }
+            case COMMENT -> {
+                CommunityComments comment = communityCommentsRepository.findById(report.getTargetId())
+                        .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
+                comment.hide();
+                incrementViolation(comment.getCreatedBy());
+            }
+        }
+    }
+
+    /**
+     * 관리자: 신고 대상 삭제 처리 (reportId 기반)
+     * 게시글은 hard-delete. 댓글은 대댓글 있으면 soft-delete, 없으면 hard-delete. 작성자 violationCount 증가.
+     */
+    public void deleteTarget(Long reportId) {
+        Report report = findReport(reportId);
+        validateNotUserReport(report);
+
+        switch (report.getReportType()) {
+            case BOARD -> {
+                Board board = boardRepository.findByContent_Id(report.getTargetId())
+                        .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
+                incrementViolation(board.getCreatedBy());
+                board.getContent().getImageFiles().forEach(
+                        img -> img.deactivate()
+                );
+                boardRepository.delete(board);
+            }
+            case COMMENT -> {
+                CommunityComments comment = communityCommentsRepository.findById(report.getTargetId())
+                        .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
+                incrementViolation(comment.getCreatedBy());
+                if (communityCommentsRepository.existsByParentId(comment.getId())) {
+                    comment.softDelete();
+                } else {
+                    communityCommentsRepository.delete(comment);
+                }
+            }
+        }
+    }
+
+    /**
+     * 관리자: 신고 반려 — 대상 숨김 해제 (reportId 기반)
+     * violationCount 는 변경하지 않는다.
+     */
+    public void reject(Long reportId) {
+        Report report = findReport(reportId);
+        validateNotUserReport(report);
+
+        switch (report.getReportType()) {
+            case BOARD -> {
+                Board board = boardRepository.findByContent_Id(report.getTargetId())
+                        .orElseThrow(() -> new ErrorException(ErrorCode.BOARD_NOT_FOUND));
+                board.unhide();
+            }
+            case COMMENT -> {
+                CommunityComments comment = communityCommentsRepository.findById(report.getTargetId())
+                        .orElseThrow(() -> new ErrorException(ErrorCode.COMMENT_NOT_FOUND));
+                comment.unhide();
+            }
+        }
+    }
+
+    private Report findReport(Long reportId) {
+        return reportRepository.findById(reportId)
+                .orElseThrow(() -> new ErrorException(ErrorCode.REPORT_NOT_FOUND));
+    }
+
+    private void validateNotUserReport(Report report) {
+        if (report.getReportType() == ReportType.USER) {
+            throw new ErrorException(ErrorCode.WRONG_PARAMETER);
+        }
+    }
+
+    private void incrementViolation(User user) {
+        if (user != null) {
+            user.incrementViolationCount();
+        }
     }
 
     // 대상 존재 확인 + 자기 신고 방지, 조회한 엔티티 반환 (회원 신고는 숨길 대상이 없어 null)
